@@ -204,7 +204,77 @@ function createGameActivityController({
         }
     };
 
-    return { gameActivityCreate, gameActivityList };
+    const transitionGameActivity = (nextStatus) => async (req, res) => {
+        const activityId = req.params && req.params.id;
+        const body = req.body || {};
+        const { teacherId } = body;
+
+        if (!isValidObjectId(activityId)) {
+            return validationErrorResponse(res, "A valid game activity id is required");
+        }
+
+        if (!isValidObjectId(teacherId)) {
+            return validationErrorResponse(res, "A valid teacherId is required");
+        }
+
+        const expectedStatus = nextStatus === "published" ? "draft" : "published";
+        const update = { $set: { status: nextStatus } };
+
+        if (nextStatus === "published") {
+            update.$set.publishedAt = new Date();
+        }
+
+        try {
+            // Compare-and-set on the current state prevents two concurrent
+            // requests from applying an invalid transition to the same record.
+            const updatedActivity = await GameActivityModel.findOneAndUpdate(
+                {
+                    _id: activityId,
+                    createdByTeacher: teacherId,
+                    status: expectedStatus,
+                },
+                update,
+                { new: true, runValidators: true }
+            );
+
+            if (updatedActivity) {
+                return res.status(200).json(updatedActivity);
+            }
+
+            // Distinguish a missing/non-owned activity from a transition conflict
+            // without revealing activities belonging to another teacher.
+            const ownedActivity = await GameActivityModel.findOne({
+                _id: activityId,
+                createdByTeacher: teacherId,
+            });
+
+            if (!ownedActivity) {
+                return res.status(404).json({
+                    message: "Game activity not found for this teacher",
+                });
+            }
+
+            const message = nextStatus === "published"
+                ? "Only draft activities can be published"
+                : "Only published activities can be archived";
+
+            return res.status(409).json({ message });
+        } catch (error) {
+            if (error && (error.name === "ValidationError" || error.name === "CastError")) {
+                return validationErrorResponse(res, error.message);
+            }
+            return res.status(500).json({
+                message: nextStatus === "published"
+                    ? "Unable to publish game activity"
+                    : "Unable to archive game activity",
+            });
+        }
+    };
+
+    const publishGameActivity = transitionGameActivity("published");
+    const archiveGameActivity = transitionGameActivity("archived");
+
+    return { gameActivityCreate, gameActivityList, publishGameActivity, archiveGameActivity };
 }
 
 let defaultController;
@@ -227,8 +297,15 @@ const gameActivityCreate = (req, res) =>
 const gameActivityList = (req, res) =>
     getDefaultController().gameActivityList(req, res);
 
+const publishGameActivity = (req, res) =>
+    getDefaultController().publishGameActivity(req, res);
+const archiveGameActivity = (req, res) =>
+    getDefaultController().archiveGameActivity(req, res);
+
 module.exports = {
     gameActivityCreate,
     gameActivityList,
+    publishGameActivity,
+    archiveGameActivity,
     createGameActivityController,
 };
