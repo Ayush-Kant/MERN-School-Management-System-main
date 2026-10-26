@@ -49,6 +49,10 @@ function makeHarness(overrides = {}) {
         listFilter: null,
         populated: [],
         sort: null,
+        transitionFilter: null,
+        transitionUpdate: null,
+        transitionOptions: null,
+        ownedLookupFilter: null,
     };
 
     const teacher = Object.hasOwn(overrides, "teacher") ? overrides.teacher : validTeacher;
@@ -63,6 +67,20 @@ function makeHarness(overrides = {}) {
         async save() {
             if (overrides.saveError) throw overrides.saveError;
             return { _id: ACTIVITY_ID, ...calls.createdData };
+        }
+
+        static async findOneAndUpdate(filter, update, options) {
+            calls.transitionFilter = filter;
+            calls.transitionUpdate = update;
+            calls.transitionOptions = options;
+            if (overrides.transitionError) throw overrides.transitionError;
+            return overrides.transitionResult || null;
+        }
+
+        static async findOne(filter) {
+            calls.ownedLookupFilter = filter;
+            if (overrides.ownedLookupError) throw overrides.ownedLookupError;
+            return Object.hasOwn(overrides, "ownedActivity") ? overrides.ownedActivity : null;
         }
 
         static find(filter) {
@@ -341,4 +359,145 @@ test("returns a generic server error when listing fails", async () => {
     assert.equal(res.statusCode, 500);
     assert.equal(res.body.message, "Unable to list game activities");
     assert.equal(JSON.stringify(res.body).includes("database internals"), false);
+});
+
+
+test("publishes a draft activity atomically and records publishedAt", async () => {
+    const publishedAt = new Date("2026-10-26T08:00:00.000Z");
+    const { controller, calls } = makeHarness({
+        transitionResult: { _id: ACTIVITY_ID, status: "published", publishedAt },
+    });
+    const res = makeResponse();
+
+    await controller.publishGameActivity({
+        params: { id: ACTIVITY_ID },
+        body: { teacherId: TEACHER_ID },
+    }, res);
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.status, "published");
+    assert.equal(calls.transitionFilter._id, ACTIVITY_ID);
+    assert.equal(calls.transitionFilter.createdByTeacher, TEACHER_ID);
+    assert.equal(calls.transitionFilter.status, "draft");
+    assert.equal(calls.transitionUpdate.$set.status, "published");
+    assert.ok(calls.transitionUpdate.$set.publishedAt instanceof Date);
+    assert.deepEqual(calls.transitionOptions, { new: true, runValidators: true });
+    assert.equal(calls.ownedLookupFilter, null);
+});
+
+test("archives a published activity without overwriting its original publish timestamp", async () => {
+    const { controller, calls } = makeHarness({
+        transitionResult: { _id: ACTIVITY_ID, status: "archived" },
+    });
+    const res = makeResponse();
+
+    await controller.archiveGameActivity({
+        params: { id: ACTIVITY_ID },
+        body: { teacherId: TEACHER_ID },
+    }, res);
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.status, "archived");
+    assert.equal(calls.transitionFilter._id, ACTIVITY_ID);
+    assert.equal(calls.transitionFilter.createdByTeacher, TEACHER_ID);
+    assert.equal(calls.transitionFilter.status, "published");
+    assert.deepEqual(calls.transitionUpdate, { $set: { status: "archived" } });
+});
+
+test("rejects invalid activity and teacher ids before querying MongoDB", async () => {
+    const cases = [
+        { params: { id: "bad-id" }, body: { teacherId: TEACHER_ID } },
+        { params: { id: ACTIVITY_ID }, body: { teacherId: "bad-id" } },
+    ];
+
+    for (const request of cases) {
+        const { controller, calls } = makeHarness();
+        const res = makeResponse();
+
+        await controller.publishGameActivity(request, res);
+
+        assert.equal(res.statusCode, 400);
+        assert.equal(calls.transitionFilter, null);
+        assert.equal(calls.ownedLookupFilter, null);
+    }
+});
+
+test("returns not found if the activity is missing or not owned by the supplied teacher", async () => {
+    const { controller, calls } = makeHarness({ ownedActivity: null });
+    const res = makeResponse();
+
+    await controller.publishGameActivity({
+        params: { id: ACTIVITY_ID },
+        body: { teacherId: TEACHER_ID },
+    }, res);
+
+    assert.equal(res.statusCode, 404);
+    assert.match(res.body.message, /not found for this teacher/);
+    assert.deepEqual(calls.ownedLookupFilter, {
+        _id: ACTIVITY_ID,
+        createdByTeacher: TEACHER_ID,
+    });
+});
+
+test("rejects publishing non-draft activities and archiving non-published activities", async () => {
+    const cases = [
+        {
+            operation: "publishGameActivity",
+            ownedActivity: { status: "published" },
+            expectedMessage: /Only draft activities can be published/,
+        },
+        {
+            operation: "publishGameActivity",
+            ownedActivity: { status: "archived" },
+            expectedMessage: /Only draft activities can be published/,
+        },
+        {
+            operation: "archiveGameActivity",
+            ownedActivity: { status: "draft" },
+            expectedMessage: /Only published activities can be archived/,
+        },
+        {
+            operation: "archiveGameActivity",
+            ownedActivity: { status: "archived" },
+            expectedMessage: /Only published activities can be archived/,
+        },
+    ];
+
+    for (const item of cases) {
+        const { controller, calls } = makeHarness({ ownedActivity: item.ownedActivity });
+        const res = makeResponse();
+
+        await controller[item.operation]({
+            params: { id: ACTIVITY_ID },
+            body: { teacherId: TEACHER_ID },
+        }, res);
+
+        assert.equal(res.statusCode, 409);
+        assert.match(res.body.message, item.expectedMessage);
+        assert.ok(calls.transitionFilter);
+        assert.ok(calls.ownedLookupFilter);
+    }
+});
+
+test("returns a generic error if a publish or archive database update fails", async () => {
+    const cases = [
+        { operation: "publishGameActivity", expectedMessage: "Unable to publish game activity" },
+        { operation: "archiveGameActivity", expectedMessage: "Unable to archive game activity" },
+    ];
+
+    for (const item of cases) {
+        const { controller } = makeHarness({
+            transitionError: new Error("private database diagnostic"),
+        });
+        const res = makeResponse();
+
+        await controller[item.operation]({
+            params: { id: ACTIVITY_ID },
+            body: { teacherId: TEACHER_ID },
+        }, res);
+
+        assert.equal(res.statusCode, 500);
+        assert.equal(res.body.message, item.expectedMessage);
+        assert.equal(JSON.stringify(res.body).includes("private database diagnostic"), false);
+    }
 });
