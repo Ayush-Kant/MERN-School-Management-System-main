@@ -23,6 +23,7 @@ import TeacherProfile from "./TeacherProfile";
 import TeacherClassDetails from "./TeacherClassDetails";
 import TeacherViewStudent from "./TeacherViewStudent";
 import TeacherComplain from "./TeacherComplain";
+import TeacherGameZone from "./TeacherGameZone";
 
 import Logout from "../Logout";
 import StudentAttendance from "../admin/studentRelated/StudentAttendance";
@@ -227,6 +228,11 @@ const TeacherDashboard = () => {
                 <Route
                     path="/Teacher/complain"
                     element={<TeacherComplain />}
+                />
+
+                <Route
+                    path="/Teacher/game-zone"
+                    element={<TeacherGameZone />}
                 />
 
                 <Route
