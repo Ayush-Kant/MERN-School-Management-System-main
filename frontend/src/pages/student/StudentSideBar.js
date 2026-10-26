@@ -23,6 +23,7 @@ import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import CampaignRoundedIcon from "@mui/icons-material/CampaignRounded";
 import AccountCircleRoundedIcon from "@mui/icons-material/AccountCircleRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 
 const StudentSideBar = () => {
 
@@ -35,6 +36,11 @@ const StudentSideBar = () => {
     const isSubjects =
         location.pathname.startsWith(
             "/Student/subjects"
+        );
+
+    const isGameZone =
+        location.pathname.startsWith(
+            "/Student/game-zone"
         );
 
     const isAttendance =
@@ -89,6 +95,20 @@ const StudentSideBar = () => {
                 </ListItemIcon>
 
                 <ListItemText primary="Subjects" />
+            </StyledNavItem>
+
+            <StyledNavItem
+                component={Link}
+                to="/Student/game-zone"
+                selected={isGameZone}
+            >
+                <ListItemIcon>
+                    <SportsEsportsRoundedIcon
+                        color={isGameZone ? "primary" : "inherit"}
+                    />
+                </ListItemIcon>
+
+                <ListItemText primary="Game Zone" />
             </StyledNavItem>
 
             <StyledNavItem
