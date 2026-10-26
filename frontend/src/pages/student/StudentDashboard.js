@@ -28,6 +28,7 @@ import StudentProfile from "./StudentProfile";
 import StudentSubjects from "./StudentSubjects";
 import ViewStdAttendance from "./ViewStdAttendance";
 import StudentComplain from "./StudentComplain";
+import StudentGameZone from "./StudentGameZone";
 
 import Logout from "../Logout";
 
@@ -267,6 +268,11 @@ const StudentDashboard = () => {
                     <Route
                         path="/Student/subjects"
                         element={<StudentSubjects />}
+                    />
+
+                    <Route
+                        path="/Student/game-zone"
+                        element={<StudentGameZone />}
                     />
 
                     <Route
