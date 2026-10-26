@@ -147,7 +147,7 @@ test("filters published activities by title and topic", async () => {
     await renderPage();
 
     await act(async () => {
-        setInput("Search games or topics", "space");
+        setInput("search", "space");
     });
 
     expect(document.body.textContent).toContain("Solar System Quiz");
