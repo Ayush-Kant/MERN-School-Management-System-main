@@ -24,7 +24,6 @@ import {
 import AddCircleOutlineRoundedIcon from "@mui/icons-material/AddCircleOutlineRounded";
 import ArchiveRoundedIcon from "@mui/icons-material/ArchiveRounded";
 import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
-import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
@@ -580,18 +579,6 @@ const TeacherGameZone = () => {
                     >
                         Close
                     </Button>
-                    {previewActivity?.originalUrl && (
-                        <Button
-                            component="a"
-                            href={previewActivity.originalUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            endIcon={<OpenInNewRoundedIcon />}
-                            sx={{ color: "#93C5FD", textTransform: "none" }}
-                        >
-                            Open source
-                        </Button>
-                    )}
                 </DialogActions>
             </Dialog>
         </Container>
