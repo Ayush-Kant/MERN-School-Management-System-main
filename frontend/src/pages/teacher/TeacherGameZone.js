@@ -27,30 +27,9 @@ import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlin
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
+import { getEntityId, isOfficialWordwallEmbedUrl } from "../../utils/wordwallUrl";
 
 const API_BASE_URL = (process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
-
-export function getEntityId(value) {
-    if (typeof value === "string") return value;
-    return value && typeof value._id === "string" ? value._id : "";
-}
-
-export function isOfficialWordwallEmbedUrl(value) {
-    if (typeof value !== "string" || !value.trim()) return false;
-
-    try {
-        const parsed = new URL(value.trim());
-        const hostname = parsed.hostname.toLowerCase();
-        return parsed.protocol === "https:" &&
-            (hostname === "wordwall.net" || hostname === "www.wordwall.net") &&
-            !parsed.username &&
-            !parsed.password &&
-            parsed.pathname.startsWith("/embed/") &&
-            !parsed.hash;
-    } catch {
-        return false;
-    }
-}
 
 function getErrorMessage(error, fallback) {
     return error?.response?.data?.message || fallback;
