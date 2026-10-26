@@ -24,7 +24,7 @@ const {
     removeStudentAttendance } = require('../controllers/student_controller.js');
 const { subjectCreate, classSubjects, deleteSubjectsByClass, getSubjectDetail, deleteSubject, freeSubjectList, allSubjects, deleteSubjects } = require('../controllers/subject-controller.js');
 const { teacherRegister, teacherLogIn, getTeachers, getTeacherDetail, deleteTeachers, deleteTeachersByClass, deleteTeacher, updateTeacherSubject, teacherAttendance } = require('../controllers/teacher-controller.js');
-const { gameActivityCreate, gameActivityList } = require('../controllers/game-activity-controller.js');
+const { gameActivityCreate, gameActivityList, publishGameActivity, archiveGameActivity } = require('../controllers/game-activity-controller.js');
 
 // Admin
 router.post('/AdminReg', adminRegister);
@@ -120,5 +120,7 @@ router.delete("/SubjectsClass/:id", deleteSubjectsByClass)
 // Game Zone
 router.post('/GameActivityCreate', gameActivityCreate);
 router.get('/GameActivityList/:id', gameActivityList);
+router.put('/GameActivityPublish/:id', publishGameActivity);
+router.put('/GameActivityArchive/:id', archiveGameActivity);
 
 module.exports = router;
