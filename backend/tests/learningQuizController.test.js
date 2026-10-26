@@ -225,8 +225,8 @@ test("creates quizzes as drafts and derives school, class, and subject from teac
 test("rejects malformed teacher ids and invalid question counts before database access", async () => {
     const invalidCases = [
         { teacherId: "not-an-id" },
-        { title: "ok", questions: [] },
-        { title: "ok", questions: Array.from({ length: 31 }, () => validQuestions[0]) },
+        { questions: [] },
+        { questions: Array.from({ length: 31 }, () => validQuestions[0]) },
     ];
 
     for (const body of invalidCases) {
