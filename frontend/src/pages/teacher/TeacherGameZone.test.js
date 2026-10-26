@@ -116,7 +116,7 @@ test("loads the teacher's own activities using the existing backend API", async 
     await renderPage();
 
     expect(axios.get).toHaveBeenCalledWith(
-        `/GameActivityList/${SCHOOL_ID}?teacherId=${TEACHER_ID}`
+        `${API_BASE_URL}/GameActivityList/${SCHOOL_ID}?teacherId=${TEACHER_ID}`
     );
     expect(document.body.textContent).toContain("Fractions Challenge");
     expect(document.body.textContent).toContain("Your activities");
