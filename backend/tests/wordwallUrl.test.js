@@ -58,6 +58,6 @@ test("rejects URLs containing credentials or fragments", () => {
 test("rejects unsafe URL schemes", () => {
     assert.throws(
         () => validateWordwallEmbedUrl("javascript:alert(1)"),
-        /valid Wordwall embed URL/
+        /HTTPS/
     );
 });
