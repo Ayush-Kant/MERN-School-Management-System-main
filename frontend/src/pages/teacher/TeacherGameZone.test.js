@@ -22,6 +22,7 @@ const TEACHER_ID = "bbbbbbbbbbbbbbbbbbbbbbbb";
 const SCHOOL_ID = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const ACTIVITY_ID = "111111111111111111111111";
 const EMBED_URL = "https://wordwall.net/embed/123456";
+const API_BASE_URL = (process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
 const CURRENT_USER = {
     _id: TEACHER_ID,
     role: "Teacher",
@@ -139,7 +140,7 @@ test("creates a draft from form details and refreshes the activity list", async 
     });
 
     expect(axios.post).toHaveBeenCalledWith(
-        "/GameActivityCreate",
+        `${API_BASE_URL}/GameActivityCreate`,
         {
             teacherId: TEACHER_ID,
             title: "Fractions Challenge",
@@ -176,7 +177,7 @@ test("publishes a draft through the existing transition endpoint", async () => {
     });
 
     expect(axios.put).toHaveBeenCalledWith(
-        `/GameActivityPublish/${ACTIVITY_ID}`,
+        `${API_BASE_URL}/GameActivityPublish/${ACTIVITY_ID}`,
         { teacherId: TEACHER_ID },
         { headers: { "Content-Type": "application/json" } }
     );
@@ -196,7 +197,7 @@ test("asks before archiving a published activity and sends the teacher id", asyn
 
     expect(window.confirm).toHaveBeenCalled();
     expect(axios.put).toHaveBeenCalledWith(
-        `/GameActivityArchive/${ACTIVITY_ID}`,
+        `${API_BASE_URL}/GameActivityArchive/${ACTIVITY_ID}`,
         { teacherId: TEACHER_ID },
         { headers: { "Content-Type": "application/json" } }
     );
