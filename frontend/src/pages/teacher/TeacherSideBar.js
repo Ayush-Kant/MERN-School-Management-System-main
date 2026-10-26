@@ -17,6 +17,7 @@ import AccountCircleRoundedIcon from "@mui/icons-material/AccountCircleRounded";
 import CampaignRoundedIcon from "@mui/icons-material/CampaignRounded";
 import ClassRoundedIcon from "@mui/icons-material/ClassRounded";
 import SchoolRoundedIcon from "@mui/icons-material/SchoolRounded";
+import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 
 const TeacherSideBar = () => {
     const { currentUser } = useSelector((state) => state.user);
@@ -132,6 +133,20 @@ const TeacherSideBar = () => {
                 <ListItemText
                     primary={`Class ${sclassName?.sclassName}`}
                 />
+            </ListItemButton>
+
+            <ListItemButton
+                component={Link}
+                to="/Teacher/game-zone"
+                sx={menuItemStyle(
+                    location.pathname.startsWith("/Teacher/game-zone")
+                )}
+            >
+                <ListItemIcon>
+                    <SportsEsportsRoundedIcon />
+                </ListItemIcon>
+
+                <ListItemText primary="Game Zone" />
             </ListItemButton>
 
             <ListItemButton
