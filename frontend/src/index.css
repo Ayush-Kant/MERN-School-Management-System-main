@@ -1,0 +1,228 @@
+/* ===========================
+   GOOGLE FONT
+=========================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+/* ===========================
+   ROOT COLORS
+=========================== */
+
+:root{
+
+  --bg:#070B14;
+  --surface:#111827;
+  --surface-light:#172033;
+
+  --primary:#2563EB;
+  --primary-hover:#1D4ED8;
+
+  --gold:#FBBF24;
+  --gold-hover:#F59E0B;
+
+  --border:#1E293B;
+
+  --text:#F8FAFC;
+  --text-secondary:#94A3B8;
+
+}
+
+/* ===========================
+   RESET
+=========================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Inter',sans-serif;
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+
+    background:var(--bg);
+    color:var(--text);
+
+    min-height:100vh;
+
+    overflow-x:hidden;
+
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+
+}
+
+/* ===========================
+   LINKS
+=========================== */
+
+a{
+
+    text-decoration:none;
+    color:inherit;
+
+}
+
+/* ===========================
+   IMAGES
+=========================== */
+
+img{
+
+    display:block;
+    max-width:100%;
+
+}
+
+/* ===========================
+   SELECTION
+=========================== */
+
+::selection{
+
+    background:rgba(37,99,235,.35);
+
+    color:white;
+
+}
+
+/* ===========================
+   SCROLLBAR
+=========================== */
+
+::-webkit-scrollbar{
+
+    width:10px;
+
+}
+
+::-webkit-scrollbar-track{
+
+    background:#0B1220;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+    background:#2563EB;
+
+    border-radius:20px;
+
+}
+
+::-webkit-scrollbar-thumb:hover{
+
+    background:#1D4ED8;
+
+}
+
+/* Firefox */
+
+*{
+
+    scrollbar-width:thin;
+
+    scrollbar-color:#2563EB #0B1220;
+
+}
+
+/* ===========================
+   TRANSITIONS
+=========================== */
+
+button,
+a,
+.MuiPaper-root,
+.MuiButton-root,
+.MuiCard-root,
+.MuiIconButton-root{
+
+    transition:all .25s ease;
+
+}
+
+/* ===========================
+   FORM (legacy)
+=========================== */
+
+.register{
+
+    min-height:100vh;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+.registerTitle{
+
+    color:var(--text);
+
+    font-size:2.2rem;
+
+    font-weight:700;
+
+}
+
+.registerForm{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:18px;
+
+}
+
+.registerInput{
+
+    padding:14px 18px;
+
+    border-radius:12px;
+
+    border:1px solid var(--border);
+
+    background:var(--surface);
+
+    color:var(--text);
+
+}
+
+.registerInput:focus{
+
+    outline:none;
+
+    border-color:var(--primary);
+
+}
+
+.registerButton{
+
+    padding:14px;
+
+    border:none;
+
+    border-radius:12px;
+
+    cursor:pointer;
+
+    background:var(--primary);
+
+    color:white;
+
+    font-weight:600;
+
+}
+
+.registerButton:hover{
+
+    background:var(--primary-hover);
+
+}
