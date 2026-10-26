@@ -10,6 +10,7 @@ const CLASS_ID = "cccccccccccccccccccccccc";
 const OTHER_CLASS_ID = "999999999999999999999999";
 const SUBJECT_ID = "dddddddddddddddddddddddd";
 const ACTIVITY_ID = "111111111111111111111111";
+const NUMERIC_HEX_ID = "1234567890abcdef12345678";
 
 const validTeacher = {
     _id: TEACHER_ID,
@@ -500,4 +501,21 @@ test("returns a generic error if a publish or archive database update fails", as
         assert.equal(res.body.message, item.expectedMessage);
         assert.equal(JSON.stringify(res.body).includes("private database diagnostic"), false);
     }
+});
+
+
+test("accepts valid ObjectIds containing digits", async () => {
+    const { controller, calls } = makeHarness({ listRecords: [] });
+    const res = makeResponse();
+
+    await controller.gameActivityList({
+        params: { id: NUMERIC_HEX_ID },
+        query: {},
+    }, res);
+
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(calls.listFilter, {
+        school: NUMERIC_HEX_ID,
+        status: "published",
+    });
 });
