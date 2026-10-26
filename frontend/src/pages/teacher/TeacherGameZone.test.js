@@ -3,10 +3,8 @@ import { act } from "react-dom/test-utils";
 import { createRoot } from "react-dom/client";
 import axios from "axios";
 import { useSelector } from "react-redux";
-import TeacherGameZone, {
-    getEntityId,
-    isOfficialWordwallEmbedUrl,
-} from "./TeacherGameZone";
+import TeacherGameZone from "./TeacherGameZone";
+import { getEntityId, isOfficialWordwallEmbedUrl } from "../../utils/wordwallUrl";
 
 jest.mock("axios", () => ({
     get: jest.fn(),
