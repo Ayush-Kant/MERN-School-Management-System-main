@@ -139,22 +139,70 @@ const deleteStudentsByClass = async (req, res) => {
     }
 }
 
-const updateStudent = async (req, res) => {
-    try {
-        if (req.body.password) {
-            const salt = await bcrypt.genSalt(10)
-            res.body.password = await bcrypt.hash(res.body.password, salt)
-        }
-        let result = await Student.findByIdAndUpdate(req.params.id,
-            { $set: req.body },
-            { new: true })
+function createUpdateStudentHandler({
+    StudentModel = Student,
+    hashPassword = async (password) => {
+        const salt = await bcrypt.genSalt(10);
+        return bcrypt.hash(password, salt);
+    },
+} = {}) {
+    return async function updateStudent(req, res) {
+        const body = req.body;
 
-        result.password = undefined;
-        res.send(result)
-    } catch (error) {
-        res.status(500).json(error);
-    }
+        if (!body || typeof body !== "object" || Array.isArray(body)) {
+            return res.status(400).json({ message: "A valid update object is required" });
+        }
+
+        const allowedFields = new Set(["name", "rollNum", "password", "sclassName"]);
+        const unsupportedFields = Object.keys(body).filter((field) => !allowedFields.has(field));
+
+        if (unsupportedFields.length > 0) {
+            return res.status(400).json({
+                message: `Unsupported student update field(s): ${unsupportedFields.join(", ")}`,
+            });
+        }
+
+        const updates = {};
+        for (const field of ["name", "rollNum", "sclassName"]) {
+            if (Object.prototype.hasOwnProperty.call(body, field)) {
+                updates[field] = body[field];
+            }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(body, "password")) {
+            if (typeof body.password !== "string" || body.password.length === 0) {
+                return res.status(400).json({ message: "Password must be a non-empty string" });
+            }
+            updates.password = await hashPassword(body.password);
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ message: "At least one supported student field is required" });
+        }
+
+        try {
+            const result = await StudentModel.findByIdAndUpdate(
+                req.params.id,
+                { $set: updates },
+                { new: true, runValidators: true }
+            );
+
+            if (!result) {
+                return res.status(404).json({ message: "Student not found" });
+            }
+
+            result.password = undefined;
+            return res.send(result);
+        } catch (error) {
+            if (error && (error.name === "ValidationError" || error.name === "CastError")) {
+                return res.status(400).json({ message: "Invalid student update data" });
+            }
+            return res.status(500).json({ message: "Unable to update student" });
+        }
+    };
 }
+
+const updateStudent = createUpdateStudentHandler();
 
 const updateExamResult = async (req, res) => {
     const { subName, marksObtained } = req.body;
