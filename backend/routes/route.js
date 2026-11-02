@@ -30,111 +30,118 @@ const { getAuthSession, authLogout } = require('../controllers/auth-controller.j
 const { authenticateSession } = require('../middleware/authenticateSession.js');
 const { authorizeRoles } = require('../middleware/authorizeRoles.js');
 
-// Admin
+// Reusable route guards. Keep authentication before role checks.
+const requireAdmin = [authenticateSession, authorizeRoles("Admin")];
+const requireAdminOrTeacher = [authenticateSession, authorizeRoles("Admin", "Teacher")];
+const requireSchoolMember = [authenticateSession, authorizeRoles("Admin", "Teacher", "Student")];
+const requireTeacherOrStudent = [authenticateSession, authorizeRoles("Teacher", "Student")];
+const requireTeacher = [authenticateSession, authorizeRoles("Teacher")];
+const requireStudent = [authenticateSession, authorizeRoles("Student")];
+
+// Admin account bootstrap and login remain public by design.
 router.post('/AdminReg', adminRegister);
 router.post('/AdminLogin', adminLogIn);
-
-router.get("/Admin/:id", getAdminDetail)
+router.get("/Admin/:id", ...requireAdmin, getAdminDetail);
 // router.delete("/Admin/:id", deleteAdmin)
 
 // router.put("/Admin/:id", updateAdmin)
 
 // Student
 
-router.post('/StudentReg', studentRegister);
-router.post('/StudentLogin', studentLogIn)
+router.post('/StudentReg', ...requireAdmin, studentRegister);
+router.post('/StudentLogin', studentLogIn);
 
-router.get("/Students/:id", getStudents)
-router.get("/Student/:id", getStudentDetail)
+router.get("/Students/:id", ...requireAdminOrTeacher, getStudents);
+router.get("/Student/:id", ...requireSchoolMember, getStudentDetail);
 
-router.delete("/Students/:id", deleteStudents)
-router.delete("/StudentsClass/:id", deleteStudentsByClass)
-router.delete("/Student/:id", deleteStudent)
+router.delete("/Students/:id", ...requireAdmin, deleteStudents);
+router.delete("/StudentsClass/:id", ...requireAdmin, deleteStudentsByClass);
+router.delete("/Student/:id", ...requireAdmin, deleteStudent);
 
-router.put("/Student/:id", updateStudent)
+router.put("/Student/:id", ...requireAdmin, updateStudent);
 
-router.put('/UpdateExamResult/:id', updateExamResult)
+router.put('/UpdateExamResult/:id', ...requireAdminOrTeacher, updateExamResult);
 
-router.put('/StudentAttendance/:id', studentAttendance)
+router.put('/StudentAttendance/:id', ...requireAdminOrTeacher, studentAttendance);
 
-router.put('/RemoveAllStudentsSubAtten/:id', clearAllStudentsAttendanceBySubject);
-router.put('/RemoveAllStudentsAtten/:id', clearAllStudentsAttendance);
+router.put('/RemoveAllStudentsSubAtten/:id', ...requireAdminOrTeacher, clearAllStudentsAttendanceBySubject);
+router.put('/RemoveAllStudentsAtten/:id', ...requireAdmin, clearAllStudentsAttendance);
 
-router.put('/RemoveStudentSubAtten/:id', removeStudentAttendanceBySubject);
-router.put('/RemoveStudentAtten/:id', removeStudentAttendance)
+router.put('/RemoveStudentSubAtten/:id', ...requireAdminOrTeacher, removeStudentAttendanceBySubject);
+router.put('/RemoveStudentAtten/:id', ...requireAdminOrTeacher, removeStudentAttendance);
 
 // Teacher
 
-router.post('/TeacherReg', teacherRegister);
-router.post('/TeacherLogin', teacherLogIn)
+router.post('/TeacherReg', ...requireAdmin, teacherRegister);
+router.post('/TeacherLogin', teacherLogIn);
 
-router.get("/Teachers/:id", getTeachers)
-router.get("/Teacher/:id", getTeacherDetail)
+router.get("/Teachers/:id", ...requireAdmin, getTeachers);
+router.get("/Teacher/:id", ...requireAdminOrTeacher, getTeacherDetail);
 
-router.delete("/Teachers/:id", deleteTeachers)
-router.delete("/TeachersClass/:id", deleteTeachersByClass)
-router.delete("/Teacher/:id", deleteTeacher)
+router.delete("/Teachers/:id", ...requireAdmin, deleteTeachers);
+router.delete("/TeachersClass/:id", ...requireAdmin, deleteTeachersByClass);
+router.delete("/Teacher/:id", ...requireAdmin, deleteTeacher);
 
-router.put("/TeacherSubject", updateTeacherSubject)
+router.put("/TeacherSubject", ...requireAdmin, updateTeacherSubject);
 
-router.post('/TeacherAttendance/:id', teacherAttendance)
+router.post('/TeacherAttendance/:id', ...requireAdmin, teacherAttendance);
 
 // Notice
 
-router.post('/NoticeCreate', noticeCreate);
+router.post('/NoticeCreate', ...requireAdmin, noticeCreate);
 
-router.get('/NoticeList/:id', noticeList);
+router.get('/NoticeList/:id', ...requireSchoolMember, noticeList);
 
-router.delete("/Notices/:id", deleteNotices)
-router.delete("/Notice/:id", deleteNotice)
+router.delete("/Notices/:id", ...requireAdmin, deleteNotices);
+router.delete("/Notice/:id", ...requireAdmin, deleteNotice);
 
-router.put("/Notice/:id", updateNotice)
+router.put("/Notice/:id", ...requireAdmin, updateNotice);
 
 // Complain
 
-router.post('/ComplainCreate', complainCreate);
+router.post('/ComplainCreate', ...requireStudent, complainCreate);
 
-router.get('/ComplainList/:id', complainList);
+router.get('/ComplainList/:id', ...requireAdmin, complainList);
 
 // Sclass
 
-router.post('/SclassCreate', sclassCreate);
+router.post('/SclassCreate', ...requireAdmin, sclassCreate);
 
-router.get('/SclassList/:id', sclassList);
-router.get("/Sclass/:id", getSclassDetail)
+router.get('/SclassList/:id', ...requireAdmin, sclassList);
+router.get("/Sclass/:id", ...requireSchoolMember, getSclassDetail);
 
-router.get("/Sclass/Students/:id", getSclassStudents)
+router.get("/Sclass/Students/:id", ...requireAdminOrTeacher, getSclassStudents);
 
-router.delete("/Sclasses/:id", deleteSclasses)
-router.delete("/Sclass/:id", deleteSclass)
+router.delete("/Sclasses/:id", ...requireAdmin, deleteSclasses);
+router.delete("/Sclass/:id", ...requireAdmin, deleteSclass);
 
 // Subject
 
-router.post('/SubjectCreate', subjectCreate);
+router.post('/SubjectCreate', ...requireAdmin, subjectCreate);
 
-router.get('/AllSubjects/:id', allSubjects);
-router.get('/ClassSubjects/:id', classSubjects);
-router.get('/FreeSubjectList/:id', freeSubjectList);
-router.get("/Subject/:id", getSubjectDetail)
+router.get('/AllSubjects/:id', ...requireAdmin, allSubjects);
+router.get('/ClassSubjects/:id', ...requireSchoolMember, classSubjects);
+router.get('/FreeSubjectList/:id', ...requireAdmin, freeSubjectList);
+router.get("/Subject/:id", ...requireSchoolMember, getSubjectDetail);
 
-router.delete("/Subject/:id", deleteSubject)
-router.delete("/Subjects/:id", deleteSubjects)
-router.delete("/SubjectsClass/:id", deleteSubjectsByClass)
+router.delete("/Subject/:id", ...requireAdmin, deleteSubject);
+router.delete("/Subjects/:id", ...requireAdmin, deleteSubjects);
+router.delete("/SubjectsClass/:id", ...requireAdmin, deleteSubjectsByClass);
 
 // Game Zone
-router.post('/GameActivityCreate', authenticateSession, authorizeRoles("Teacher"), gameActivityCreate);
-router.get('/GameActivityList/:id', authenticateSession, authorizeRoles("Teacher", "Student"), gameActivityList);
-router.put('/GameActivityPublish/:id', authenticateSession, authorizeRoles("Teacher"), publishGameActivity);
-router.put('/GameActivityArchive/:id', authenticateSession, authorizeRoles("Teacher"), archiveGameActivity);
+router.post('/GameActivityCreate', ...requireTeacher, gameActivityCreate);
+router.get('/GameActivityList/:id', ...requireTeacherOrStudent, gameActivityList);
+router.put('/GameActivityPublish/:id', ...requireTeacher, publishGameActivity);
+router.put('/GameActivityArchive/:id', ...requireTeacher, archiveGameActivity);
 
 // Authentication session
 router.get('/AuthSession', authenticateSession, getAuthSession);
 router.post('/AuthLogout', authLogout);
 
 // AI Learning Studio: first-party, server-graded quizzes
-router.post('/LearningQuizCreate', authenticateSession, authorizeRoles("Teacher"), learningQuizCreate);
-router.get('/LearningQuizList/:id', authenticateSession, authorizeRoles("Teacher", "Student"), learningQuizList);
-router.put('/LearningQuizPublish/:id', authenticateSession, authorizeRoles("Teacher"), publishLearningQuiz);
-router.post('/LearningQuizSubmit/:id', authenticateSession, authorizeRoles("Student"), learningQuizSubmit);
+router.post('/LearningQuizCreate', ...requireTeacher, learningQuizCreate);
+router.get('/LearningQuizList/:id', ...requireTeacherOrStudent, learningQuizList);
+router.put('/LearningQuizPublish/:id', ...requireTeacher, publishLearningQuiz);
+router.post('/LearningQuizSubmit/:id', ...requireStudent, learningQuizSubmit);
 
 module.exports = router;
