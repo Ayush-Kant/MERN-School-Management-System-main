@@ -25,6 +25,7 @@ const studentRegister = async (req, res) => {
             const student = new Student({
                 ...req.body,
                 school: req.body.adminID,
+                role: "Student",
                 password: hashedPass
             });
 
