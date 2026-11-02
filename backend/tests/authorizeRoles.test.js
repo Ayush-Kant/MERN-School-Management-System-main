@@ -117,3 +117,18 @@ test("rejects invalid middleware configuration immediately", () => {
     assert.throws(() => authorizeRoles("teacher"), TypeError);
     assert.throws(() => authorizeRoles("Teacher", "Root"), TypeError);
 });
+
+test("accepts valid ObjectIds containing numeric characters", () => {
+    const middleware = authorizeRoles("Student");
+    const res = makeResponse();
+    let nextCalled = false;
+
+    middleware({
+        auth: { userId: "1234567890abcdef12345678", role: "Student" },
+    }, res, () => {
+        nextCalled = true;
+    });
+
+    assert.equal(nextCalled, true);
+    assert.equal(res.body, undefined);
+});
