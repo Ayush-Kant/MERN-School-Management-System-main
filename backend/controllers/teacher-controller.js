@@ -6,6 +6,15 @@ const {
 } = require("../utils/authSession.js");
 const Teacher = require('../models/teacherSchema.js');
 const Subject = require('../models/subjectSchema.js');
+const GameActivity = require('../models/gameActivitySchema.js');
+const {
+    createGameActivityLifecycle,
+    sameReference,
+} = require('../services/learning/gameActivityIntegrity.js');
+
+const gameActivityLifecycle = createGameActivityLifecycle({
+    GameActivityModel: GameActivity,
+});
 
 const teacherRegister = async (req, res) => {
     const { name, email, password, school, teachSubject, teachSclass } = req.body;
@@ -99,13 +108,63 @@ const getTeacherDetail = async (req, res) => {
 const updateTeacherSubject = async (req, res) => {
     const { teacherId, teachSubject } = req.body;
     try {
+        const teacher = await Teacher.findById(teacherId);
+        if (!teacher) {
+            return res.status(404).json({ message: "Teacher not found" });
+        }
+
+        const nextSubject = await Subject.findById(teachSubject);
+        if (!nextSubject) {
+            return res.status(404).json({ message: "Subject not found" });
+        }
+
+        if (
+            !sameReference(nextSubject.school, teacher.school) ||
+            !sameReference(nextSubject.sclassName, teacher.teachSclass)
+        ) {
+            return res.status(400).json({
+                message: "The assigned subject must belong to the teacher's current school and class",
+            });
+        }
+
+        if (nextSubject.teacher && !sameReference(nextSubject.teacher, teacher._id)) {
+            return res.status(409).json({
+                message: "The assigned subject is linked to a different teacher",
+            });
+        }
+
+        const previousSubjectId = teacher.teachSubject;
+        const assignmentChanged = !sameReference(previousSubjectId, nextSubject._id);
+
+        if (assignmentChanged) {
+            // Old activities no longer match the Teacher's persisted assignment.
+            await gameActivityLifecycle.archiveForTeacherReassignment(teacher._id, {
+                schoolId: teacher.school,
+                classId: teacher.teachSclass,
+                subjectId: nextSubject._id,
+            });
+        }
+
         const updatedTeacher = await Teacher.findByIdAndUpdate(
             teacherId,
-            { teachSubject },
-            { new: true }
+            { teachSubject: nextSubject._id },
+            { new: true, runValidators: true }
         );
+        if (!updatedTeacher) {
+            return res.status(404).json({ message: "Teacher not found" });
+        }
 
-        await Subject.findByIdAndUpdate(teachSubject, { teacher: updatedTeacher._id });
+        if (assignmentChanged && previousSubjectId) {
+            await Subject.updateOne(
+                { _id: previousSubjectId, teacher: teacher._id },
+                { $unset: { teacher: "" } }
+            );
+        }
+
+        await Subject.updateOne(
+            { _id: nextSubject._id },
+            { $set: { teacher: updatedTeacher._id } }
+        );
 
         res.send(updatedTeacher);
     } catch (error) {
@@ -115,11 +174,21 @@ const updateTeacherSubject = async (req, res) => {
 
 const deleteTeacher = async (req, res) => {
     try {
+        const teacherToDelete = await Teacher.findById(req.params.id);
+        if (!teacherToDelete) {
+            return res.send({ message: "Teacher not found" });
+        }
+
+        await gameActivityLifecycle.archiveByTeacher(teacherToDelete._id);
+
         const deletedTeacher = await Teacher.findByIdAndDelete(req.params.id);
+        if (!deletedTeacher) {
+            return res.send({ message: "Teacher not found" });
+        }
 
         await Subject.updateOne(
-            { teacher: deletedTeacher._id, teacher: { $exists: true } },
-            { $unset: { teacher: 1 } }
+            { teacher: deletedTeacher._id },
+            { $unset: { teacher: "" } }
         );
 
         res.send(deletedTeacher);
@@ -130,20 +199,24 @@ const deleteTeacher = async (req, res) => {
 
 const deleteTeachers = async (req, res) => {
     try {
-        const deletionResult = await Teacher.deleteMany({ school: req.params.id });
+        const teachersToDelete = await Teacher.find({ school: req.params.id }).select("_id");
+        if (teachersToDelete.length === 0) {
+            return res.send({ message: "No teachers found to delete" });
+        }
 
+        const teacherIds = teachersToDelete.map((teacher) => teacher._id);
+        await gameActivityLifecycle.archiveByTeachers(teacherIds);
+
+        const deletionResult = await Teacher.deleteMany({ school: req.params.id });
         const deletedCount = deletionResult.deletedCount || 0;
 
         if (deletedCount === 0) {
-            res.send({ message: "No teachers found to delete" });
-            return;
+            return res.send({ message: "No teachers found to delete" });
         }
 
-        const deletedTeachers = await Teacher.find({ school: req.params.id });
-
         await Subject.updateMany(
-            { teacher: { $in: deletedTeachers.map(teacher => teacher._id) }, teacher: { $exists: true } },
-            { $unset: { teacher: "" }, $unset: { teacher: null } }
+            { teacher: { $in: teacherIds } },
+            { $unset: { teacher: "" } }
         );
 
         res.send(deletionResult);
@@ -154,20 +227,24 @@ const deleteTeachers = async (req, res) => {
 
 const deleteTeachersByClass = async (req, res) => {
     try {
-        const deletionResult = await Teacher.deleteMany({ sclassName: req.params.id });
+        const teachersToDelete = await Teacher.find({ teachSclass: req.params.id }).select("_id");
+        if (teachersToDelete.length === 0) {
+            return res.send({ message: "No teachers found to delete" });
+        }
 
+        const teacherIds = teachersToDelete.map((teacher) => teacher._id);
+        await gameActivityLifecycle.archiveByTeachers(teacherIds);
+
+        const deletionResult = await Teacher.deleteMany({ teachSclass: req.params.id });
         const deletedCount = deletionResult.deletedCount || 0;
 
         if (deletedCount === 0) {
-            res.send({ message: "No teachers found to delete" });
-            return;
+            return res.send({ message: "No teachers found to delete" });
         }
 
-        const deletedTeachers = await Teacher.find({ sclassName: req.params.id });
-
         await Subject.updateMany(
-            { teacher: { $in: deletedTeachers.map(teacher => teacher._id) }, teacher: { $exists: true } },
-            { $unset: { teacher: "" }, $unset: { teacher: null } }
+            { teacher: { $in: teacherIds } },
+            { $unset: { teacher: "" } }
         );
 
         res.send(deletionResult);
