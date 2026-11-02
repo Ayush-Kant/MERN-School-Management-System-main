@@ -18,13 +18,14 @@ The activity also stores a validated Wordwall embed URL, provider, topic, lifecy
 
 ## 2. Relationship invariant
 
-Before a Teacher creates an activity, the controller loads the Teacher, their assigned Class, and their assigned Subject from MongoDB. The shared `validateGameActivityRelationships` function verifies:
+Before a Teacher creates an activity, the controller loads the referenced Admin school, the Teacher, the Teacher's assigned Class, and the Teacher's assigned Subject from MongoDB. The shared `validateGameActivityRelationships` function verifies:
 
 1. The Teacher and all required assignment references exist and are valid ObjectIds.
-2. The loaded Class and Subject IDs match the Teacher's persisted assignments.
-3. The Class and Subject belong to the Teacher's school.
-4. The Subject belongs to the Teacher's assigned Class.
-5. If the Subject is already assigned to a Teacher, it must be assigned to this Teacher.
+2. The Admin school exists and its ID matches the Teacher's persisted school reference.
+3. The loaded Class and Subject IDs match the Teacher's persisted assignments.
+4. The Class and Subject belong to the Teacher's school.
+5. The Subject belongs to the Teacher's assigned Class.
+6. If the Subject is already assigned to a Teacher, it must be assigned to this Teacher.
 
 The helper is pure and unit-tested. It does not trust request-supplied school, class, subject, or teacher IDs as authority.
 
