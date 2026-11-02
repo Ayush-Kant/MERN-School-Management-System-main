@@ -1,6 +1,12 @@
 const Subject = require('../models/subjectSchema.js');
 const Teacher = require('../models/teacherSchema.js');
 const Student = require('../models/studentSchema.js');
+const GameActivity = require('../models/gameActivitySchema.js');
+const { createGameActivityLifecycle } = require('../services/learning/gameActivityIntegrity.js');
+
+const gameActivityLifecycle = createGameActivityLifecycle({
+    GameActivityModel: GameActivity,
+});
 
 const subjectCreate = async (req, res) => {
     try {
@@ -90,12 +96,23 @@ const getSubjectDetail = async (req, res) => {
 
 const deleteSubject = async (req, res) => {
     try {
-        const deletedSubject = await Subject.findByIdAndDelete(req.params.id);
+        const existingSubject = await Subject.findById(req.params.id);
+        if (!existingSubject) {
+            return res.send({ message: "Subject not found" });
+        }
 
-        // Set the teachSubject field to null in teachers
-        await Teacher.updateOne(
+        // Preserve the learning record while its source subject is removed.
+        await gameActivityLifecycle.archiveBySubject(existingSubject._id);
+
+        const deletedSubject = await Subject.findByIdAndDelete(req.params.id);
+        if (!deletedSubject) {
+            return res.send({ message: "Subject not found" });
+        }
+
+        // Clear the deleted subject assignment from its teacher.
+        await Teacher.updateMany(
             { teachSubject: deletedSubject._id },
-            { $unset: { teachSubject: "" }, $unset: { teachSubject: null } }
+            { $unset: { teachSubject: "" } }
         );
 
         // Remove the objects containing the deleted subject from students' examResult array
@@ -118,13 +135,19 @@ const deleteSubject = async (req, res) => {
 
 const deleteSubjects = async (req, res) => {
     try {
-        const deletedSubjects = await Subject.deleteMany({ school: req.params.id });
+        // All subjects in this school are being removed, so none of its games remain eligible.
+        await gameActivityLifecycle.archiveBySchool(req.params.id);
 
-        // Set the teachSubject field to null in teachers
-        await Teacher.updateMany(
-            { teachSubject: { $in: deletedSubjects.map(subject => subject._id) } },
-            { $unset: { teachSubject: "" }, $unset: { teachSubject: null } }
-        );
+        const subjectsToDelete = await Subject.find({ school: req.params.id }).select("_id");
+        const deletedSubjects = await Subject.deleteMany({ school: req.params.id });
+        const deletedSubjectIds = subjectsToDelete.map((subject) => subject._id);
+
+        if (deletedSubjectIds.length > 0) {
+            await Teacher.updateMany(
+                { teachSubject: { $in: deletedSubjectIds } },
+                { $unset: { teachSubject: "" } }
+            );
+        }
 
         // Set examResult and attendance to null in all students
         await Student.updateMany(
@@ -140,13 +163,19 @@ const deleteSubjects = async (req, res) => {
 
 const deleteSubjectsByClass = async (req, res) => {
     try {
-        const deletedSubjects = await Subject.deleteMany({ sclassName: req.params.id });
+        // The class is being cleared of subjects; archive games before their subject references disappear.
+        await gameActivityLifecycle.archiveByClass(req.params.id);
 
-        // Set the teachSubject field to null in teachers
-        await Teacher.updateMany(
-            { teachSubject: { $in: deletedSubjects.map(subject => subject._id) } },
-            { $unset: { teachSubject: "" }, $unset: { teachSubject: null } }
-        );
+        const subjectsToDelete = await Subject.find({ sclassName: req.params.id }).select("_id");
+        const deletedSubjects = await Subject.deleteMany({ sclassName: req.params.id });
+        const deletedSubjectIds = subjectsToDelete.map((subject) => subject._id);
+
+        if (deletedSubjectIds.length > 0) {
+            await Teacher.updateMany(
+                { teachSubject: { $in: deletedSubjectIds } },
+                { $unset: { teachSubject: "" } }
+            );
+        }
 
         // Set examResult and attendance to null in all students
         await Student.updateMany(
