@@ -62,6 +62,7 @@ function rejectIdentityOverride(suppliedId, authenticatedId, res, fieldName) {
  */
 function createGameActivityController({
     GameActivityModel,
+    AdminModel,
     TeacherModel,
     SclassModel,
     SubjectModel,
@@ -120,13 +121,15 @@ function createGameActivityController({
                 return sendApiError(res, 404, "Teacher not found");
             }
 
-            const [schoolClass, subject] = await Promise.all([
+            const [schoolRecord, schoolClass, subject] = await Promise.all([
+                AdminModel.findById(teacher.school),
                 SclassModel.findById(teacher.teachSclass),
                 SubjectModel.findById(teacher.teachSubject),
             ]);
 
             const relationshipError = validateGameActivityRelationships({
                 teacher,
+                schoolRecord,
                 schoolClass,
                 subject,
             });
@@ -394,6 +397,7 @@ function getDefaultController() {
     if (!defaultController) {
         defaultController = createGameActivityController({
             GameActivityModel: require("../models/gameActivitySchema.js"),
+            AdminModel: require("../models/adminSchema.js"),
             TeacherModel: require("../models/teacherSchema.js"),
             SclassModel: require("../models/sclassSchema.js"),
             SubjectModel: require("../models/subjectSchema.js"),
