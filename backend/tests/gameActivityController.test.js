@@ -160,6 +160,23 @@ function makeHarness(overrides = {}) {
     return { controller, calls };
 }
 
+test("rejects a missing referenced school before creating a GameActivity", async () => {
+    const { controller, calls } = makeHarness({ school: null });
+    const res = makeResponse();
+
+    await controller.gameActivityCreate({
+        body: {
+            teacherId: TEACHER_ID,
+            title: "Valid title",
+            embedUrl: "https://wordwall.net/embed/1",
+        },
+    }, res);
+
+    assert.equal(res.statusCode, 404);
+    assert.equal(res.body.message, "School not found for this Teacher");
+    assert.equal(calls.createdData, null);
+});
+
 test("creates a draft scoped to the teacher's assigned school, class, and subject", async () => {
     const { controller, calls } = makeHarness();
     const res = makeResponse();
