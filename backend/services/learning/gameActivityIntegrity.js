@@ -1,4 +1,4 @@
-const OBJECT_ID_PATTERN = /^[a-f\\d]{24}$/i;
+const OBJECT_ID_PATTERN = /^[a-f\d]{24}$/i;
 
 const GAME_ACTIVITY_ARCHIVE_REASONS = Object.freeze([
     "manual",
@@ -39,7 +39,7 @@ function sameReference(left, right) {
  * creating a GameActivity. The caller loads the three documents from MongoDB;
  * request-supplied identifiers are never used as relationship authority.
  */
-function validateGameActivityRelationships({ teacher, schoolClass, subject } = {}) {
+function validateGameActivityRelationships({ teacher, schoolRecord, schoolClass, subject } = {}) {
     if (!teacher || !normalizeReferenceId(teacher._id)) {
         return { status: 404, message: "Teacher not found" };
     }
@@ -53,6 +53,10 @@ function validateGameActivityRelationships({ teacher, schoolClass, subject } = {
             status: 400,
             message: "The teacher must be assigned to a school, class, and subject before creating a game",
         };
+    }
+
+    if (!schoolRecord || !sameReference(schoolRecord._id, teacher.school)) {
+        return { status: 404, message: "School not found for this Teacher" };
     }
 
     if (
