@@ -46,6 +46,7 @@ function makeResponse() {
 function makeHarness(overrides = {}) {
     const calls = {
         teacherLookup: [],
+        schoolLookup: [],
         studentLookup: [],
         classLookup: [],
         subjectLookup: [],
@@ -109,6 +110,13 @@ function makeHarness(overrides = {}) {
 
     const controller = createGameActivityController({
         GameActivityModel: FakeGameActivity,
+        AdminModel: {
+            async findById(id) {
+                calls.schoolLookup.push(id);
+                if (Object.hasOwn(overrides, "school")) return overrides.school;
+                return { _id: SCHOOL_ID };
+            },
+        },
         TeacherModel: {
             async findById(id) {
                 calls.teacherLookup.push(id);
