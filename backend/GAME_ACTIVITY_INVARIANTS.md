@@ -56,8 +56,8 @@ The lifecycle helper uses `updateMany` with `runValidators: true` and a filter t
 | Delete one Class | `class` | `class_deleted` |
 | Delete all Classes in a school | `school` | `school_resources_deleted` |
 | Delete one Subject | `subject` | `subject_deleted` |
-| Delete all Subjects in a school | `school` | `school_resources_deleted` |
-| Delete Subjects in one Class | `class` | `class_deleted` |
+| Delete all Subjects in a school | `subject: { $in: subjectIds }` | `subject_deleted` |
+| Delete Subjects in one Class | `subject: { $in: subjectIds }` | `subject_deleted` |
 | Delete one Teacher | `createdByTeacher` | `teacher_deleted` |
 | Delete multiple Teachers | `createdByTeacher: { $in: teacherIds }` | `teacher_deleted` |
 | Reassign a Teacher's Subject | Teacher plus any old school/class/subject scope that differs from the new assignment | `teacher_reassigned` |
