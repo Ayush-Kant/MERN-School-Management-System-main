@@ -87,6 +87,8 @@ function makeResponse() {
 
 function makeHarness(overrides = {}) {
     const calls = {
+        teacherLookup: [],
+        studentLookup: [],
         quizCreateData: null,
         quizListFilter: null,
         quizFindOneAndUpdateFilter: null,
@@ -169,12 +171,14 @@ function makeHarness(overrides = {}) {
         LearningQuizModel: FakeLearningQuiz,
         LearningAttemptModel: FakeLearningAttempt,
         TeacherModel: {
-            async findById() {
+            async findById(id) {
+                calls.teacherLookup.push(id);
                 return Object.hasOwn(overrides, "teacher") ? overrides.teacher : teacher;
             },
         },
         StudentModel: {
-            async findById() {
+            async findById(id) {
+                calls.studentLookup.push(id);
                 return Object.hasOwn(overrides, "student") ? overrides.student : student;
             },
         },
@@ -189,6 +193,22 @@ function makeHarness(overrides = {}) {
             },
         },
     });
+
+    const defaultActors = {
+        learningQuizCreate: { userId: TEACHER_ID, role: "Teacher" },
+        learningQuizList: { userId: TEACHER_ID, role: "Teacher" },
+        publishLearningQuiz: { userId: TEACHER_ID, role: "Teacher" },
+        learningQuizSubmit: { userId: STUDENT_ID, role: "Student" },
+    };
+    for (const [methodName, method] of Object.entries({ ...controller })) {
+        controller[methodName] = (req, res) => {
+            const authenticatedRequest = { ...req };
+            if (!Object.prototype.hasOwnProperty.call(authenticatedRequest, "auth")) {
+                authenticatedRequest.auth = defaultActors[methodName];
+            }
+            return method(authenticatedRequest, res);
+        };
+    }
 
     return { controller, calls };
 }
@@ -275,6 +295,7 @@ test("student quiz listings contain no answer keys or teacher explanations", asy
     const res = makeResponse();
 
     await controller.learningQuizList({
+        auth: { userId: STUDENT_ID, role: "Student" },
         params: { id: SCHOOL_ID },
         query: { classId: CLASS_ID, subjectId: SUBJECT_ID },
     }, res);
@@ -294,8 +315,8 @@ test("student quiz listings contain no answer keys or teacher explanations", asy
 
 test("requires class scope and does not allow students to list draft quizzes", async () => {
     const cases = [
-        { params: { id: SCHOOL_ID }, query: {}, expected: 400 },
-        { params: { id: SCHOOL_ID }, query: { classId: CLASS_ID, status: "draft" }, expected: 403 },
+        { auth: { userId: STUDENT_ID, role: "Student" }, params: { id: SCHOOL_ID }, query: {}, expected: 400 },
+        { auth: { userId: STUDENT_ID, role: "Student" }, params: { id: SCHOOL_ID }, query: { classId: CLASS_ID, status: "draft" }, expected: 403 },
     ];
 
     for (const request of cases) {
@@ -318,6 +339,8 @@ test("teacher listing is scoped to the requesting teacher and can include drafts
     assert.equal(res.statusCode, 200);
     assert.deepEqual(calls.quizListFilter, {
         school: SCHOOL_ID,
+        class: CLASS_ID,
+        subject: SUBJECT_ID,
         createdByTeacher: TEACHER_ID,
         status: "draft",
     });
@@ -339,6 +362,7 @@ test("publishes only the teacher's draft quiz", async () => {
     assert.deepEqual(calls.quizFindOneAndUpdateFilter, {
         _id: QUIZ_ID,
         createdByTeacher: TEACHER_ID,
+        school: SCHOOL_ID,
         status: "draft",
     });
     assert.equal(calls.quizFindOneAndUpdateData.update.$set.status, "published");
@@ -480,4 +504,52 @@ test("rejects answer attempts for unknown quiz or student", async () => {
         assert.equal(res.statusCode, item.expected);
         assert.equal(calls.attemptCreateData, null);
     }
+});
+
+test("rejects quiz creation or publishing when a teacher spoofs another teacher id", async () => {
+    const createHarness = makeHarness();
+    const createRes = makeResponse();
+    await createHarness.controller.learningQuizCreate(createRequest({ teacherId: "ffffffffffffffffffffffff" }), createRes);
+    assert.equal(createRes.statusCode, 403);
+    assert.equal(createHarness.calls.teacherLookup.length, 0);
+
+    const publishHarness = makeHarness();
+    const publishRes = makeResponse();
+    await publishHarness.controller.publishLearningQuiz({
+        params: { id: QUIZ_ID },
+        body: { teacherId: "ffffffffffffffffffffffff" },
+    }, publishRes);
+    assert.equal(publishRes.statusCode, 403);
+    assert.equal(publishHarness.calls.quizFindOneAndUpdateFilter, null);
+});
+
+test("rejects a student quiz request when the supplied student id differs from the session", async () => {
+    const { controller, calls } = makeHarness();
+    const res = makeResponse();
+
+    await controller.learningQuizSubmit({
+        params: { id: QUIZ_ID },
+        body: {
+            studentId: "ffffffffffffffffffffffff",
+            idempotencyKey: "attempt-key-spoof",
+            answers: [],
+        },
+    }, res);
+
+    assert.equal(res.statusCode, 403);
+    assert.equal(calls.quizLookedUp, undefined);
+    assert.equal(calls.studentLookup.length, 0);
+});
+
+test("rejects teacher quiz listings for a school outside the authenticated teacher's school", async () => {
+    const { controller, calls } = makeHarness();
+    const res = makeResponse();
+
+    await controller.learningQuizList({
+        params: { id: "ffffffffffffffffffffffff" },
+        query: { teacherId: TEACHER_ID },
+    }, res);
+
+    assert.equal(res.statusCode, 404);
+    assert.equal(calls.quizListFilter, null);
 });
