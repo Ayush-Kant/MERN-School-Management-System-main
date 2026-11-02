@@ -536,6 +536,8 @@ test("returns a generic error if a publish or archive database update fails", as
 test("accepts valid ObjectIds containing digits", async () => {
     const { controller, calls } = makeHarness({
         teacher: { ...validTeacher, school: NUMERIC_HEX_ID },
+        schoolClass: { ...validClass, school: NUMERIC_HEX_ID },
+        subject: { ...validSubject, school: NUMERIC_HEX_ID },
         listRecords: [],
     });
     const res = makeResponse();
