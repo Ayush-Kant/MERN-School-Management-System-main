@@ -17,6 +17,41 @@ function validationErrorResponse(res, message) {
     return res.status(400).json({ message });
 }
 
+function getAuthenticatedActor(req, res, allowedRoles) {
+    const actor = req && req.auth;
+    if (
+        !actor ||
+        !isValidObjectId(actor.userId) ||
+        !["Admin", "Teacher", "Student"].includes(actor.role)
+    ) {
+        res.status(401).json({ message: "Authentication required" });
+        return null;
+    }
+
+    if (!allowedRoles.includes(actor.role)) {
+        res.status(403).json({ message: "You are not allowed to access this resource" });
+        return null;
+    }
+
+    return { userId: actor.userId, role: actor.role };
+}
+
+function rejectIdentityOverride(suppliedId, authenticatedId, res, fieldName) {
+    if (suppliedId === undefined) return false;
+
+    if (!isValidObjectId(suppliedId)) {
+        validationErrorResponse(res, `${fieldName} must be a valid id`);
+        return true;
+    }
+
+    if (!sameId(suppliedId, authenticatedId)) {
+        res.status(403).json({ message: `${fieldName} does not match the authenticated account` });
+        return true;
+    }
+
+    return false;
+}
+
 /**
  * Dependencies are injected so the controller can be tested without a live
  * MongoDB connection. Production handlers lazily supply the existing models.
@@ -26,21 +61,27 @@ function createGameActivityController({
     TeacherModel,
     SclassModel,
     SubjectModel,
+    StudentModel,
     validateEmbedUrl = validateWordwallEmbedUrl,
 }) {
     const gameActivityCreate = async (req, res) => {
+        const actor = getAuthenticatedActor(req, res, ["Teacher"]);
+        if (!actor) return;
+
         const body = req.body || {};
+        if (rejectIdentityOverride(body.teacherId, actor.userId, res, "teacherId")) return;
+
         const {
-            teacherId,
             title,
             description = "",
             embedUrl,
             originalUrl = "",
             topic = "",
         } = body;
+        const teacherId = actor.userId;
 
         if (!isValidObjectId(teacherId)) {
-            return validationErrorResponse(res, "A valid teacherId is required");
+            return res.status(401).json({ message: "Authentication required" });
         }
 
         if (typeof title !== "string" || title.trim().length < 2 || title.trim().length > 120) {
@@ -139,6 +180,9 @@ function createGameActivityController({
     };
 
     const gameActivityList = async (req, res) => {
+        const actor = getAuthenticatedActor(req, res, ["Teacher", "Student"]);
+        if (!actor) return;
+
         const schoolId = req.params && req.params.id;
         const queryParams = (req && req.query) || {};
         const { classId, subjectId, teacherId, status } = queryParams;
@@ -163,32 +207,97 @@ function createGameActivityController({
             return validationErrorResponse(res, "status must be draft, published, or archived");
         }
 
-        // Without a teacher context, this endpoint is suitable for student
-        // browsing and exposes only published activities.
-        if (!teacherId && status && status !== "published") {
-            return res.status(403).json({
-                message: "Only teachers can list non-published game activities",
-            });
-        }
-
         try {
-            const filter = { school: schoolId };
+            let filter;
 
-            if (classId) filter.class = classId;
-            if (subjectId) filter.subject = subjectId;
+            if (actor.role === "Teacher") {
+                if (rejectIdentityOverride(teacherId, actor.userId, res, "teacherId")) return;
 
-            if (teacherId) {
-                const teacher = await TeacherModel.findById(teacherId);
-                if (!teacher || !sameId(teacher.school, schoolId)) {
-                    return res.status(404).json({ message: "Teacher not found in this school" });
+                const teacher = await TeacherModel.findById(actor.userId);
+                if (!teacher || !teacher.school || !teacher.teachSclass || !teacher.teachSubject) {
+                    return res.status(404).json({ message: "Teacher not found or not assigned to a class and subject" });
                 }
 
-                filter.createdByTeacher = teacher._id || teacherId;
+                if (!sameId(teacher.school, schoolId)) {
+                    return res.status(404).json({ message: "Game activities not found for this school" });
+                }
+
+                if (classId !== undefined && !sameId(classId, teacher.teachSclass)) {
+                    return res.status(403).json({ message: "You cannot list activities outside your assigned class" });
+                }
+
+                if (subjectId !== undefined && !sameId(subjectId, teacher.teachSubject)) {
+                    return res.status(403).json({ message: "You cannot list activities outside your assigned subject" });
+                }
+
+                const [schoolClass, subject] = await Promise.all([
+                    SclassModel.findById(teacher.teachSclass),
+                    SubjectModel.findById(teacher.teachSubject),
+                ]);
+
+                if (
+                    !schoolClass ||
+                    !subject ||
+                    !sameId(schoolClass.school, teacher.school) ||
+                    !sameId(subject.school, teacher.school) ||
+                    !sameId(subject.sclassName, teacher.teachSclass) ||
+                    (subject.teacher && !sameId(subject.teacher, actor.userId))
+                ) {
+                    return res.status(403).json({ message: "Your current class and subject assignments are not valid" });
+                }
+
+                filter = {
+                    school: teacher.school,
+                    class: teacher.teachSclass,
+                    subject: teacher.teachSubject,
+                    createdByTeacher: actor.userId,
+                };
                 if (status) filter.status = status;
-                // No status filter in teacher context means all of this teacher's
-                // activities (draft, published, and archived).
             } else {
-                filter.status = "published";
+                if (teacherId !== undefined) {
+                    return res.status(403).json({ message: "Student requests cannot use a teacher identity" });
+                }
+                if (status !== undefined && status !== "published") {
+                    return res.status(403).json({
+                        message: "Students can only list published game activities",
+                    });
+                }
+
+                const student = await StudentModel.findById(actor.userId);
+                if (!student || !student.school || !student.sclassName) {
+                    return res.status(404).json({ message: "Student not found or not assigned to a class" });
+                }
+
+                if (!sameId(student.school, schoolId)) {
+                    return res.status(404).json({ message: "Game activities not found for this school" });
+                }
+
+                if (classId !== undefined && !sameId(classId, student.sclassName)) {
+                    return res.status(403).json({ message: "You cannot list activities outside your assigned class" });
+                }
+
+                const schoolClass = await SclassModel.findById(student.sclassName);
+                if (!schoolClass || !sameId(schoolClass.school, student.school)) {
+                    return res.status(404).json({ message: "Student class not found in this school" });
+                }
+
+                filter = {
+                    school: student.school,
+                    class: student.sclassName,
+                    status: "published",
+                };
+
+                if (subjectId !== undefined) {
+                    const subject = await SubjectModel.findById(subjectId);
+                    if (
+                        !subject ||
+                        !sameId(subject.school, student.school) ||
+                        !sameId(subject.sclassName, student.sclassName)
+                    ) {
+                        return res.status(404).json({ message: "Subject not found in the student's class" });
+                    }
+                    filter.subject = subject._id || subjectId;
+                }
             }
 
             const activities = await GameActivityModel.find(filter)
@@ -205,17 +314,16 @@ function createGameActivityController({
     };
 
     const transitionGameActivity = (nextStatus) => async (req, res) => {
+        const actor = getAuthenticatedActor(req, res, ["Teacher"]);
+        if (!actor) return;
+
         const activityId = req.params && req.params.id;
         const body = req.body || {};
-        const { teacherId } = body;
 
         if (!isValidObjectId(activityId)) {
             return validationErrorResponse(res, "A valid game activity id is required");
         }
-
-        if (!isValidObjectId(teacherId)) {
-            return validationErrorResponse(res, "A valid teacherId is required");
-        }
+        if (rejectIdentityOverride(body.teacherId, actor.userId, res, "teacherId")) return;
 
         const expectedStatus = nextStatus === "published" ? "draft" : "published";
         const update = { $set: { status: nextStatus } };
@@ -225,14 +333,21 @@ function createGameActivityController({
         }
 
         try {
-            // Compare-and-set on the current state prevents two concurrent
-            // requests from applying an invalid transition to the same record.
+            const teacher = await TeacherModel.findById(actor.userId);
+            if (!teacher) {
+                return res.status(404).json({ message: "Teacher not found" });
+            }
+
+            // Actor identity and school scope come from the verified session and
+            // current database record, not from the request body.
+            const activityScope = {
+                _id: activityId,
+                createdByTeacher: actor.userId,
+                school: teacher.school,
+            };
+
             const updatedActivity = await GameActivityModel.findOneAndUpdate(
-                {
-                    _id: activityId,
-                    createdByTeacher: teacherId,
-                    status: expectedStatus,
-                },
+                { ...activityScope, status: expectedStatus },
                 update,
                 { new: true, runValidators: true }
             );
@@ -241,13 +356,7 @@ function createGameActivityController({
                 return res.status(200).json(updatedActivity);
             }
 
-            // Distinguish a missing/non-owned activity from a transition conflict
-            // without revealing activities belonging to another teacher.
-            const ownedActivity = await GameActivityModel.findOne({
-                _id: activityId,
-                createdByTeacher: teacherId,
-            });
-
+            const ownedActivity = await GameActivityModel.findOne(activityScope);
             if (!ownedActivity) {
                 return res.status(404).json({
                     message: "Game activity not found for this teacher",
@@ -286,6 +395,7 @@ function getDefaultController() {
             TeacherModel: require("../models/teacherSchema.js"),
             SclassModel: require("../models/sclassSchema.js"),
             SubjectModel: require("../models/subjectSchema.js"),
+            StudentModel: require("../models/studentSchema.js"),
         });
     }
     return defaultController;
