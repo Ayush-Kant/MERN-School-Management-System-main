@@ -135,12 +135,13 @@ const deleteSubject = async (req, res) => {
 
 const deleteSubjects = async (req, res) => {
     try {
-        // All subjects in this school are being removed, so none of its games remain eligible.
-        await gameActivityLifecycle.archiveBySchool(req.params.id);
-
         const subjectsToDelete = await Subject.find({ school: req.params.id }).select("_id");
-        const deletedSubjects = await Subject.deleteMany({ school: req.params.id });
         const deletedSubjectIds = subjectsToDelete.map((subject) => subject._id);
+
+        // Archive only activities that reference the subjects being removed.
+        await gameActivityLifecycle.archiveBySubjects(deletedSubjectIds);
+
+        const deletedSubjects = await Subject.deleteMany({ school: req.params.id });
 
         if (deletedSubjectIds.length > 0) {
             await Teacher.updateMany(
@@ -163,12 +164,13 @@ const deleteSubjects = async (req, res) => {
 
 const deleteSubjectsByClass = async (req, res) => {
     try {
-        // The class is being cleared of subjects; archive games before their subject references disappear.
-        await gameActivityLifecycle.archiveByClass(req.params.id);
-
         const subjectsToDelete = await Subject.find({ sclassName: req.params.id }).select("_id");
-        const deletedSubjects = await Subject.deleteMany({ sclassName: req.params.id });
         const deletedSubjectIds = subjectsToDelete.map((subject) => subject._id);
+
+        // Archive only activities that reference the subjects being removed.
+        await gameActivityLifecycle.archiveBySubjects(deletedSubjectIds);
+
+        const deletedSubjects = await Subject.deleteMany({ sclassName: req.params.id });
 
         if (deletedSubjectIds.length > 0) {
             await Teacher.updateMany(
