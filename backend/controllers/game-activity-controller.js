@@ -1,5 +1,8 @@
 const { validateWordwallEmbedUrl } = require("../utils/wordwallUrl");
 const { sendApiError } = require("../utils/apiResponse.js");
+const {
+    validateGameActivityRelationships,
+} = require("../services/learning/gameActivityIntegrity.js");
 
 const GAME_STATUSES = new Set(["draft", "published", "archived"]);
 const OBJECT_ID_PATTERN = /^[a-f\d]{24}$/i;
@@ -117,39 +120,21 @@ function createGameActivityController({
                 return sendApiError(res, 404, "Teacher not found");
             }
 
-            if (!teacher.school || !teacher.teachSclass || !teacher.teachSubject) {
-                return validationErrorResponse(
-                    res,
-                    "The teacher must be assigned to a school, class, and subject before creating a game"
-                );
-            }
-
             const [schoolClass, subject] = await Promise.all([
                 SclassModel.findById(teacher.teachSclass),
                 SubjectModel.findById(teacher.teachSubject),
             ]);
 
-            if (!schoolClass || !subject) {
-                return validationErrorResponse(
-                    res,
-                    "The teacher's assigned class or subject could not be found"
-                );
-            }
-
-            const assignmentsMatch =
-                sameId(schoolClass.school, teacher.school) &&
-                sameId(subject.school, teacher.school) &&
-                sameId(subject.sclassName, teacher.teachSclass);
-
-            if (!assignmentsMatch) {
-                return validationErrorResponse(
-                    res,
-                    "The teacher's class and subject must belong to the same school and class"
-                );
-            }
-
-            if (subject.teacher && !sameId(subject.teacher, teacher._id)) {
-                return sendApiError(res, 409, "The assigned subject is linked to a different teacher");
+            const relationshipError = validateGameActivityRelationships({
+                teacher,
+                schoolClass,
+                subject,
+            });
+            if (relationshipError) {
+                if (relationshipError.status === 400) {
+                    return validationErrorResponse(res, relationshipError.message);
+                }
+                return sendApiError(res, relationshipError.status, relationshipError.message);
             }
 
             // The first API slice always creates a draft. Publishing will be a
@@ -327,6 +312,9 @@ function createGameActivityController({
 
         if (nextStatus === "published") {
             update.$set.publishedAt = new Date();
+        } else if (nextStatus === "archived") {
+            update.$set.archivedAt = new Date();
+            update.$set.archiveReason = "manual";
         }
 
         try {
