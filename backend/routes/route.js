@@ -26,6 +26,8 @@ const { subjectCreate, classSubjects, deleteSubjectsByClass, getSubjectDetail, d
 const { teacherRegister, teacherLogIn, getTeachers, getTeacherDetail, deleteTeachers, deleteTeachersByClass, deleteTeacher, updateTeacherSubject, teacherAttendance } = require('../controllers/teacher-controller.js');
 const { gameActivityCreate, gameActivityList, publishGameActivity, archiveGameActivity } = require('../controllers/game-activity-controller.js');
 const { learningQuizCreate, learningQuizList, publishLearningQuiz, learningQuizSubmit } = require('../controllers/learning-quiz-controller.js');
+const { getAuthSession, authLogout } = require('../controllers/auth-controller.js');
+const { authenticateSession } = require('../middleware/authenticateSession.js');
 
 // Admin
 router.post('/AdminReg', adminRegister);
@@ -123,6 +125,10 @@ router.post('/GameActivityCreate', gameActivityCreate);
 router.get('/GameActivityList/:id', gameActivityList);
 router.put('/GameActivityPublish/:id', publishGameActivity);
 router.put('/GameActivityArchive/:id', archiveGameActivity);
+
+// Authentication session
+router.get('/AuthSession', authenticateSession, getAuthSession);
+router.post('/AuthLogout', authLogout);
 
 // AI Learning Studio: first-party, server-graded quizzes
 router.post('/LearningQuizCreate', learningQuizCreate);
