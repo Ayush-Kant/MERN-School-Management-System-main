@@ -46,6 +46,7 @@ test("enables credentials only for configured origins", async () => {
     });
     assert.equal(allowed, true);
     assert.equal(options.credentials, true);
+    assert.deepEqual(options.exposedHeaders, ["X-Request-Id"]);
 
     await assert.rejects(
         () => new Promise((resolve, reject) => {
