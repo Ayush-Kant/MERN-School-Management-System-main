@@ -363,6 +363,8 @@ test("publishes only the teacher's draft quiz", async () => {
         _id: QUIZ_ID,
         createdByTeacher: TEACHER_ID,
         school: SCHOOL_ID,
+        class: CLASS_ID,
+        subject: SUBJECT_ID,
         status: "draft",
     });
     assert.equal(calls.quizFindOneAndUpdateData.update.$set.status, "published");
