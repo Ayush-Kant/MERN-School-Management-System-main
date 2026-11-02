@@ -436,7 +436,9 @@ test("archives a published activity without overwriting its original publish tim
     assert.equal(calls.transitionFilter.class, CLASS_ID);
     assert.equal(calls.transitionFilter.subject, SUBJECT_ID);
     assert.equal(calls.transitionFilter.status, "published");
-    assert.deepEqual(calls.transitionUpdate, { $set: { status: "archived" } });
+    assert.equal(calls.transitionUpdate.$set.status, "archived");
+    assert.ok(calls.transitionUpdate.$set.archivedAt instanceof Date);
+    assert.equal(calls.transitionUpdate.$set.archiveReason, "manual");
 });
 
 test("rejects invalid activity and teacher ids before querying MongoDB", async () => {
