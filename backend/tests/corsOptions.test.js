@@ -54,6 +54,10 @@ test("enables credentials only for configured origins", async () => {
                 resolve(result);
             });
         }),
-        /Origin is not allowed by CORS/
+        (error) => {
+            assert.match(error.message, /Origin is not allowed by CORS/);
+            assert.equal(error.code, "CORS_ORIGIN_NOT_ALLOWED");
+            return true;
+        }
     );
 });
