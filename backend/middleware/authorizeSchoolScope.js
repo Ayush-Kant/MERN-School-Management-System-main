@@ -63,7 +63,7 @@ function createAuthorizeSchoolScope(models = {}) {
         if (
             (!SIMPLE_RESOURCES.has(resource) && !RESOURCE_DEFINITIONS[resource]) ||
             typeof from !== "string" ||
-            !/^(params|body|query)\\.[A-Za-z0-9_.]+$/.test(from)
+            !/^(params|body|query)[.][A-Za-z0-9_.]+$/.test(from)
         ) {
             throw new TypeError("authorizeSchoolScope requires a supported resource and request source");
         }
