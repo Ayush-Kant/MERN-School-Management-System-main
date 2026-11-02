@@ -20,6 +20,7 @@ const gameActivitySchema = new mongoose.Schema({
         enum: ["wordwall"],
         default: "wordwall",
         immutable: true,
+        index: true,
     },
     embedUrl: {
         type: String,
@@ -83,8 +84,35 @@ const gameActivitySchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
+    archivedAt: {
+        type: Date,
+        default: null,
+    },
+    archiveReason: {
+        type: String,
+        enum: [
+            "manual",
+            "teacher_deleted",
+            "teacher_reassigned",
+            "class_deleted",
+            "subject_deleted",
+            "school_resources_deleted",
+        ],
+        default: null,
+    },
 }, { timestamps: true });
 
-gameActivitySchema.index({ school: 1, class: 1, subject: 1, status: 1 });
+// Student catalogue reads are scoped by school/class/subject/status and sorted newest first.
+gameActivitySchema.index({ school: 1, class: 1, subject: 1, status: 1, createdAt: -1 });
+
+// Teacher management reads additionally constrain the creator.
+gameActivitySchema.index({
+    createdByTeacher: 1,
+    school: 1,
+    class: 1,
+    subject: 1,
+    status: 1,
+    createdAt: -1,
+});
 
 module.exports = mongoose.model("gameActivity", gameActivitySchema);
