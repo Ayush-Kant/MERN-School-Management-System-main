@@ -99,4 +99,11 @@ const deleteNotices = async (req, res) => {
     }
 }
 
-module.exports = { noticeCreate, noticeList, updateNotice, deleteNotice, deleteNotices };
+module.exports = {
+    noticeCreate,
+    noticeList,
+    updateNotice,
+    deleteNotice,
+    deleteNotices,
+    createUpdateNoticeHandler,
+};
