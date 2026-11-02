@@ -26,6 +26,7 @@ function assertProtectedRoute(method, path, roles) {
     assert.equal(handlers[2], loadActorContext, `${method} ${path} must load database-backed actor context after the role guard`);
     assert.equal(handlers.length, 4, `${method} ${path} should have auth, role, actor context, and controller handlers`);
     assert.equal(typeof handlers[3], "function", `${method} ${path} must finish with a controller handler`);
+    assert.equal(handlers[3].isAsyncHandler, true, `${method} ${path} must forward async controller failures`);
 }
 
 test("Game Zone create and state transitions require a Teacher session", () => {
