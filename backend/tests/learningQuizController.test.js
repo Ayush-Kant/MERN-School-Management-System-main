@@ -254,6 +254,7 @@ test("rejects malformed teacher ids and invalid question counts before database 
         const res = makeResponse();
         await controller.learningQuizCreate(createRequest(body), res);
         assert.equal(res.statusCode, 400);
+        assert.equal(res.body.code, "VALIDATION_ERROR");
         assert.equal(calls.quizCreateData, null);
     }
 });
