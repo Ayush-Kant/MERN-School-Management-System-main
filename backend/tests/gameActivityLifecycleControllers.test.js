@@ -108,6 +108,27 @@ test("deleting one Class archives its activities before deleting the Class", asy
     assert.equal(events[1].type, "delete-class");
 });
 
+test("failed archival prevents a Class deletion", async () => {
+    let deleteCalled = false;
+    const res = makeResponse();
+
+    await withStubs([
+        [Sclass, "findById", async () => ({ _id: IDS.class })],
+        [GameActivity, "updateMany", async () => {
+            throw new Error("archive persistence failed");
+        }],
+        [Sclass, "findByIdAndDelete", async () => {
+            deleteCalled = true;
+            return { _id: IDS.class };
+        }],
+    ], async () => {
+        await deleteSclass({ params: { id: IDS.class } }, res);
+    });
+
+    assert.equal(res.statusCode, 500);
+    assert.equal(deleteCalled, false);
+});
+
 test("deleting all Classes in a school archives the school's GameActivity catalogue first", async () => {
     const events = [];
     const res = makeResponse();
