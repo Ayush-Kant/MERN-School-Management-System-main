@@ -202,6 +202,7 @@ test("rejects invalid Wordwall embed URLs before looking up the teacher", async 
     }, res);
 
     assert.equal(res.statusCode, 400);
+    assert.equal(res.body.code, "VALIDATION_ERROR");
     assert.match(res.body.message, /Wordwall/);
     assert.deepEqual(calls.teacherLookup, []);
 });
