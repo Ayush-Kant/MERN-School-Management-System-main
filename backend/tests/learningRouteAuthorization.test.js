@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const router = require("../routes/route");
 const { authenticateSession } = require("../middleware/authenticateSession");
+const { loadActorContext } = require("../middleware/loadActorContext");
 
 function findRoute(method, path) {
     const layer = router.stack.find((item) =>
@@ -22,7 +23,9 @@ function assertProtectedRoute(method, path, roles) {
         roles,
         `${method} ${path} must enforce the expected role allowlist`
     );
-    assert.equal(handlers.length, 3, `${method} ${path} should have auth, role, and controller handlers`);
+    assert.equal(handlers[2], loadActorContext, `${method} ${path} must load database-backed actor context after the role guard`);
+    assert.equal(handlers.length, 4, `${method} ${path} should have auth, role, actor context, and controller handlers`);
+    assert.equal(typeof handlers[3], "function", `${method} ${path} must finish with a controller handler`);
 }
 
 test("Game Zone create and state transitions require a Teacher session", () => {
