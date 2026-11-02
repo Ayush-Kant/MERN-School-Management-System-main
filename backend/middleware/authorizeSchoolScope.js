@@ -28,6 +28,7 @@ const RESOURCE_DEFINITIONS = {
 };
 
 const SIMPLE_RESOURCES = new Set(["school", "self"]);
+const SUPPORTED_ROLES = new Set(["Admin", "Teacher", "Student"]);
 
 function readPath(root, path) {
     return path.split(".").reduce((value, segment) => {
@@ -90,9 +91,14 @@ function createAuthorizeSchoolScope(models = {}) {
             }[resource]}.js`)
             : null;
 
-        return async function schoolScopeAuthorization(req, res, next) {
+        const middleware = async function schoolScopeAuthorization(req, res, next) {
             const actor = req && req.actor;
-            if (!actor || !normalizeObjectId(actor.userId) || !normalizeObjectId(actor.schoolId)) {
+            if (
+                !actor ||
+                !SUPPORTED_ROLES.has(actor.role) ||
+                !normalizeObjectId(actor.userId) ||
+                !normalizeObjectId(actor.schoolId)
+            ) {
                 return res.status(401).json({ message: "Authentication required" });
             }
 
@@ -201,6 +207,13 @@ function createAuthorizeSchoolScope(models = {}) {
                 });
             }
         };
+
+        Object.defineProperty(middleware, "scope", {
+            value: Object.freeze({ resource, from, as: as || resource, belongsTo, optional }),
+            enumerable: true,
+        });
+
+        return middleware;
     };
 }
 
