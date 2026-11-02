@@ -83,6 +83,7 @@ const adminRegister = async (req, res) => {
             const hashedPassword = await hashAdminPassword(password);
             const admin = new Admin({
                 ...body,
+                role: "Admin",
                 password: hashedPassword,
             });
 
