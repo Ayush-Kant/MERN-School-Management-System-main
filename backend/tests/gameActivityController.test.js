@@ -406,6 +406,8 @@ test("publishes a draft activity atomically and records publishedAt", async () =
     assert.equal(calls.transitionFilter._id, ACTIVITY_ID);
     assert.equal(calls.transitionFilter.createdByTeacher, TEACHER_ID);
     assert.equal(calls.transitionFilter.school, SCHOOL_ID);
+    assert.equal(calls.transitionFilter.class, CLASS_ID);
+    assert.equal(calls.transitionFilter.subject, SUBJECT_ID);
     assert.equal(calls.transitionFilter.status, "draft");
     assert.equal(calls.transitionUpdate.$set.status, "published");
     assert.ok(calls.transitionUpdate.$set.publishedAt instanceof Date);
@@ -429,6 +431,8 @@ test("archives a published activity without overwriting its original publish tim
     assert.equal(calls.transitionFilter._id, ACTIVITY_ID);
     assert.equal(calls.transitionFilter.createdByTeacher, TEACHER_ID);
     assert.equal(calls.transitionFilter.school, SCHOOL_ID);
+    assert.equal(calls.transitionFilter.class, CLASS_ID);
+    assert.equal(calls.transitionFilter.subject, SUBJECT_ID);
     assert.equal(calls.transitionFilter.status, "published");
     assert.deepEqual(calls.transitionUpdate, { $set: { status: "archived" } });
 });
@@ -466,6 +470,8 @@ test("returns not found if the activity is missing or not owned by the supplied 
         _id: ACTIVITY_ID,
         createdByTeacher: TEACHER_ID,
         school: SCHOOL_ID,
+        class: CLASS_ID,
+        subject: SUBJECT_ID,
     });
 });
 
