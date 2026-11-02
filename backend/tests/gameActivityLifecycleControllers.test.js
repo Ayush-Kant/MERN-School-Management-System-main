@@ -26,6 +26,7 @@ const IDS = {
     subject: "cccccccccccccccccccccccc",
     nextSubject: "eeeeeeeeeeeeeeeeeeeeeeee",
     teacher: "dddddddddddddddddddddddd",
+    otherTeacher: "888888888888888888888888",
 };
 
 function makeResponse() {
