@@ -54,6 +54,15 @@ async function invoke(middleware, req) {
     return { req, res, nextCalled };
 }
 
+function assertSessionCookieCleared(res) {
+    const header = res.headers["Set-Cookie"];
+    const values = Array.isArray(header) ? header : [header];
+    assert.ok(
+        values.some((value) => typeof value === "string" && /Max-Age=0/.test(value)),
+        "expected a Set-Cookie header that expires the session"
+    );
+}
+
 test("Admin context derives the school id from the authenticated Admin account", async () => {
     const AdminModel = makeModel({ _id: USER_ID, role: "Admin" });
     const middleware = createLoadActorContext({ AdminModel });
@@ -137,7 +146,7 @@ test("a deleted account invalidates the session and clears its cookie", async ()
     assert.equal(result.nextCalled, false);
     assert.equal(result.res.statusCode, 401);
     assert.match(result.res.body.message, /account/i);
-    assert.match(result.res.headers["Set-Cookie"], /Max-Age=0/);
+    assertSessionCookieCleared(result.res);
 });
 
 test("a persisted role mismatch invalidates the session and clears its cookie", async () => {
@@ -155,7 +164,7 @@ test("a persisted role mismatch invalidates the session and clears its cookie", 
 
     assert.equal(result.nextCalled, false);
     assert.equal(result.res.statusCode, 401);
-    assert.match(result.res.headers["Set-Cookie"], /Max-Age=0/);
+    assertSessionCookieCleared(result.res);
 });
 
 test("a non-admin account without a valid school assignment is denied", async () => {
