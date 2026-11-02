@@ -387,12 +387,31 @@ function createLearningQuizController({
 
         try {
             const teacher = await TeacherModel.findById(actor.userId);
-            if (!teacher) return res.status(404).json({ message: "Teacher not found" });
+            if (!teacher || !teacher.school || !teacher.teachSclass || !teacher.teachSubject) {
+                return res.status(404).json({ message: "Teacher not found or not assigned to a class and subject" });
+            }
+
+            const [schoolClass, subject] = await Promise.all([
+                SclassModel.findById(teacher.teachSclass),
+                SubjectModel.findById(teacher.teachSubject),
+            ]);
+            if (
+                !schoolClass ||
+                !subject ||
+                !sameId(schoolClass.school, teacher.school) ||
+                !sameId(subject.school, teacher.school) ||
+                !sameId(subject.sclassName, teacher.teachSclass) ||
+                (subject.teacher && !sameId(subject.teacher, actor.userId))
+            ) {
+                return res.status(403).json({ message: "Your current class and subject assignments are not valid" });
+            }
 
             const quizScope = {
                 _id: quizId,
                 createdByTeacher: actor.userId,
                 school: teacher.school,
+                class: teacher.teachSclass,
+                subject: teacher.teachSubject,
             };
             const publishedQuiz = await LearningQuizModel.findOneAndUpdate(
                 { ...quizScope, status: "draft" },
