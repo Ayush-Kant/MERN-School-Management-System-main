@@ -349,4 +349,5 @@ module.exports = {
     clearAllStudentsAttendance,
     removeStudentAttendanceBySubject,
     removeStudentAttendance,
+    createUpdateStudentHandler,
 };
