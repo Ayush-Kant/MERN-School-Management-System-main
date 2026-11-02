@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const { hashAdminPassword, verifyAdminPassword } = require("../utils/adminPassword.js");
 const Admin = require('../models/adminSchema.js');
 const Sclass = require('../models/sclassSchema.js');
 const Student = require('../models/studentSchema.js');
@@ -57,44 +57,67 @@ const Complain = require('../models/complainSchema.js');
 
 const adminRegister = async (req, res) => {
     try {
-        const admin = new Admin({
-            ...req.body
-        });
+        const body = req.body || {};
+        const { password } = body;
 
-        const existingAdminByEmail = await Admin.findOne({ email: req.body.email });
-        const existingSchool = await Admin.findOne({ schoolName: req.body.schoolName });
+        if (typeof password !== "string" || password.length === 0) {
+            return res.status(400).json({ message: "Password is required" });
+        }
+
+        const existingAdminByEmail = await Admin.findOne({ email: body.email });
+        const existingSchool = await Admin.findOne({ schoolName: body.schoolName });
 
         if (existingAdminByEmail) {
-            res.send({ message: 'Email already exists' });
+            return res.send({ message: 'Email already exists' });
         }
         else if (existingSchool) {
-            res.send({ message: 'School name already exists' });
+            return res.send({ message: 'School name already exists' });
         }
         else {
-            let result = await admin.save();
+            const hashedPassword = await hashAdminPassword(password);
+            const admin = new Admin({
+                ...body,
+                password: hashedPassword,
+            });
+
+            const result = await admin.save();
             result.password = undefined;
-            res.send(result);
+            return res.send(result);
         }
     } catch (err) {
-        res.status(500).json(err);
+        return res.status(500).json(err);
     }
 };
 
 const adminLogIn = async (req, res) => {
-    if (req.body.email && req.body.password) {
-        let admin = await Admin.findOne({ email: req.body.email });
-        if (admin) {
-            if (req.body.password === admin.password) {
-                admin.password = undefined;
-                res.send(admin);
-            } else {
-                res.send({ message: "Invalid password" });
-            }
-        } else {
-            res.send({ message: "User not found" });
+    try {
+        const body = req.body || {};
+
+        if (!body.email || typeof body.password !== "string" || body.password.length === 0) {
+            return res.send({ message: "Email and password are required" });
         }
-    } else {
-        res.send({ message: "Email and password are required" });
+
+        const admin = await Admin.findOne({ email: body.email });
+        if (!admin) {
+            return res.send({ message: "User not found" });
+        }
+
+        const verification = await verifyAdminPassword(body.password, admin.password);
+        if (!verification.valid) {
+            return res.send({ message: "Invalid password" });
+        }
+
+        // Existing plaintext Admin passwords are upgraded after a successful login.
+        // This preserves access for legacy accounts without keeping plaintext after login.
+        if (verification.needsRehash) {
+            admin.password = await hashAdminPassword(body.password);
+            await admin.save();
+        }
+
+        admin.password = undefined;
+        return res.send(admin);
+    } catch (err) {
+        return res.status(500).json(err);
     }
 };
 
