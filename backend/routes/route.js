@@ -31,6 +31,7 @@ const { authenticateSession } = require('../middleware/authenticateSession.js');
 const { authorizeRoles } = require('../middleware/authorizeRoles.js');
 const { loadActorContext } = require('../middleware/loadActorContext.js');
 const { authorizeSchoolScope } = require('../middleware/authorizeSchoolScope.js');
+const { asyncHandler } = require("../utils/asyncHandler.js");
 
 // Authentication -> persisted role -> database-backed actor context.
 const requireAdmin = [authenticateSession, authorizeRoles("Admin"), loadActorContext];
@@ -231,19 +232,19 @@ router.delete("/Subjects/:id", ...requireAdmin, schoolParam, deleteSubjects);
 router.delete("/SubjectsClass/:id", ...requireAdmin, classParam, deleteSubjectsByClass);
 
 // Game Zone
-router.post('/GameActivityCreate', ...requireTeacher, gameActivityCreate);
-router.get('/GameActivityList/:id', ...requireTeacherOrStudent, gameActivityList);
-router.put('/GameActivityPublish/:id', ...requireTeacher, publishGameActivity);
-router.put('/GameActivityArchive/:id', ...requireTeacher, archiveGameActivity);
+router.post('/GameActivityCreate', ...requireTeacher, asyncHandler(gameActivityCreate));
+router.get('/GameActivityList/:id', ...requireTeacherOrStudent, asyncHandler(gameActivityList));
+router.put('/GameActivityPublish/:id', ...requireTeacher, asyncHandler(publishGameActivity));
+router.put('/GameActivityArchive/:id', ...requireTeacher, asyncHandler(archiveGameActivity));
 
 // Authentication session
 router.get('/AuthSession', authenticateSession, getAuthSession);
 router.post('/AuthLogout', authLogout);
 
 // AI Learning Studio: first-party, server-graded quizzes
-router.post('/LearningQuizCreate', ...requireTeacher, learningQuizCreate);
-router.get('/LearningQuizList/:id', ...requireTeacherOrStudent, learningQuizList);
-router.put('/LearningQuizPublish/:id', ...requireTeacher, publishLearningQuiz);
-router.post('/LearningQuizSubmit/:id', ...requireStudent, learningQuizSubmit);
+router.post('/LearningQuizCreate', ...requireTeacher, asyncHandler(learningQuizCreate));
+router.get('/LearningQuizList/:id', ...requireTeacherOrStudent, asyncHandler(learningQuizList));
+router.put('/LearningQuizPublish/:id', ...requireTeacher, asyncHandler(publishLearningQuiz));
+router.post('/LearningQuizSubmit/:id', ...requireStudent, asyncHandler(learningQuizSubmit));
 
 module.exports = router;
