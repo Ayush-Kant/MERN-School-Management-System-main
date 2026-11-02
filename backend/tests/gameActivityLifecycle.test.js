@@ -65,6 +65,7 @@ test("valid Teacher, class, and subject relationships are accepted", () => {
     assert.equal(
         validateGameActivityRelationships({
             teacher: validTeacher,
+            schoolRecord: { _id: IDS.school },
             schoolClass: validClass,
             subject: validSubject,
         }),
@@ -88,9 +89,29 @@ test("relationship validation rejects missing or incomplete Teacher assignments"
     assert.match(result.message, /assigned to a school, class, and subject/);
 });
 
+test("relationship validation rejects a missing or mismatched school reference", () => {
+    const missingSchool = validateGameActivityRelationships({
+        teacher: validTeacher,
+        schoolRecord: null,
+        schoolClass: validClass,
+        subject: validSubject,
+    });
+    assert.equal(missingSchool.status, 404);
+    assert.match(missingSchool.message, /School not found/);
+
+    const mismatchedSchool = validateGameActivityRelationships({
+        teacher: validTeacher,
+        schoolRecord: { _id: IDS.otherSchool },
+        schoolClass: validClass,
+        subject: validSubject,
+    });
+    assert.equal(mismatchedSchool.status, 404);
+});
+
 test("relationship validation rejects missing or mismatched class and subject references", () => {
     const missingClass = validateGameActivityRelationships({
         teacher: validTeacher,
+        schoolRecord: { _id: IDS.school },
         schoolClass: null,
         subject: validSubject,
     });
@@ -99,6 +120,7 @@ test("relationship validation rejects missing or mismatched class and subject re
 
     const classIdMismatch = validateGameActivityRelationships({
         teacher: validTeacher,
+        schoolRecord: { _id: IDS.school },
         schoolClass: { ...validClass, _id: IDS.otherClass },
         subject: validSubject,
     });
@@ -106,6 +128,7 @@ test("relationship validation rejects missing or mismatched class and subject re
 
     const subjectIdMismatch = validateGameActivityRelationships({
         teacher: validTeacher,
+        schoolRecord: { _id: IDS.school },
         schoolClass: validClass,
         subject: { ...validSubject, _id: IDS.otherSubject },
     });
@@ -115,6 +138,7 @@ test("relationship validation rejects missing or mismatched class and subject re
 test("relationship validation rejects cross-school and cross-class references", () => {
     const classSchoolMismatch = validateGameActivityRelationships({
         teacher: validTeacher,
+        schoolRecord: { _id: IDS.school },
         schoolClass: { ...validClass, school: IDS.otherSchool },
         subject: validSubject,
     });
@@ -123,6 +147,7 @@ test("relationship validation rejects cross-school and cross-class references", 
 
     const subjectSchoolMismatch = validateGameActivityRelationships({
         teacher: validTeacher,
+        schoolRecord: { _id: IDS.school },
         schoolClass: validClass,
         subject: { ...validSubject, school: IDS.otherSchool },
     });
@@ -130,6 +155,7 @@ test("relationship validation rejects cross-school and cross-class references", 
 
     const subjectClassMismatch = validateGameActivityRelationships({
         teacher: validTeacher,
+        schoolRecord: { _id: IDS.school },
         schoolClass: validClass,
         subject: { ...validSubject, sclassName: IDS.otherClass },
     });
@@ -139,6 +165,7 @@ test("relationship validation rejects cross-school and cross-class references", 
 test("relationship validation rejects a subject owned by another Teacher", () => {
     const result = validateGameActivityRelationships({
         teacher: validTeacher,
+        schoolRecord: { _id: IDS.school },
         schoolClass: validClass,
         subject: { ...validSubject, teacher: IDS.otherTeacher },
     });
