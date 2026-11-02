@@ -1,3 +1,5 @@
+const { sendApiError } = require("../utils/apiResponse.js");
+
 const OBJECT_ID_PATTERN = /^[a-f\d]{24}$/i;
 const QUIZ_STATUSES = new Set(["draft", "published", "archived"]);
 const MAX_QUESTIONS = 30;
@@ -15,7 +17,7 @@ function sameId(left, right) {
 }
 
 function clientError(res, message) {
-    return res.status(400).json({ message });
+    return sendApiError(res, 400, message);
 }
 
 function getAuthenticatedActor(req, res, allowedRoles) {
@@ -25,12 +27,12 @@ function getAuthenticatedActor(req, res, allowedRoles) {
         !isValidObjectId(actor.userId) ||
         !["Admin", "Teacher", "Student"].includes(actor.role)
     ) {
-        res.status(401).json({ message: "Authentication required" });
+        sendApiError(res, 401, "Authentication required");
         return null;
     }
 
     if (!allowedRoles.includes(actor.role)) {
-        res.status(403).json({ message: "You are not allowed to access this resource" });
+        sendApiError(res, 403, "You are not allowed to access this resource");
         return null;
     }
 
@@ -46,7 +48,7 @@ function rejectIdentityOverride(suppliedId, authenticatedId, res, fieldName) {
     }
 
     if (!sameId(suppliedId, authenticatedId)) {
-        res.status(403).json({ message: `${fieldName} does not match the authenticated account` });
+        sendApiError(res, 403, `${fieldName} does not match the authenticated account`);
         return true;
     }
 
@@ -164,7 +166,7 @@ function createLearningQuizController({
         const teacherId = actor.userId;
 
         if (!isValidObjectId(teacherId)) {
-            return res.status(401).json({ message: "Authentication required" });
+            return sendApiError(res, 401, "Authentication required");
         }
         if (typeof title !== "string" || title.trim().length < 3 || title.trim().length > 160) {
             return clientError(res, "Title must contain between 3 and 160 characters");
@@ -197,7 +199,7 @@ function createLearningQuizController({
 
         try {
             const teacher = await TeacherModel.findById(teacherId);
-            if (!teacher) return res.status(404).json({ message: "Teacher not found" });
+            if (!teacher) return sendApiError(res, 404, "Teacher not found");
 
             if (!teacher.school || !teacher.teachSclass || !teacher.teachSubject) {
                 return clientError(res, "The teacher must be assigned to a school, class, and subject before creating a quiz");
@@ -222,7 +224,7 @@ function createLearningQuizController({
             }
 
             if (subject.teacher && !sameId(subject.teacher, teacher._id)) {
-                return res.status(409).json({ message: "The assigned subject is linked to a different teacher" });
+                return sendApiError(res, 409, "The assigned subject is linked to a different teacher");
             }
 
             const quiz = new LearningQuizModel({
@@ -250,9 +252,9 @@ function createLearningQuizController({
             return res.status(201).json(await quiz.save());
         } catch (error) {
             if (error && (error.name === "ValidationError" || error.name === "CastError")) {
-                return clientError(res, error.message);
+                return clientError(res, "Request data failed validation");
             }
-            return res.status(500).json({ message: "Unable to create learning quiz" });
+            return sendApiError(res, 500, "Unable to create learning quiz");
         }
     };
 
@@ -281,16 +283,16 @@ function createLearningQuizController({
 
                 const teacher = await TeacherModel.findById(actor.userId);
                 if (!teacher || !teacher.school || !teacher.teachSclass || !teacher.teachSubject) {
-                    return res.status(404).json({ message: "Teacher not found or not assigned to a class and subject" });
+                    return sendApiError(res, 404, "Teacher not found or not assigned to a class and subject");
                 }
                 if (!sameId(teacher.school, schoolId)) {
-                    return res.status(404).json({ message: "Learning quizzes not found for this school" });
+                    return sendApiError(res, 404, "Learning quizzes not found for this school");
                 }
                 if (classId !== undefined && !sameId(classId, teacher.teachSclass)) {
-                    return res.status(403).json({ message: "You cannot list quizzes outside your assigned class" });
+                    return sendApiError(res, 403, "You cannot list quizzes outside your assigned class");
                 }
                 if (subjectId !== undefined && !sameId(subjectId, teacher.teachSubject)) {
-                    return res.status(403).json({ message: "You cannot list quizzes outside your assigned subject" });
+                    return sendApiError(res, 403, "You cannot list quizzes outside your assigned subject");
                 }
 
                 const [schoolClass, subject] = await Promise.all([
@@ -305,7 +307,7 @@ function createLearningQuizController({
                     !sameId(subject.sclassName, teacher.teachSclass) ||
                     (subject.teacher && !sameId(subject.teacher, actor.userId))
                 ) {
-                    return res.status(403).json({ message: "Your current class and subject assignments are not valid" });
+                    return sendApiError(res, 403, "Your current class and subject assignments are not valid");
                 }
 
                 filter = {
@@ -318,29 +320,29 @@ function createLearningQuizController({
                 teacherView = true;
             } else {
                 if (teacherId !== undefined) {
-                    return res.status(403).json({ message: "Student requests cannot use a teacher identity" });
+                    return sendApiError(res, 403, "Student requests cannot use a teacher identity");
                 }
                 if (!classId) {
                     return clientError(res, "classId is required when listing student quizzes");
                 }
                 if (status !== undefined && status !== "published") {
-                    return res.status(403).json({ message: "Students can only list published quizzes" });
+                    return sendApiError(res, 403, "Students can only list published quizzes");
                 }
 
                 const student = await StudentModel.findById(actor.userId);
                 if (!student || !student.school || !student.sclassName) {
-                    return res.status(404).json({ message: "Student not found or not assigned to a class" });
+                    return sendApiError(res, 404, "Student not found or not assigned to a class");
                 }
                 if (!sameId(student.school, schoolId)) {
-                    return res.status(404).json({ message: "Learning quizzes not found for this school" });
+                    return sendApiError(res, 404, "Learning quizzes not found for this school");
                 }
                 if (!sameId(classId, student.sclassName)) {
-                    return res.status(403).json({ message: "You cannot list quizzes outside your assigned class" });
+                    return sendApiError(res, 403, "You cannot list quizzes outside your assigned class");
                 }
 
                 const schoolClass = await SclassModel.findById(student.sclassName);
                 if (!schoolClass || !sameId(schoolClass.school, student.school)) {
-                    return res.status(404).json({ message: "Student class not found in this school" });
+                    return sendApiError(res, 404, "Student class not found in this school");
                 }
 
                 filter = {
@@ -356,7 +358,7 @@ function createLearningQuizController({
                         !sameId(subject.school, student.school) ||
                         !sameId(subject.sclassName, student.sclassName)
                     ) {
-                        return res.status(404).json({ message: "Subject not found in the student's class" });
+                        return sendApiError(res, 404, "Subject not found in the student's class");
                     }
                     filter.subject = subject._id || subjectId;
                 }
@@ -371,7 +373,7 @@ function createLearningQuizController({
 
             return res.status(200).json(teacherView ? quizzes : quizzes.map(toStudentQuiz));
         } catch (error) {
-            return res.status(500).json({ message: "Unable to list learning quizzes" });
+            return sendApiError(res, 500, "Unable to list learning quizzes");
         }
     };
 
@@ -388,7 +390,7 @@ function createLearningQuizController({
         try {
             const teacher = await TeacherModel.findById(actor.userId);
             if (!teacher || !teacher.school || !teacher.teachSclass || !teacher.teachSubject) {
-                return res.status(404).json({ message: "Teacher not found or not assigned to a class and subject" });
+                return sendApiError(res, 404, "Teacher not found or not assigned to a class and subject");
             }
 
             const [schoolClass, subject] = await Promise.all([
@@ -403,7 +405,7 @@ function createLearningQuizController({
                 !sameId(subject.sclassName, teacher.teachSclass) ||
                 (subject.teacher && !sameId(subject.teacher, actor.userId))
             ) {
-                return res.status(403).json({ message: "Your current class and subject assignments are not valid" });
+                return sendApiError(res, 403, "Your current class and subject assignments are not valid");
             }
 
             const quizScope = {
@@ -421,13 +423,13 @@ function createLearningQuizController({
             if (publishedQuiz) return res.status(200).json(publishedQuiz);
 
             const ownedQuiz = await LearningQuizModel.findOne(quizScope);
-            if (!ownedQuiz) return res.status(404).json({ message: "Quiz not found for this teacher" });
-            return res.status(409).json({ message: "Only draft quizzes can be published" });
+            if (!ownedQuiz) return sendApiError(res, 404, "Quiz not found for this teacher");
+            return sendApiError(res, 409, "Only draft quizzes can be published");
         } catch (error) {
             if (error && (error.name === "ValidationError" || error.name === "CastError")) {
-                return clientError(res, error.message);
+                return clientError(res, "Request data failed validation");
             }
-            return res.status(500).json({ message: "Unable to publish learning quiz" });
+            return sendApiError(res, 500, "Unable to publish learning quiz");
         }
     };
 
@@ -471,7 +473,7 @@ function createLearningQuizController({
 
         try {
             const quiz = await LearningQuizModel.findById(quizId);
-            if (!quiz) return res.status(404).json({ message: "Quiz not found" });
+            if (!quiz) return sendApiError(res, 404, "Quiz not found");
 
             const student = await StudentModel.findById(studentId);
             if (
@@ -479,7 +481,7 @@ function createLearningQuizController({
                 !sameId(student.school, quiz.school) ||
                 !sameId(student.sclassName, quiz.class)
             ) {
-                return res.status(404).json({ message: "Quiz not found for this student" });
+                return sendApiError(res, 404, "Quiz not found for this student");
             }
 
             const [schoolClass, subject] = await Promise.all([
@@ -493,7 +495,7 @@ function createLearningQuizController({
                 !sameId(subject.school, student.school) ||
                 !sameId(subject.sclassName, student.sclassName)
             ) {
-                return res.status(404).json({ message: "Quiz not found for this student" });
+                return sendApiError(res, 404, "Quiz not found for this student");
             }
 
             const attemptScope = {
@@ -507,7 +509,7 @@ function createLearningQuizController({
             }
 
             if (quiz.status !== "published") {
-                return res.status(404).json({ message: "Quiz not found" });
+                return sendApiError(res, 404, "Quiz not found");
             }
 
             const questionById = new Map((quiz.questions || []).map((question) => [
@@ -526,7 +528,7 @@ function createLearningQuizController({
             }
 
             if (!Array.isArray(quiz.questions) || quiz.questions.length < 1 || quiz.questions.length > MAX_QUESTIONS) {
-                return res.status(409).json({ message: "This quiz is not in a valid state for submission" });
+                return sendApiError(res, 409, "This quiz is not in a valid state for submission");
             }
 
             const answersByQuestion = new Map(answers.map((answer) => [
@@ -600,9 +602,9 @@ function createLearningQuizController({
                 }
             }
             if (error && (error.name === "ValidationError" || error.name === "CastError")) {
-                return clientError(res, error.message);
+                return clientError(res, "Request data failed validation");
             }
-            return res.status(500).json({ message: "Unable to record learning attempt" });
+            return sendApiError(res, 500, "Unable to record learning attempt");
         }
     };
 
