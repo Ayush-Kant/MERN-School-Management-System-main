@@ -33,8 +33,10 @@ mongoose
         // or credentials from the environment.
         console.error(JSON.stringify({
             event: "database_connection_failed",
-            errorName: error && typeof error.name === "string" ? error.name : "Error",
-            errorCode: error && typeof error.code === "string" ? error.code : undefined,
+            errorName: error && typeof error.name === "string" &&
+                /^[A-Za-z][A-Za-z0-9]{0,39}$/.test(error.name) ? error.name : "Error",
+            errorCode: error && typeof error.code === "string" &&
+                /^[A-Z0-9_]{1,40}$/.test(error.code) ? error.code : undefined,
         }));
     });
 
