@@ -62,7 +62,10 @@ test("rejects requests without a session cookie", () => {
 test("attaches verified session claims to the request", () => {
     const middleware = createAuthenticateSession({
         getConfig: () => config,
-        verifyToken: verifySessionToken,
+        verifyToken: (token, options) => verifySessionToken(token, {
+            ...options,
+            nowSeconds: 1_800_000_100,
+        }),
     });
     const token = createSessionToken(
         { userId, role: "Admin" },
