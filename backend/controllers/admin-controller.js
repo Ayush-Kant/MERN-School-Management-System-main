@@ -1,4 +1,9 @@
 const { hashAdminPassword, verifyAdminPassword } = require("../utils/adminPassword.js");
+const {
+    getSessionConfig,
+    createSessionToken,
+    setSessionCookie,
+} = require("../utils/authSession.js");
 const Admin = require('../models/adminSchema.js');
 const Sclass = require('../models/sclassSchema.js');
 const Student = require('../models/studentSchema.js');
@@ -57,6 +62,7 @@ const Complain = require('../models/complainSchema.js');
 
 const adminRegister = async (req, res) => {
     try {
+        const sessionConfig = getSessionConfig();
         const body = req.body || {};
         const { password } = body;
 
@@ -81,6 +87,12 @@ const adminRegister = async (req, res) => {
             });
 
             const result = await admin.save();
+            const sessionToken = createSessionToken(
+                { userId: String(result._id), role: "Admin" },
+                { config: sessionConfig }
+            );
+            setSessionCookie(res, sessionToken, sessionConfig);
+
             result.password = undefined;
             return res.send(result);
         }
@@ -91,6 +103,7 @@ const adminRegister = async (req, res) => {
 
 const adminLogIn = async (req, res) => {
     try {
+        const sessionConfig = getSessionConfig();
         const body = req.body || {};
 
         if (!body.email || typeof body.password !== "string" || body.password.length === 0) {
@@ -113,6 +126,12 @@ const adminLogIn = async (req, res) => {
             admin.password = await hashAdminPassword(body.password);
             await admin.save();
         }
+
+        const sessionToken = createSessionToken(
+            { userId: String(admin._id), role: "Admin" },
+            { config: sessionConfig }
+        );
+        setSessionCookie(res, sessionToken, sessionConfig);
 
         admin.password = undefined;
         return res.send(admin);
