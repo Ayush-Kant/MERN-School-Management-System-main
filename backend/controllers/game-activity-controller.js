@@ -337,13 +337,33 @@ function createGameActivityController({
             if (!teacher) {
                 return res.status(404).json({ message: "Teacher not found" });
             }
+            if (!teacher.school || !teacher.teachSclass || !teacher.teachSubject) {
+                return res.status(403).json({ message: "A current school, class, and subject assignment is required" });
+            }
 
-            // Actor identity and school scope come from the verified session and
-            // current database record, not from the request body.
+            const [schoolClass, subject] = await Promise.all([
+                SclassModel.findById(teacher.teachSclass),
+                SubjectModel.findById(teacher.teachSubject),
+            ]);
+            if (
+                !schoolClass ||
+                !subject ||
+                !sameId(schoolClass.school, teacher.school) ||
+                !sameId(subject.school, teacher.school) ||
+                !sameId(subject.sclassName, teacher.teachSclass) ||
+                (subject.teacher && !sameId(subject.teacher, actor.userId))
+            ) {
+                return res.status(403).json({ message: "Your current class and subject assignments are not valid" });
+            }
+
+            // Actor identity and the currently assigned school/class/subject
+            // come from the verified session and database, not the request.
             const activityScope = {
                 _id: activityId,
                 createdByTeacher: actor.userId,
                 school: teacher.school,
+                class: teacher.teachSclass,
+                subject: teacher.teachSubject,
             };
 
             const updatedActivity = await GameActivityModel.findOneAndUpdate(
