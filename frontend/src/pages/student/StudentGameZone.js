@@ -217,7 +217,7 @@ const StudentGameZone = () => {
                     <TextField
                         name="search"
                         value={search}
-                        onChange={(event) => setSearch(event.target.value)
+                        onChange={(event) => setSearch(event.target.value)}
                         placeholder="Search games or topics"
                         aria-label="Search games or topics"
                         size="small"
