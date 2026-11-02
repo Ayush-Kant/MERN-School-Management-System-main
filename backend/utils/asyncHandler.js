@@ -8,11 +8,18 @@ function asyncHandler(handler) {
         throw new TypeError("asyncHandler requires a route handler function");
     }
 
-    return function wrappedAsyncHandler(req, res, next) {
+    const wrapped = function wrappedAsyncHandler(req, res, next) {
         return Promise.resolve()
             .then(() => handler(req, res, next))
             .catch(next);
     };
+
+    Object.defineProperty(wrapped, "isAsyncHandler", {
+        value: true,
+        enumerable: true,
+    });
+
+    return wrapped;
 }
 
 module.exports = { asyncHandler };
