@@ -29,104 +29,206 @@ const { learningQuizCreate, learningQuizList, publishLearningQuiz, learningQuizS
 const { getAuthSession, authLogout } = require('../controllers/auth-controller.js');
 const { authenticateSession } = require('../middleware/authenticateSession.js');
 const { authorizeRoles } = require('../middleware/authorizeRoles.js');
+const { loadActorContext } = require('../middleware/loadActorContext.js');
+const { authorizeSchoolScope } = require('../middleware/authorizeSchoolScope.js');
 
-// Reusable route guards. Keep authentication before role checks.
-const requireAdmin = [authenticateSession, authorizeRoles("Admin")];
-const requireAdminOrTeacher = [authenticateSession, authorizeRoles("Admin", "Teacher")];
-const requireSchoolMember = [authenticateSession, authorizeRoles("Admin", "Teacher", "Student")];
-const requireTeacherOrStudent = [authenticateSession, authorizeRoles("Teacher", "Student")];
-const requireTeacher = [authenticateSession, authorizeRoles("Teacher")];
-const requireStudent = [authenticateSession, authorizeRoles("Student")];
+// Authentication -> persisted role -> database-backed actor context.
+const requireAdmin = [authenticateSession, authorizeRoles("Admin"), loadActorContext];
+const requireAdminOrTeacher = [
+    authenticateSession,
+    authorizeRoles("Admin", "Teacher"),
+    loadActorContext,
+];
+const requireSchoolMember = [
+    authenticateSession,
+    authorizeRoles("Admin", "Teacher", "Student"),
+    loadActorContext,
+];
+const requireTeacherOrStudent = [
+    authenticateSession,
+    authorizeRoles("Teacher", "Student"),
+    loadActorContext,
+];
+const requireTeacher = [authenticateSession, authorizeRoles("Teacher"), loadActorContext];
+const requireStudent = [authenticateSession, authorizeRoles("Student"), loadActorContext];
+
+// Reusable tenant/resource ownership guards. Each is applied after the actor is loaded.
+const ownAdminId = authorizeSchoolScope({ resource: "self", from: "params.id" });
+const schoolParam = authorizeSchoolScope({ resource: "school", from: "params.id" });
+const adminIdBody = authorizeSchoolScope({ resource: "school", from: "body.adminID" });
+const schoolBody = authorizeSchoolScope({ resource: "school", from: "body.school" });
+const classParam = authorizeSchoolScope({ resource: "class", from: "params.id" });
+const studentParam = authorizeSchoolScope({ resource: "student", from: "params.id" });
+const teacherParam = authorizeSchoolScope({ resource: "teacher", from: "params.id" });
+const subjectParam = authorizeSchoolScope({ resource: "subject", from: "params.id" });
+const noticeParam = authorizeSchoolScope({ resource: "notice", from: "params.id" });
+
+const studentRegistrationClass = authorizeSchoolScope({
+    resource: "class",
+    from: "body.sclassName",
+});
+const subjectCreationClass = authorizeSchoolScope({
+    resource: "class",
+    from: "body.sclassName",
+});
+const teacherRegistrationClass = authorizeSchoolScope({
+    resource: "class",
+    from: "body.teachSclass",
+    as: "teacherRegistrationClass",
+});
+const teacherRegistrationSubject = authorizeSchoolScope({
+    resource: "subject",
+    from: "body.teachSubject",
+    as: "teacherRegistrationSubject",
+    belongsTo: {
+        field: "sclassName",
+        resource: "teacherRegistrationClass",
+        resourceField: "_id",
+    },
+});
+const teacherAssignmentTeacher = authorizeSchoolScope({
+    resource: "teacher",
+    from: "body.teacherId",
+    as: "teacherAssignmentTeacher",
+});
+const teacherAssignmentSubject = authorizeSchoolScope({
+    resource: "subject",
+    from: "body.teachSubject",
+    as: "teacherAssignmentSubject",
+    belongsTo: {
+        field: "sclassName",
+        resource: "teacherAssignmentTeacher",
+        resourceField: "teachSclass",
+    },
+});
+const studentUpdateClass = authorizeSchoolScope({
+    resource: "class",
+    from: "body.sclassName",
+    optional: true,
+});
+const targetStudent = authorizeSchoolScope({
+    resource: "student",
+    from: "params.id",
+    as: "targetStudent",
+});
+const targetStudentSubject = authorizeSchoolScope({
+    resource: "subject",
+    from: "body.subName",
+    as: "targetStudentSubject",
+    belongsTo: {
+        field: "sclassName",
+        resource: "targetStudent",
+        resourceField: "sclassName",
+    },
+});
+const targetStudentSubId = authorizeSchoolScope({
+    resource: "subject",
+    from: "body.subId",
+    as: "targetStudentSubId",
+    belongsTo: {
+        field: "sclassName",
+        resource: "targetStudent",
+        resourceField: "sclassName",
+    },
+});
+const optionalStudentSchool = authorizeSchoolScope({
+    resource: "school",
+    from: "body.school",
+    optional: true,
+});
 
 // Admin account bootstrap and login remain public by design.
 router.post('/AdminReg', adminRegister);
 router.post('/AdminLogin', adminLogIn);
-router.get("/Admin/:id", ...requireAdmin, getAdminDetail);
+router.get("/Admin/:id", ...requireAdmin, ownAdminId, getAdminDetail);
 // router.delete("/Admin/:id", deleteAdmin)
 
 // router.put("/Admin/:id", updateAdmin)
 
 // Student
 
-router.post('/StudentReg', ...requireAdmin, studentRegister);
+router.post('/StudentReg', ...requireAdmin, adminIdBody, studentRegistrationClass, studentRegister);
 router.post('/StudentLogin', studentLogIn);
 
-router.get("/Students/:id", ...requireAdminOrTeacher, getStudents);
-router.get("/Student/:id", ...requireSchoolMember, getStudentDetail);
+router.get("/Students/:id", ...requireAdmin, schoolParam, getStudents);
+router.get("/Student/:id", ...requireSchoolMember, studentParam, getStudentDetail);
 
-router.delete("/Students/:id", ...requireAdmin, deleteStudents);
-router.delete("/StudentsClass/:id", ...requireAdmin, deleteStudentsByClass);
-router.delete("/Student/:id", ...requireAdmin, deleteStudent);
+router.delete("/Students/:id", ...requireAdmin, schoolParam, deleteStudents);
+router.delete("/StudentsClass/:id", ...requireAdmin, classParam, deleteStudentsByClass);
+router.delete("/Student/:id", ...requireAdmin, studentParam, deleteStudent);
 
-router.put("/Student/:id", ...requireAdmin, updateStudent);
+router.put("/Student/:id", ...requireAdmin, studentParam, studentUpdateClass, updateStudent);
 
-router.put('/UpdateExamResult/:id', ...requireAdminOrTeacher, updateExamResult);
+router.put('/UpdateExamResult/:id', ...requireAdminOrTeacher, targetStudent, targetStudentSubject, updateExamResult);
 
-router.put('/StudentAttendance/:id', ...requireAdminOrTeacher, studentAttendance);
+router.put('/StudentAttendance/:id', ...requireAdminOrTeacher, targetStudent, targetStudentSubject, studentAttendance);
 
-router.put('/RemoveAllStudentsSubAtten/:id', ...requireAdminOrTeacher, clearAllStudentsAttendanceBySubject);
-router.put('/RemoveAllStudentsAtten/:id', ...requireAdmin, clearAllStudentsAttendance);
+router.put('/RemoveAllStudentsSubAtten/:id', ...requireAdminOrTeacher, subjectParam, clearAllStudentsAttendanceBySubject);
+router.put('/RemoveAllStudentsAtten/:id', ...requireAdmin, schoolParam, clearAllStudentsAttendance);
 
-router.put('/RemoveStudentSubAtten/:id', ...requireAdminOrTeacher, removeStudentAttendanceBySubject);
-router.put('/RemoveStudentAtten/:id', ...requireAdminOrTeacher, removeStudentAttendance);
+router.put('/RemoveStudentSubAtten/:id', ...requireAdminOrTeacher, targetStudent, targetStudentSubId, removeStudentAttendanceBySubject);
+router.put('/RemoveStudentAtten/:id', ...requireAdminOrTeacher, studentParam, removeStudentAttendance);
 
 // Teacher
 
-router.post('/TeacherReg', ...requireAdmin, teacherRegister);
+router.post('/TeacherReg', ...requireAdmin, schoolBody, teacherRegistrationClass, teacherRegistrationSubject, teacherRegister);
 router.post('/TeacherLogin', teacherLogIn);
 
-router.get("/Teachers/:id", ...requireAdmin, getTeachers);
-router.get("/Teacher/:id", ...requireAdminOrTeacher, getTeacherDetail);
+router.get("/Teachers/:id", ...requireAdmin, schoolParam, getTeachers);
+router.get("/Teacher/:id", ...requireAdminOrTeacher, teacherParam, getTeacherDetail);
 
-router.delete("/Teachers/:id", ...requireAdmin, deleteTeachers);
-router.delete("/TeachersClass/:id", ...requireAdmin, deleteTeachersByClass);
-router.delete("/Teacher/:id", ...requireAdmin, deleteTeacher);
+router.delete("/Teachers/:id", ...requireAdmin, schoolParam, deleteTeachers);
+router.delete("/TeachersClass/:id", ...requireAdmin, classParam, deleteTeachersByClass);
+router.delete("/Teacher/:id", ...requireAdmin, teacherParam, deleteTeacher);
 
-router.put("/TeacherSubject", ...requireAdmin, updateTeacherSubject);
+router.put("/TeacherSubject", ...requireAdmin, teacherAssignmentTeacher, teacherAssignmentSubject, updateTeacherSubject);
 
-router.post('/TeacherAttendance/:id', ...requireAdmin, teacherAttendance);
+router.post('/TeacherAttendance/:id', ...requireAdmin, teacherParam, teacherAttendance);
 
 // Notice
 
-router.post('/NoticeCreate', ...requireAdmin, noticeCreate);
+router.post('/NoticeCreate', ...requireAdmin, adminIdBody, noticeCreate);
 
-router.get('/NoticeList/:id', ...requireSchoolMember, noticeList);
+router.get('/NoticeList/:id', ...requireSchoolMember, schoolParam, noticeList);
 
-router.delete("/Notices/:id", ...requireAdmin, deleteNotices);
-router.delete("/Notice/:id", ...requireAdmin, deleteNotice);
+router.delete("/Notices/:id", ...requireAdmin, schoolParam, deleteNotices);
+router.delete("/Notice/:id", ...requireAdmin, noticeParam, deleteNotice);
 
-router.put("/Notice/:id", ...requireAdmin, updateNotice);
+router.put("/Notice/:id", ...requireAdmin, noticeParam, updateNotice);
 
 // Complain
 
-router.post('/ComplainCreate', ...requireStudent, complainCreate);
+router.post('/ComplainCreate', ...requireStudent, optionalStudentSchool, authorizeSchoolScope({
+    resource: "self",
+    from: "body.user",
+}), complainCreate);
 
-router.get('/ComplainList/:id', ...requireAdmin, complainList);
+router.get('/ComplainList/:id', ...requireAdmin, schoolParam, complainList);
 
 // Sclass
 
-router.post('/SclassCreate', ...requireAdmin, sclassCreate);
+router.post('/SclassCreate', ...requireAdmin, adminIdBody, sclassCreate);
 
-router.get('/SclassList/:id', ...requireAdmin, sclassList);
-router.get("/Sclass/:id", ...requireSchoolMember, getSclassDetail);
+router.get('/SclassList/:id', ...requireAdmin, schoolParam, sclassList);
+router.get("/Sclass/:id", ...requireSchoolMember, classParam, getSclassDetail);
 
-router.get("/Sclass/Students/:id", ...requireAdminOrTeacher, getSclassStudents);
+router.get("/Sclass/Students/:id", ...requireAdminOrTeacher, classParam, getSclassStudents);
 
-router.delete("/Sclasses/:id", ...requireAdmin, deleteSclasses);
-router.delete("/Sclass/:id", ...requireAdmin, deleteSclass);
+router.delete("/Sclasses/:id", ...requireAdmin, schoolParam, deleteSclasses);
+router.delete("/Sclass/:id", ...requireAdmin, classParam, deleteSclass);
 
 // Subject
 
-router.post('/SubjectCreate', ...requireAdmin, subjectCreate);
+router.post('/SubjectCreate', ...requireAdmin, adminIdBody, subjectCreationClass, subjectCreate);
 
-router.get('/AllSubjects/:id', ...requireAdmin, allSubjects);
-router.get('/ClassSubjects/:id', ...requireSchoolMember, classSubjects);
-router.get('/FreeSubjectList/:id', ...requireAdmin, freeSubjectList);
-router.get("/Subject/:id", ...requireSchoolMember, getSubjectDetail);
+router.get('/AllSubjects/:id', ...requireAdmin, schoolParam, allSubjects);
+router.get('/ClassSubjects/:id', ...requireSchoolMember, classParam, classSubjects);
+router.get('/FreeSubjectList/:id', ...requireAdmin, classParam, freeSubjectList);
+router.get("/Subject/:id", ...requireSchoolMember, subjectParam, getSubjectDetail);
 
-router.delete("/Subject/:id", ...requireAdmin, deleteSubject);
-router.delete("/Subjects/:id", ...requireAdmin, deleteSubjects);
-router.delete("/SubjectsClass/:id", ...requireAdmin, deleteSubjectsByClass);
+router.delete("/Subject/:id", ...requireAdmin, subjectParam, deleteSubject);
+router.delete("/Subjects/:id", ...requireAdmin, schoolParam, deleteSubjects);
+router.delete("/SubjectsClass/:id", ...requireAdmin, classParam, deleteSubjectsByClass);
 
 // Game Zone
 router.post('/GameActivityCreate', ...requireTeacher, gameActivityCreate);
