@@ -120,3 +120,16 @@ test("returns not found when the target student no longer exists", async () => {
     assert.equal(res.statusCode, 404);
     assert.deepEqual(res.body, { message: "Student not found" });
 });
+
+test("handles password hashing failures without attempting a database update", async () => {
+    const StudentModel = makeStudentModel();
+    const hashPassword = async () => {
+        throw new Error("hashing failed");
+    };
+    const handler = createUpdateStudentHandler({ StudentModel, hashPassword });
+    const { res } = await invoke(handler, { password: "new-password" }, StudentModel);
+
+    assert.equal(res.statusCode, 500);
+    assert.deepEqual(res.body, { message: "Unable to update student" });
+    assert.equal(StudentModel.calls.length, 0);
+});
