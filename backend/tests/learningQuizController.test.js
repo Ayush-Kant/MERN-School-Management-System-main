@@ -556,3 +556,61 @@ test("rejects teacher quiz listings for a school outside the authenticated teach
     assert.equal(res.statusCode, 404);
     assert.equal(calls.quizListFilter, null);
 });
+
+test("returns safe standardized errors when Learning Quiz persistence operations fail", async () => {
+    const cases = [
+        {
+            operation: "create",
+            overrides: { quizSaveError: new Error("private quiz database diagnostic") },
+            expectedMessage: "Unable to create learning quiz",
+        },
+        {
+            operation: "list",
+            overrides: { quizListError: new Error("private list database diagnostic") },
+            expectedMessage: "Unable to list learning quizzes",
+        },
+        {
+            operation: "publish",
+            overrides: { publishError: new Error("private publish database diagnostic") },
+            expectedMessage: "Unable to publish learning quiz",
+        },
+        {
+            operation: "submit",
+            overrides: { attemptSaveError: new Error("private attempt database diagnostic") },
+            expectedMessage: "Unable to record learning attempt",
+        },
+    ];
+
+    for (const item of cases) {
+        const { controller } = makeHarness(item.overrides);
+        const res = makeResponse();
+
+        if (item.operation === "create") {
+            await controller.learningQuizCreate(createRequest(), res);
+        } else if (item.operation === "list") {
+            await controller.learningQuizList({
+                params: { id: SCHOOL_ID },
+                query: { teacherId: TEACHER_ID },
+            }, res);
+        } else if (item.operation === "publish") {
+            await controller.publishLearningQuiz({
+                params: { id: QUIZ_ID },
+                body: { teacherId: TEACHER_ID },
+            }, res);
+        } else {
+            await controller.learningQuizSubmit({
+                params: { id: QUIZ_ID },
+                body: {
+                    studentId: STUDENT_ID,
+                    idempotencyKey: "attempt-key-server-failure",
+                    answers: [],
+                },
+            }, res);
+        }
+
+        assert.equal(res.statusCode, 500, item.operation);
+        assert.equal(res.body.code, "INTERNAL_ERROR", item.operation);
+        assert.equal(res.body.message, item.expectedMessage, item.operation);
+        assert.equal(JSON.stringify(res.body).includes("private"), false, item.operation);
+    }
+});
