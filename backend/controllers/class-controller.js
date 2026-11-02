@@ -2,6 +2,12 @@ const Sclass = require('../models/sclassSchema.js');
 const Student = require('../models/studentSchema.js');
 const Subject = require('../models/subjectSchema.js');
 const Teacher = require('../models/teacherSchema.js');
+const GameActivity = require('../models/gameActivitySchema.js');
+const { createGameActivityLifecycle } = require('../services/learning/gameActivityIntegrity.js');
+
+const gameActivityLifecycle = createGameActivityLifecycle({
+    GameActivityModel: GameActivity,
+});
 
 const sclassCreate = async (req, res) => {
     try {
@@ -73,6 +79,14 @@ const getSclassStudents = async (req, res) => {
 
 const deleteSclass = async (req, res) => {
     try {
+        const existingClass = await Sclass.findById(req.params.id);
+        if (!existingClass) {
+            return res.send({ message: "Class not found" });
+        }
+
+        // Archive learning activities before removing their class reference.
+        await gameActivityLifecycle.archiveByClass(req.params.id);
+
         const deletedClass = await Sclass.findByIdAndDelete(req.params.id);
         if (!deletedClass) {
             return res.send({ message: "Class not found" });
@@ -88,6 +102,14 @@ const deleteSclass = async (req, res) => {
 
 const deleteSclasses = async (req, res) => {
     try {
+        const classesToDelete = await Sclass.find({ school: req.params.id }).select("_id");
+        if (classesToDelete.length === 0) {
+            return res.send({ message: "No classes found to delete" });
+        }
+
+        // Removing every class in a school invalidates every school's game scope.
+        await gameActivityLifecycle.archiveBySchool(req.params.id);
+
         const deletedClasses = await Sclass.deleteMany({ school: req.params.id });
         if (deletedClasses.deletedCount === 0) {
             return res.send({ message: "No classes found to delete" });
