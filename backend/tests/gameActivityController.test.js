@@ -385,6 +385,7 @@ test("returns a generic server error when listing fails", async () => {
     }, res);
 
     assert.equal(res.statusCode, 500);
+    assert.equal(res.body.code, "INTERNAL_ERROR");
     assert.equal(res.body.message, "Unable to list game activities");
     assert.equal(JSON.stringify(res.body).includes("database internals"), false);
 });
