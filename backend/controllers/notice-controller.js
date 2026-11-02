@@ -26,16 +26,56 @@ const noticeList = async (req, res) => {
     }
 };
 
-const updateNotice = async (req, res) => {
-    try {
-        const result = await Notice.findByIdAndUpdate(req.params.id,
-            { $set: req.body },
-            { new: true })
-        res.send(result)
-    } catch (error) {
-        res.status(500).json(error);
-    }
+function createUpdateNoticeHandler({ NoticeModel = Notice } = {}) {
+    return async function updateNotice(req, res) {
+        const body = req.body;
+
+        if (!body || typeof body !== "object" || Array.isArray(body)) {
+            return res.status(400).json({ message: "A valid update object is required" });
+        }
+
+        const allowedFields = new Set(["title", "details", "date"]);
+        const unsupportedFields = Object.keys(body).filter((field) => !allowedFields.has(field));
+
+        if (unsupportedFields.length > 0) {
+            return res.status(400).json({
+                message: `Unsupported notice update field(s): ${unsupportedFields.join(", ")}`,
+            });
+        }
+
+        const updates = {};
+        for (const field of allowedFields) {
+            if (Object.prototype.hasOwnProperty.call(body, field)) {
+                updates[field] = body[field];
+            }
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ message: "At least one notice field is required" });
+        }
+
+        try {
+            const result = await NoticeModel.findByIdAndUpdate(
+                req.params.id,
+                { $set: updates },
+                { new: true, runValidators: true }
+            );
+
+            if (!result) {
+                return res.status(404).json({ message: "Notice not found" });
+            }
+
+            return res.send(result);
+        } catch (error) {
+            if (error && (error.name === "ValidationError" || error.name === "CastError")) {
+                return res.status(400).json({ message: "Invalid notice update data" });
+            }
+            return res.status(500).json({ message: "Unable to update notice" });
+        }
+    };
 }
+
+const updateNotice = createUpdateNoticeHandler();
 
 const deleteNotice = async (req, res) => {
     try {
