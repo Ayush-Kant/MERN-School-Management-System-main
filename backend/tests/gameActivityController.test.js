@@ -280,7 +280,7 @@ test("returns a client error for Mongoose validation failures", async () => {
     }, res);
 
     assert.equal(res.statusCode, 400);
-    assert.match(res.body.message, /validation failed/);
+    assert.equal(res.body.message, "Request data failed validation");
 });
 
 test("lists only published activities for student-facing requests and applies scope filters", async () => {
