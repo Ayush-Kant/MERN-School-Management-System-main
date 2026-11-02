@@ -6,12 +6,34 @@ import {
     authFailed,
     authError,
     authLogout,
+    sessionRestoreRequest,
+    sessionRestoreSuccess,
+    sessionRestoreFailed,
     doneSuccess,
     getDeleteSuccess,
     getRequest,
     getFailed,
     getError,
 } from './userSlice';
+
+export const restoreSession = () => async (dispatch) => {
+    dispatch(sessionRestoreRequest());
+
+    try {
+        const result = await axios.get(
+            `${process.env.REACT_APP_BASE_URL}/AuthSession`,
+            { withCredentials: true }
+        );
+
+        if (!result.data || !result.data.role) {
+            throw new Error("The server did not return an authenticated profile");
+        }
+
+        dispatch(sessionRestoreSuccess(result.data));
+    } catch (error) {
+        dispatch(sessionRestoreFailed());
+    }
+};
 
 export const loginUser = (fields, role) => async (dispatch) => {
     dispatch(authRequest());
@@ -54,6 +76,8 @@ export const registerUser = (fields, role) => async (dispatch) => {
 };
 
 export const logoutUser = () => async (dispatch) => {
+    dispatch(authLogout());
+
     try {
         await axios.post(
             `${process.env.REACT_APP_BASE_URL}/AuthLogout`,
@@ -64,7 +88,7 @@ export const logoutUser = () => async (dispatch) => {
         // Clear the local UI state even when the API is unreachable.
         // The HttpOnly cookie can only be cleared by the server response.
     } finally {
-        dispatch(authLogout());
+        // Local state is cleared before the request; the server clears the HttpOnly cookie.
     }
 };
 
