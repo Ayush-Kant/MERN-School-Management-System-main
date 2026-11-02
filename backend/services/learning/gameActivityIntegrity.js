@@ -10,10 +10,19 @@ const GAME_ACTIVITY_ARCHIVE_REASONS = Object.freeze([
 ]);
 
 function normalizeReferenceId(value) {
-    if (value && typeof value === "object" && value._id !== undefined) {
-        return normalizeReferenceId(value._id);
-    }
     if (value === undefined || value === null) return null;
+
+    if (typeof value === "object") {
+        // BSON ObjectIds are objects too; prefer their hex representation and
+        // avoid recursively following an ObjectId's self-referential _id.
+        if (typeof value.toHexString === "function") {
+            const hex = value.toHexString();
+            return OBJECT_ID_PATTERN.test(hex) ? hex.toLowerCase() : null;
+        }
+        if (value._id !== undefined && value._id !== value) {
+            return normalizeReferenceId(value._id);
+        }
+    }
 
     const normalized = String(value);
     return OBJECT_ID_PATTERN.test(normalized) ? normalized.toLowerCase() : null;
