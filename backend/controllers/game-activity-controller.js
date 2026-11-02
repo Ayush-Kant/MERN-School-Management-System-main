@@ -382,7 +382,7 @@ function createGameActivityController({
                 ? "Only draft activities can be published"
                 : "Only published activities can be archived";
 
-            return res.status(409).json({ message });
+            return sendApiError(res, 409, message);
         } catch (error) {
             if (error && (error.name === "ValidationError" || error.name === "CastError")) {
                 return validationErrorResponse(res, "Request data failed validation");
