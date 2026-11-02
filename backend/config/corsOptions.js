@@ -41,6 +41,7 @@ function createCorsOptions(env = process.env) {
 
     return {
         credentials: true,
+        exposedHeaders: ["X-Request-Id"],
         origin(origin, callback) {
             // Non-browser clients such as local scripts do not send an Origin header.
             if (!origin || allowedOrigins.has(origin)) {
