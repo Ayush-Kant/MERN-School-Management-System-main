@@ -370,7 +370,7 @@ test("does not list a teacher's activities outside that teacher's school", async
     }, res);
 
     assert.equal(res.statusCode, 404);
-    assert.match(res.body.message, /Teacher not found in this school/);
+    assert.equal(res.body.message, "Game activities not found for this school");
     assert.equal(calls.listFilter, null);
 });
 
