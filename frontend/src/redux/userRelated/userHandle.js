@@ -19,6 +19,7 @@ export const loginUser = (fields, role) => async (dispatch) => {
     try {
         const result = await axios.post(`${process.env.REACT_APP_BASE_URL}/${role}Login`, fields, {
             headers: { 'Content-Type': 'application/json' },
+            withCredentials: true,
         });
         if (result.data.role) {
             dispatch(authSuccess(result.data));
@@ -36,6 +37,7 @@ export const registerUser = (fields, role) => async (dispatch) => {
     try {
         const result = await axios.post(`${process.env.REACT_APP_BASE_URL}/${role}Reg`, fields, {
             headers: { 'Content-Type': 'application/json' },
+            withCredentials: true,
         });
         if (result.data.schoolName) {
             dispatch(authSuccess(result.data));
@@ -51,8 +53,19 @@ export const registerUser = (fields, role) => async (dispatch) => {
     }
 };
 
-export const logoutUser = () => (dispatch) => {
-    dispatch(authLogout());
+export const logoutUser = () => async (dispatch) => {
+    try {
+        await axios.post(
+            `${process.env.REACT_APP_BASE_URL}/AuthLogout`,
+            {},
+            { withCredentials: true }
+        );
+    } catch (error) {
+        // Clear the local UI state even when the API is unreachable.
+        // The HttpOnly cookie can only be cleared by the server response.
+    } finally {
+        dispatch(authLogout());
+    }
 };
 
 export const getUserDetails = (id, address) => async (dispatch) => {
