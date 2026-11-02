@@ -1,6 +1,6 @@
 const { clearSessionCookie } = require("../utils/authSession.js");
 
-const OBJECT_ID_PATTERN = /^[a-f\\d]{24}$/i;
+const OBJECT_ID_PATTERN = /^[a-f0-9]{24}$/i;
 const SUPPORTED_ROLES = new Set(["Admin", "Teacher", "Student"]);
 
 function normalizeObjectId(value) {
