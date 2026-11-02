@@ -82,4 +82,4 @@ Run from `backend`:
 npm test
 ~~~
 
-The new tests validate the Mongoose schema without a live database and exercise relationship checks and lifecycle query construction using injected model doubles. Existing tests continue to use the isolated test environment.
+The new tests validate the Mongoose schema without a live database, exercise relationship checks and lifecycle query construction with injected model doubles, and verify that controller-level archival runs before destructive operations or reassignment. A failure-path test confirms that a failed archive prevents the Class deletion. Existing tests continue to use the isolated test environment.
