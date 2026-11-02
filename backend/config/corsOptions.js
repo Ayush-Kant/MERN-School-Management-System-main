@@ -47,7 +47,9 @@ function createCorsOptions(env = process.env) {
                 return callback(null, true);
             }
 
-            return callback(new Error("Origin is not allowed by CORS"));
+            const error = new Error("Origin is not allowed by CORS");
+            error.code = "CORS_ORIGIN_NOT_ALLOWED";
+            return callback(error);
         },
     };
 }
