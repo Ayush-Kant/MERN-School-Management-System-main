@@ -7,3 +7,6 @@ process.env.NODE_ENV = "test";
 process.env.MONGO_URL = "mongodb://127.0.0.1:27017/school_management_test";
 process.env.FRONTEND_URLS = "http://localhost:3000";
 process.env.AUTH_SESSION_SECRET = "unit-test-only-session-secret-do-not-use-in-production";
+process.env.AUTH_SESSION_TTL_SECONDS = "3600";
+process.env.AUTH_COOKIE_SAME_SITE = "lax";
+process.env.AUTH_COOKIE_SECURE = "false";
