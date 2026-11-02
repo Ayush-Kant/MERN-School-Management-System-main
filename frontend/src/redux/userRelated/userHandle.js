@@ -87,8 +87,6 @@ export const logoutUser = () => async (dispatch) => {
     } catch (error) {
         // Clear the local UI state even when the API is unreachable.
         // The HttpOnly cookie can only be cleared by the server response.
-    } finally {
-        // Local state is cleared before the request; the server clears the HttpOnly cookie.
     }
 };
 
