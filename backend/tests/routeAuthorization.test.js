@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const router = require("../routes/route.js");
 const { authenticateSession } = require("../middleware/authenticateSession.js");
+const { loadActorContext } = require("../middleware/loadActorContext.js");
 
 const PUBLIC_ROUTES = new Set([
     "POST /AdminReg",
@@ -11,15 +12,13 @@ const PUBLIC_ROUTES = new Set([
     "POST /AuthLogout",
 ]);
 
-const SESSION_ONLY_ROUTES = new Set([
-    "GET /AuthSession",
-]);
+const SESSION_ONLY_ROUTES = new Set(["GET /AuthSession"]);
 
 const EXPECTED_ROLE_ROUTES = new Map([
     ["GET /Admin/:id", ["Admin"]],
 
     ["POST /StudentReg", ["Admin"]],
-    ["GET /Students/:id", ["Admin", "Teacher"]],
+    ["GET /Students/:id", ["Admin"]],
     ["GET /Student/:id", ["Admin", "Teacher", "Student"]],
     ["DELETE /Students/:id", ["Admin"]],
     ["DELETE /StudentsClass/:id", ["Admin"]],
@@ -77,6 +76,129 @@ const EXPECTED_ROLE_ROUTES = new Map([
     ["POST /LearningQuizSubmit/:id", ["Student"]],
 ]);
 
+const scope = (resource, from, options = {}) => ({
+    resource,
+    from,
+    as: options.as || resource,
+    belongsTo: options.belongsTo,
+    optional: options.optional || false,
+});
+
+const EXPECTED_SCOPE_ROUTES = new Map([
+    ["GET /Admin/:id", [scope("self", "params.id")]],
+
+    ["POST /StudentReg", [
+        scope("school", "body.adminID"),
+        scope("class", "body.sclassName"),
+    ]],
+    ["GET /Students/:id", [scope("school", "params.id")]],
+    ["GET /Student/:id", [scope("student", "params.id")]],
+    ["DELETE /Students/:id", [scope("school", "params.id")]],
+    ["DELETE /StudentsClass/:id", [scope("class", "params.id")]],
+    ["DELETE /Student/:id", [scope("student", "params.id")]],
+    ["PUT /Student/:id", [
+        scope("student", "params.id"),
+        scope("class", "body.sclassName", { optional: true }),
+    ]],
+    ["PUT /UpdateExamResult/:id", [
+        scope("student", "params.id", { as: "targetStudent" }),
+        scope("subject", "body.subName", {
+            as: "targetStudentSubject",
+            belongsTo: {
+                field: "sclassName",
+                resource: "targetStudent",
+                resourceField: "sclassName",
+            },
+        }),
+    ]],
+    ["PUT /StudentAttendance/:id", [
+        scope("student", "params.id", { as: "targetStudent" }),
+        scope("subject", "body.subName", {
+            as: "targetStudentSubject",
+            belongsTo: {
+                field: "sclassName",
+                resource: "targetStudent",
+                resourceField: "sclassName",
+            },
+        }),
+    ]],
+    ["PUT /RemoveAllStudentsSubAtten/:id", [scope("subject", "params.id")]],
+    ["PUT /RemoveAllStudentsAtten/:id", [scope("school", "params.id")]],
+    ["PUT /RemoveStudentSubAtten/:id", [
+        scope("student", "params.id", { as: "targetStudent" }),
+        scope("subject", "body.subId", {
+            as: "targetStudentSubId",
+            belongsTo: {
+                field: "sclassName",
+                resource: "targetStudent",
+                resourceField: "sclassName",
+            },
+        }),
+    ]],
+    ["PUT /RemoveStudentAtten/:id", [scope("student", "params.id")]],
+
+    ["POST /TeacherReg", [
+        scope("school", "body.school"),
+        scope("class", "body.teachSclass", { as: "teacherRegistrationClass" }),
+        scope("subject", "body.teachSubject", {
+            as: "teacherRegistrationSubject",
+            belongsTo: {
+                field: "sclassName",
+                resource: "teacherRegistrationClass",
+                resourceField: "_id",
+            },
+        }),
+    ]],
+    ["GET /Teachers/:id", [scope("school", "params.id")]],
+    ["GET /Teacher/:id", [scope("teacher", "params.id")]],
+    ["DELETE /Teachers/:id", [scope("school", "params.id")]],
+    ["DELETE /TeachersClass/:id", [scope("class", "params.id")]],
+    ["DELETE /Teacher/:id", [scope("teacher", "params.id")]],
+    ["PUT /TeacherSubject", [
+        scope("teacher", "body.teacherId", { as: "teacherAssignmentTeacher" }),
+        scope("subject", "body.teachSubject", {
+            as: "teacherAssignmentSubject",
+            belongsTo: {
+                field: "sclassName",
+                resource: "teacherAssignmentTeacher",
+                resourceField: "teachSclass",
+            },
+        }),
+    ]],
+    ["POST /TeacherAttendance/:id", [scope("teacher", "params.id")]],
+
+    ["POST /NoticeCreate", [scope("school", "body.adminID")]],
+    ["GET /NoticeList/:id", [scope("school", "params.id")]],
+    ["DELETE /Notices/:id", [scope("school", "params.id")]],
+    ["DELETE /Notice/:id", [scope("notice", "params.id")]],
+    ["PUT /Notice/:id", [scope("notice", "params.id")]],
+
+    ["POST /ComplainCreate", [
+        scope("school", "body.school", { optional: true }),
+        scope("self", "body.user"),
+    ]],
+    ["GET /ComplainList/:id", [scope("school", "params.id")]],
+
+    ["POST /SclassCreate", [scope("school", "body.adminID")]],
+    ["GET /SclassList/:id", [scope("school", "params.id")]],
+    ["GET /Sclass/:id", [scope("class", "params.id")]],
+    ["GET /Sclass/Students/:id", [scope("class", "params.id")]],
+    ["DELETE /Sclasses/:id", [scope("school", "params.id")]],
+    ["DELETE /Sclass/:id", [scope("class", "params.id")]],
+
+    ["POST /SubjectCreate", [
+        scope("school", "body.adminID"),
+        scope("class", "body.sclassName"),
+    ]],
+    ["GET /AllSubjects/:id", [scope("school", "params.id")]],
+    ["GET /ClassSubjects/:id", [scope("class", "params.id")]],
+    ["GET /FreeSubjectList/:id", [scope("class", "params.id")]],
+    ["GET /Subject/:id", [scope("subject", "params.id")]],
+    ["DELETE /Subject/:id", [scope("subject", "params.id")]],
+    ["DELETE /Subjects/:id", [scope("school", "params.id")]],
+    ["DELETE /SubjectsClass/:id", [scope("class", "params.id")]],
+]);
+
 function routeKey(route) {
     const method = Object.keys(route.methods).find((key) => route.methods[key]);
     return `${method.toUpperCase()} ${route.path}`;
@@ -86,6 +208,19 @@ function findRoute(key) {
     const layer = router.stack.find((entry) => entry.route && routeKey(entry.route) === key);
     assert.ok(layer, `Expected route ${key} to be registered`);
     return layer.route;
+}
+
+function getMiddlewareScopes(route) {
+    return route.stack
+        .map((entry) => entry.handle.scope)
+        .filter(Boolean)
+        .map((entry) => ({
+            resource: entry.resource,
+            from: entry.from,
+            as: entry.as,
+            belongsTo: entry.belongsTo,
+            optional: entry.optional,
+        }));
 }
 
 test("all registered API routes are explicitly classified", () => {
@@ -116,6 +251,11 @@ test("only login, initial Admin registration, and logout remain public", () => {
             false,
             `${key} should not have a role guard`
         );
+        assert.equal(
+            route.stack.some((entry) => entry.handle === loadActorContext),
+            false,
+            `${key} should not load an authenticated actor`
+        );
     }
 });
 
@@ -126,17 +266,47 @@ test("the session inspection endpoint requires authentication without a role res
         route.stack.some((entry) => Array.isArray(entry.handle.allowedRoles)),
         false
     );
+    assert.equal(
+        route.stack.some((entry) => entry.handle === loadActorContext),
+        false
+    );
 });
 
-test("every other API route authenticates first and applies its explicit role allowlist", () => {
+test("every role-protected API authenticates, authorizes its role, and loads actor context in order", () => {
     for (const [key, expectedRoles] of EXPECTED_ROLE_ROUTES) {
         const route = findRoute(key);
         assert.equal(route.stack[0].handle, authenticateSession, `${key} must authenticate first`);
 
-        const roleGuards = route.stack.filter((entry) =>
+        const roleIndex = route.stack.findIndex((entry) =>
             Array.isArray(entry.handle.allowedRoles)
         );
-        assert.equal(roleGuards.length, 1, `${key} must have exactly one role guard`);
-        assert.deepEqual(roleGuards[0].handle.allowedRoles, expectedRoles, key);
+        assert.notEqual(roleIndex, -1, `${key} must have a role guard`);
+        assert.deepEqual(route.stack[roleIndex].handle.allowedRoles, expectedRoles, key);
+        assert.equal(route.stack[roleIndex + 1].handle, loadActorContext, `${key} must load actor after role authorization`);
+    }
+});
+
+test("all legacy school-management routes have explicit resource/school scope checks", () => {
+    assert.deepEqual(
+        [...EXPECTED_SCOPE_ROUTES.keys()].sort(),
+        [...EXPECTED_ROLE_ROUTES.keys()]
+            .filter((key) => !key.includes("GameActivity") && !key.includes("LearningQuiz"))
+            .sort()
+    );
+
+    for (const [key, expectedScopes] of EXPECTED_SCOPE_ROUTES) {
+        assert.deepEqual(getMiddlewareScopes(findRoute(key)), expectedScopes, key);
+    }
+});
+
+test("new Games and Learning Quiz routes rely on authenticated actor context and their controller-level ownership checks", () => {
+    for (const key of EXPECTED_ROLE_ROUTES.keys()) {
+        if (!key.includes("GameActivity") && !key.includes("LearningQuiz")) continue;
+        const route = findRoute(key);
+        const roleIndex = route.stack.findIndex((entry) =>
+            Array.isArray(entry.handle.allowedRoles)
+        );
+        assert.equal(route.stack[roleIndex + 1].handle, loadActorContext, key);
+        assert.deepEqual(getMiddlewareScopes(route), []);
     }
 });
