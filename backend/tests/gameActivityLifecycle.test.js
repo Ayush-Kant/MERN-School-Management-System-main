@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const mongoose = require("mongoose");
 const {
     GAME_ACTIVITY_ARCHIVE_REASONS,
     normalizeReferenceId,
@@ -52,6 +53,10 @@ function makeLifecycle(overrides = {}) {
 test("reference normalization accepts ObjectId strings and populated references", () => {
     assert.equal(normalizeReferenceId(IDS.teacher), IDS.teacher);
     assert.equal(normalizeReferenceId({ _id: IDS.teacher }), IDS.teacher);
+    assert.equal(
+        normalizeReferenceId(new mongoose.Types.ObjectId(IDS.teacher)),
+        IDS.teacher
+    );
     assert.equal(normalizeReferenceId("invalid"), null);
     assert.equal(normalizeReferenceId(null), null);
 });
@@ -166,6 +171,7 @@ test("subject, Teacher, Teacher batch, and school lifecycle filters are scoped p
     const { lifecycle, calls } = makeLifecycle();
 
     await lifecycle.archiveBySubject(IDS.subject);
+    await lifecycle.archiveBySubjects([IDS.subject, IDS.otherSubject, IDS.subject]);
     await lifecycle.archiveByTeacher(IDS.teacher);
     await lifecycle.archiveByTeachers([IDS.teacher, IDS.otherTeacher, IDS.teacher]);
     await lifecycle.archiveBySchool(IDS.school);
@@ -177,22 +183,28 @@ test("subject, Teacher, Teacher batch, and school lifecycle filters are scoped p
     assert.equal(calls[0].update.$set.archiveReason, "subject_deleted");
 
     assert.deepEqual(calls[1].filter, {
-        createdByTeacher: IDS.teacher,
+        subject: { $in: [IDS.subject, IDS.otherSubject] },
         status: { $ne: "archived" },
     });
-    assert.equal(calls[1].update.$set.archiveReason, "teacher_deleted");
+    assert.equal(calls[1].update.$set.archiveReason, "subject_deleted");
 
     assert.deepEqual(calls[2].filter, {
-        createdByTeacher: { $in: [IDS.teacher, IDS.otherTeacher] },
+        createdByTeacher: IDS.teacher,
         status: { $ne: "archived" },
     });
     assert.equal(calls[2].update.$set.archiveReason, "teacher_deleted");
 
     assert.deepEqual(calls[3].filter, {
+        createdByTeacher: { $in: [IDS.teacher, IDS.otherTeacher] },
+        status: { $ne: "archived" },
+    });
+    assert.equal(calls[3].update.$set.archiveReason, "teacher_deleted");
+
+    assert.deepEqual(calls[4].filter, {
         school: IDS.school,
         status: { $ne: "archived" },
     });
-    assert.equal(calls[3].update.$set.archiveReason, "school_resources_deleted");
+    assert.equal(calls[4].update.$set.archiveReason, "school_resources_deleted");
 });
 
 test("Teacher reassignment archives only activities outside the new assignment", async () => {
