@@ -6,6 +6,7 @@ const SCHOOL_ID = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const OTHER_SCHOOL_ID = "ffffffffffffffffffffffff";
 const TEACHER_ID = "bbbbbbbbbbbbbbbbbbbbbbbb";
 const OTHER_TEACHER_ID = "eeeeeeeeeeeeeeeeeeeeeeee";
+const STUDENT_ID = "eeeeeeeeeeeeeeeeeeeeeeee";
 const CLASS_ID = "cccccccccccccccccccccccc";
 const OTHER_CLASS_ID = "999999999999999999999999";
 const SUBJECT_ID = "dddddddddddddddddddddddd";
@@ -19,6 +20,7 @@ const validTeacher = {
     teachSubject: SUBJECT_ID,
 };
 const validClass = { _id: CLASS_ID, school: SCHOOL_ID };
+const validStudent = { _id: STUDENT_ID, school: SCHOOL_ID, sclassName: CLASS_ID };
 const validSubject = {
     _id: SUBJECT_ID,
     school: SCHOOL_ID,
@@ -44,6 +46,7 @@ function makeResponse() {
 function makeHarness(overrides = {}) {
     const calls = {
         teacherLookup: [],
+        studentLookup: [],
         classLookup: [],
         subjectLookup: [],
         createdData: null,
@@ -59,6 +62,7 @@ function makeHarness(overrides = {}) {
     const teacher = Object.hasOwn(overrides, "teacher") ? overrides.teacher : validTeacher;
     const schoolClass = Object.hasOwn(overrides, "schoolClass") ? overrides.schoolClass : validClass;
     const subject = Object.hasOwn(overrides, "subject") ? overrides.subject : validSubject;
+    const student = Object.hasOwn(overrides, "student") ? overrides.student : validStudent;
 
     class FakeGameActivity {
         constructor(data) {
@@ -126,7 +130,24 @@ function makeHarness(overrides = {}) {
                 return subject;
             },
         },
+        StudentModel: {
+            async findById(id) {
+                calls.studentLookup.push(id);
+                return student;
+            },
+        },
     });
+
+    const originalMethods = { ...controller };
+    for (const [methodName, method] of Object.entries(originalMethods)) {
+        controller[methodName] = (req, res) => {
+            const authenticatedRequest = { ...req };
+            if (!Object.prototype.hasOwnProperty.call(authenticatedRequest, "auth")) {
+                authenticatedRequest.auth = { userId: TEACHER_ID, role: "Teacher" };
+            }
+            return method(authenticatedRequest, res);
+        };
+    }
 
     return { controller, calls };
 }
@@ -266,6 +287,7 @@ test("lists only published activities for student-facing requests and applies sc
     const res = makeResponse();
 
     await controller.gameActivityList({
+        auth: { userId: STUDENT_ID, role: "Student" },
         params: { id: SCHOOL_ID },
         query: { classId: CLASS_ID, subjectId: SUBJECT_ID },
     }, res);
@@ -294,6 +316,8 @@ test("lists a teacher's activities and applies an explicit status filter when su
     assert.equal(res.statusCode, 200);
     assert.deepEqual(calls.listFilter, {
         school: SCHOOL_ID,
+        class: CLASS_ID,
+        subject: SUBJECT_ID,
         createdByTeacher: TEACHER_ID,
         status: "draft",
     });
@@ -311,6 +335,8 @@ test("teacher listings without a status include all of that teacher's statuses",
     assert.equal(res.statusCode, 200);
     assert.deepEqual(calls.listFilter, {
         school: SCHOOL_ID,
+        class: CLASS_ID,
+        subject: SUBJECT_ID,
         createdByTeacher: TEACHER_ID,
     });
 });
@@ -321,7 +347,7 @@ test("rejects invalid ids and disallows draft listing without a teacher context"
         { params: { id: SCHOOL_ID }, query: { classId: "bad-class-id" }, expected: 400 },
         { params: { id: SCHOOL_ID }, query: { subjectId: "bad-subject-id" }, expected: 400 },
         { params: { id: SCHOOL_ID }, query: { status: "unknown" }, expected: 400 },
-        { params: { id: SCHOOL_ID }, query: { status: "draft" }, expected: 403 },
+        { params: { id: SCHOOL_ID }, query: { status: "draft" }, auth: { userId: STUDENT_ID, role: "Student" }, expected: 403 },
     ];
 
     for (const request of cases) {
@@ -379,6 +405,7 @@ test("publishes a draft activity atomically and records publishedAt", async () =
     assert.equal(res.body.status, "published");
     assert.equal(calls.transitionFilter._id, ACTIVITY_ID);
     assert.equal(calls.transitionFilter.createdByTeacher, TEACHER_ID);
+    assert.equal(calls.transitionFilter.school, SCHOOL_ID);
     assert.equal(calls.transitionFilter.status, "draft");
     assert.equal(calls.transitionUpdate.$set.status, "published");
     assert.ok(calls.transitionUpdate.$set.publishedAt instanceof Date);
@@ -401,6 +428,7 @@ test("archives a published activity without overwriting its original publish tim
     assert.equal(res.body.status, "archived");
     assert.equal(calls.transitionFilter._id, ACTIVITY_ID);
     assert.equal(calls.transitionFilter.createdByTeacher, TEACHER_ID);
+    assert.equal(calls.transitionFilter.school, SCHOOL_ID);
     assert.equal(calls.transitionFilter.status, "published");
     assert.deepEqual(calls.transitionUpdate, { $set: { status: "archived" } });
 });
@@ -437,6 +465,7 @@ test("returns not found if the activity is missing or not owned by the supplied 
     assert.deepEqual(calls.ownedLookupFilter, {
         _id: ACTIVITY_ID,
         createdByTeacher: TEACHER_ID,
+        school: SCHOOL_ID,
     });
 });
 
@@ -505,17 +534,87 @@ test("returns a generic error if a publish or archive database update fails", as
 
 
 test("accepts valid ObjectIds containing digits", async () => {
-    const { controller, calls } = makeHarness({ listRecords: [] });
+    const { controller, calls } = makeHarness({
+        teacher: { ...validTeacher, school: NUMERIC_HEX_ID },
+        listRecords: [],
+    });
     const res = makeResponse();
 
     await controller.gameActivityList({
         params: { id: NUMERIC_HEX_ID },
-        query: {},
+        query: { teacherId: TEACHER_ID },
     }, res);
 
     assert.equal(res.statusCode, 200);
     assert.deepEqual(calls.listFilter, {
         school: NUMERIC_HEX_ID,
-        status: "published",
+        class: CLASS_ID,
+        subject: SUBJECT_ID,
+        createdByTeacher: TEACHER_ID,
     });
+});
+
+test("rejects a game request when the server-side session is missing", async () => {
+    const { controller, calls } = makeHarness();
+    const res = makeResponse();
+
+    await controller.gameActivityCreate({
+        auth: null,
+        body: { title: "Valid title", embedUrl: "https://wordwall.net/embed/1" },
+    }, res);
+
+    assert.equal(res.statusCode, 401);
+    assert.equal(calls.teacherLookup.length, 0);
+});
+
+test("does not let a teacher create or transition games as another teacher", async () => {
+    const createHarness = makeHarness();
+    const createRes = makeResponse();
+    await createHarness.controller.gameActivityCreate({
+        body: {
+            teacherId: OTHER_TEACHER_ID,
+            title: "Valid title",
+            embedUrl: "https://wordwall.net/embed/1",
+        },
+    }, createRes);
+
+    assert.equal(createRes.statusCode, 403);
+    assert.equal(createHarness.calls.teacherLookup.length, 0);
+
+    const transitionHarness = makeHarness();
+    const transitionRes = makeResponse();
+    await transitionHarness.controller.publishGameActivity({
+        params: { id: ACTIVITY_ID },
+        body: { teacherId: OTHER_TEACHER_ID },
+    }, transitionRes);
+
+    assert.equal(transitionRes.statusCode, 403);
+    assert.equal(transitionHarness.calls.transitionFilter, null);
+});
+
+test("does not let a student list another class's games", async () => {
+    const { controller, calls } = makeHarness();
+    const res = makeResponse();
+
+    await controller.gameActivityList({
+        auth: { userId: STUDENT_ID, role: "Student" },
+        params: { id: SCHOOL_ID },
+        query: { classId: OTHER_CLASS_ID },
+    }, res);
+
+    assert.equal(res.statusCode, 403);
+    assert.equal(calls.listFilter, null);
+});
+
+test("does not let a teacher list games from another school", async () => {
+    const { controller, calls } = makeHarness();
+    const res = makeResponse();
+
+    await controller.gameActivityList({
+        params: { id: OTHER_SCHOOL_ID },
+        query: { teacherId: TEACHER_ID },
+    }, res);
+
+    assert.equal(res.statusCode, 404);
+    assert.equal(calls.listFilter, null);
 });
