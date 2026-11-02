@@ -145,6 +145,24 @@ function createGameActivityLifecycle({ GameActivityModel, clock = () => new Date
             );
         },
 
+        archiveBySubjects(subjectIds) {
+            if (!Array.isArray(subjectIds)) {
+                throw new TypeError("subjectIds must be an array");
+            }
+            if (subjectIds.length === 0) {
+                return Promise.resolve(null);
+            }
+
+            const normalizedIds = [...new Set(
+                subjectIds.map((subjectId) => requireId(subjectId, "subjectId"))
+            )];
+
+            return archive(
+                { subject: { $in: normalizedIds } },
+                "subject_deleted"
+            );
+        },
+
         archiveByTeachers(teacherIds) {
             if (!Array.isArray(teacherIds)) {
                 throw new TypeError("teacherIds must be an array");
