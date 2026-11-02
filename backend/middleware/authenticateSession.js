@@ -2,6 +2,7 @@ const {
     getSessionConfig,
     verifySessionToken,
     readSessionCookie,
+    clearSessionCookie,
 } = require("../utils/authSession.js");
 
 function createAuthenticateSession(dependencies = {}) {
@@ -28,6 +29,7 @@ function createAuthenticateSession(dependencies = {}) {
             req.auth = verifyToken(token, { config });
             return next();
         } catch (error) {
+            clearSessionCookie(res);
             return res.status(401).json({ message: "Session is invalid or expired" });
         }
     };
