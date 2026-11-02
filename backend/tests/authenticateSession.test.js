@@ -24,6 +24,13 @@ function createResponse() {
     return {
         statusCode: null,
         body: null,
+        headers: {},
+        getHeader(name) {
+            return this.headers[name];
+        },
+        setHeader(name, value) {
+            this.headers[name] = value;
+        },
         status(code) {
             this.statusCode = code;
             return this;
@@ -97,6 +104,7 @@ test("rejects invalid or expired session cookies", () => {
 
     assert.equal(response.statusCode, 401);
     assert.deepEqual(response.body, { message: "Session is invalid or expired" });
+    assert.match(response.headers["Set-Cookie"][0], /Max-Age=0/);
     assert.equal(nextCalled, false);
 });
 
