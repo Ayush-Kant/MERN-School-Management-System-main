@@ -5,6 +5,8 @@ const { clearSessionCookie } = require("../utils/authSession.js");
 
 const getAuthSession = async (req, res) => {
     try {
+        res.set("Cache-Control", "no-store");
+
         if (!req.auth) {
             return res.status(401).json({ message: "Authentication required" });
         }
