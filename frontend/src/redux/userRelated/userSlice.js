@@ -5,8 +5,9 @@ const initialState = {
     userDetails: [],
     tempDetails: [],
     loading: false,
-    currentUser: JSON.parse(localStorage.getItem('user')) || null,
-    currentRole: (JSON.parse(localStorage.getItem('user')) || {}).role || null,
+    currentUser: null,
+    currentRole: null,
+    sessionStatus: 'checking',
     error: null,
     response: null,
     darkMode: true
@@ -16,6 +17,21 @@ const userSlice = createSlice({
     name: 'user',
     initialState,
     reducers: {
+        sessionRestoreRequest: (state) => {
+            state.sessionStatus = 'checking';
+        },
+        sessionRestoreSuccess: (state, action) => {
+            state.currentUser = action.payload;
+            state.currentRole = action.payload.role;
+            state.sessionStatus = 'authenticated';
+            localStorage.setItem('user', JSON.stringify(action.payload));
+        },
+        sessionRestoreFailed: (state) => {
+            state.currentUser = null;
+            state.currentRole = null;
+            state.sessionStatus = 'unauthenticated';
+            localStorage.removeItem('user');
+        },
         authRequest: (state) => {
             state.status = 'loading';
         },
@@ -33,6 +49,7 @@ const userSlice = createSlice({
             state.status = 'success';
             state.currentUser = action.payload;
             state.currentRole = action.payload.role;
+            state.sessionStatus = 'authenticated';
             localStorage.setItem('user', JSON.stringify(action.payload));
             state.response = null;
             state.error = null;
@@ -50,7 +67,8 @@ const userSlice = createSlice({
             state.currentUser = null;
             state.status = 'idle';
             state.error = null;
-            state.currentRole = null
+            state.currentRole = null;
+            state.sessionStatus = 'unauthenticated';
         },
 
         doneSuccess: (state, action) => {
@@ -84,6 +102,9 @@ const userSlice = createSlice({
 });
 
 export const {
+    sessionRestoreRequest,
+    sessionRestoreSuccess,
+    sessionRestoreFailed,
     authRequest,
     underControl,
     stuffAdded,
