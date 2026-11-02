@@ -1,4 +1,9 @@
 const bcrypt = require('bcrypt');
+const {
+    getSessionConfig,
+    createSessionToken,
+    setSessionCookie,
+} = require("../utils/authSession.js");
 const Student = require('../models/studentSchema.js');
 const Subject = require('../models/subjectSchema.js');
 
@@ -39,8 +44,15 @@ const studentLogIn = async (req, res) => {
         if (student) {
             const validated = await bcrypt.compare(req.body.password, student.password);
             if (validated) {
+                const sessionConfig = getSessionConfig();
                 student = await student.populate("school", "schoolName")
                 student = await student.populate("sclassName", "sclassName")
+                const sessionToken = createSessionToken(
+                    { userId: String(student._id), role: "Student" },
+                    { config: sessionConfig }
+                );
+                setSessionCookie(res, sessionToken, sessionConfig);
+
                 student.password = undefined;
                 student.examResult = undefined;
                 student.attendance = undefined;
