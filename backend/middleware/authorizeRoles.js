@@ -1,5 +1,5 @@
 const SUPPORTED_ROLES = new Set(["Admin", "Teacher", "Student"]);
-const OBJECT_ID_PATTERN = /^[a-f\\d]{24}$/i;
+const OBJECT_ID_PATTERN = /^[a-f\d]{24}$/i;
 
 /**
  * Must be mounted after authenticateSession. The role is taken only from the
