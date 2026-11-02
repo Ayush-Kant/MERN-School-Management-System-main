@@ -9,4 +9,7 @@ test("backend tests run with an isolated test environment", () => {
     );
     assert.equal(process.env.FRONTEND_URLS, "http://localhost:3000");
     assert.match(process.env.AUTH_SESSION_SECRET || "", /^unit-test-only-/);
+    assert.equal(process.env.AUTH_SESSION_TTL_SECONDS, "3600");
+    assert.equal(process.env.AUTH_COOKIE_SAME_SITE, "lax");
+    assert.equal(process.env.AUTH_COOKIE_SECURE, "false");
 });
