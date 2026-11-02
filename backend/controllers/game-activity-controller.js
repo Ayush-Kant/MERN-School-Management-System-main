@@ -1,4 +1,5 @@
 const { validateWordwallEmbedUrl } = require("../utils/wordwallUrl");
+const { sendApiError } = require("../utils/apiResponse.js");
 
 const GAME_STATUSES = new Set(["draft", "published", "archived"]);
 const OBJECT_ID_PATTERN = /^[a-f\d]{24}$/i;
@@ -14,7 +15,7 @@ function sameId(left, right) {
 }
 
 function validationErrorResponse(res, message) {
-    return res.status(400).json({ message });
+    return sendApiError(res, 400, message);
 }
 
 function getAuthenticatedActor(req, res, allowedRoles) {
@@ -24,12 +25,12 @@ function getAuthenticatedActor(req, res, allowedRoles) {
         !isValidObjectId(actor.userId) ||
         !["Admin", "Teacher", "Student"].includes(actor.role)
     ) {
-        res.status(401).json({ message: "Authentication required" });
+        sendApiError(res, 401, "Authentication required");
         return null;
     }
 
     if (!allowedRoles.includes(actor.role)) {
-        res.status(403).json({ message: "You are not allowed to access this resource" });
+        sendApiError(res, 403, "You are not allowed to access this resource");
         return null;
     }
 
@@ -45,7 +46,7 @@ function rejectIdentityOverride(suppliedId, authenticatedId, res, fieldName) {
     }
 
     if (!sameId(suppliedId, authenticatedId)) {
-        res.status(403).json({ message: `${fieldName} does not match the authenticated account` });
+        sendApiError(res, 403, `${fieldName} does not match the authenticated account`);
         return true;
     }
 
@@ -81,7 +82,7 @@ function createGameActivityController({
         const teacherId = actor.userId;
 
         if (!isValidObjectId(teacherId)) {
-            return res.status(401).json({ message: "Authentication required" });
+            return sendApiError(res, 401, "Authentication required");
         }
 
         if (typeof title !== "string" || title.trim().length < 2 || title.trim().length > 120) {
@@ -113,7 +114,7 @@ function createGameActivityController({
         try {
             const teacher = await TeacherModel.findById(teacherId);
             if (!teacher) {
-                return res.status(404).json({ message: "Teacher not found" });
+                return sendApiError(res, 404, "Teacher not found");
             }
 
             if (!teacher.school || !teacher.teachSclass || !teacher.teachSubject) {
@@ -148,9 +149,7 @@ function createGameActivityController({
             }
 
             if (subject.teacher && !sameId(subject.teacher, teacher._id)) {
-                return res.status(409).json({
-                    message: "The assigned subject is linked to a different teacher",
-                });
+                return sendApiError(res, 409, "The assigned subject is linked to a different teacher");
             }
 
             // The first API slice always creates a draft. Publishing will be a
@@ -173,9 +172,9 @@ function createGameActivityController({
             return res.status(201).json(savedActivity);
         } catch (error) {
             if (error && (error.name === "ValidationError" || error.name === "CastError")) {
-                return validationErrorResponse(res, error.message);
+                return validationErrorResponse(res, "Request data failed validation");
             }
-            return res.status(500).json({ message: "Unable to create game activity" });
+            return sendApiError(res, 500, "Unable to create game activity");
         }
     };
 
@@ -215,19 +214,19 @@ function createGameActivityController({
 
                 const teacher = await TeacherModel.findById(actor.userId);
                 if (!teacher || !teacher.school || !teacher.teachSclass || !teacher.teachSubject) {
-                    return res.status(404).json({ message: "Teacher not found or not assigned to a class and subject" });
+                    return sendApiError(res, 404, "Teacher not found or not assigned to a class and subject");
                 }
 
                 if (!sameId(teacher.school, schoolId)) {
-                    return res.status(404).json({ message: "Game activities not found for this school" });
+                    return sendApiError(res, 404, "Game activities not found for this school");
                 }
 
                 if (classId !== undefined && !sameId(classId, teacher.teachSclass)) {
-                    return res.status(403).json({ message: "You cannot list activities outside your assigned class" });
+                    return sendApiError(res, 403, "You cannot list activities outside your assigned class");
                 }
 
                 if (subjectId !== undefined && !sameId(subjectId, teacher.teachSubject)) {
-                    return res.status(403).json({ message: "You cannot list activities outside your assigned subject" });
+                    return sendApiError(res, 403, "You cannot list activities outside your assigned subject");
                 }
 
                 const [schoolClass, subject] = await Promise.all([
@@ -243,7 +242,7 @@ function createGameActivityController({
                     !sameId(subject.sclassName, teacher.teachSclass) ||
                     (subject.teacher && !sameId(subject.teacher, actor.userId))
                 ) {
-                    return res.status(403).json({ message: "Your current class and subject assignments are not valid" });
+                    return sendApiError(res, 403, "Your current class and subject assignments are not valid");
                 }
 
                 filter = {
@@ -255,30 +254,28 @@ function createGameActivityController({
                 if (status) filter.status = status;
             } else {
                 if (teacherId !== undefined) {
-                    return res.status(403).json({ message: "Student requests cannot use a teacher identity" });
+                    return sendApiError(res, 403, "Student requests cannot use a teacher identity");
                 }
                 if (status !== undefined && status !== "published") {
-                    return res.status(403).json({
-                        message: "Students can only list published game activities",
-                    });
+                    return sendApiError(res, 403, "Students can only list published game activities");
                 }
 
                 const student = await StudentModel.findById(actor.userId);
                 if (!student || !student.school || !student.sclassName) {
-                    return res.status(404).json({ message: "Student not found or not assigned to a class" });
+                    return sendApiError(res, 404, "Student not found or not assigned to a class");
                 }
 
                 if (!sameId(student.school, schoolId)) {
-                    return res.status(404).json({ message: "Game activities not found for this school" });
+                    return sendApiError(res, 404, "Game activities not found for this school");
                 }
 
                 if (classId !== undefined && !sameId(classId, student.sclassName)) {
-                    return res.status(403).json({ message: "You cannot list activities outside your assigned class" });
+                    return sendApiError(res, 403, "You cannot list activities outside your assigned class");
                 }
 
                 const schoolClass = await SclassModel.findById(student.sclassName);
                 if (!schoolClass || !sameId(schoolClass.school, student.school)) {
-                    return res.status(404).json({ message: "Student class not found in this school" });
+                    return sendApiError(res, 404, "Student class not found in this school");
                 }
 
                 filter = {
@@ -294,7 +291,7 @@ function createGameActivityController({
                         !sameId(subject.school, student.school) ||
                         !sameId(subject.sclassName, student.sclassName)
                     ) {
-                        return res.status(404).json({ message: "Subject not found in the student's class" });
+                        return sendApiError(res, 404, "Subject not found in the student's class");
                     }
                     filter.subject = subject._id || subjectId;
                 }
@@ -309,7 +306,7 @@ function createGameActivityController({
 
             return res.status(200).json(activities);
         } catch (error) {
-            return res.status(500).json({ message: "Unable to list game activities" });
+            return sendApiError(res, 500, "Unable to list game activities");
         }
     };
 
@@ -335,10 +332,10 @@ function createGameActivityController({
         try {
             const teacher = await TeacherModel.findById(actor.userId);
             if (!teacher) {
-                return res.status(404).json({ message: "Teacher not found" });
+                return sendApiError(res, 404, "Teacher not found");
             }
             if (!teacher.school || !teacher.teachSclass || !teacher.teachSubject) {
-                return res.status(403).json({ message: "A current school, class, and subject assignment is required" });
+                return sendApiError(res, 403, "A current school, class, and subject assignment is required");
             }
 
             const [schoolClass, subject] = await Promise.all([
@@ -353,7 +350,7 @@ function createGameActivityController({
                 !sameId(subject.sclassName, teacher.teachSclass) ||
                 (subject.teacher && !sameId(subject.teacher, actor.userId))
             ) {
-                return res.status(403).json({ message: "Your current class and subject assignments are not valid" });
+                return sendApiError(res, 403, "Your current class and subject assignments are not valid");
             }
 
             // Actor identity and the currently assigned school/class/subject
@@ -378,9 +375,7 @@ function createGameActivityController({
 
             const ownedActivity = await GameActivityModel.findOne(activityScope);
             if (!ownedActivity) {
-                return res.status(404).json({
-                    message: "Game activity not found for this teacher",
-                });
+                return sendApiError(res, 404, "Game activity not found for this teacher");
             }
 
             const message = nextStatus === "published"
@@ -390,13 +385,12 @@ function createGameActivityController({
             return res.status(409).json({ message });
         } catch (error) {
             if (error && (error.name === "ValidationError" || error.name === "CastError")) {
-                return validationErrorResponse(res, error.message);
+                return validationErrorResponse(res, "Request data failed validation");
             }
-            return res.status(500).json({
-                message: nextStatus === "published"
-                    ? "Unable to publish game activity"
-                    : "Unable to archive game activity",
-            });
+            const failureMessage = nextStatus === "published"
+                ? "Unable to publish game activity"
+                : "Unable to archive game activity";
+            return sendApiError(res, 500, failureMessage);
         }
     };
 
