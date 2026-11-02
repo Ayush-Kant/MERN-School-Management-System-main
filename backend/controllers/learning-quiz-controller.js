@@ -18,6 +18,41 @@ function clientError(res, message) {
     return res.status(400).json({ message });
 }
 
+function getAuthenticatedActor(req, res, allowedRoles) {
+    const actor = req && req.auth;
+    if (
+        !actor ||
+        !isValidObjectId(actor.userId) ||
+        !["Admin", "Teacher", "Student"].includes(actor.role)
+    ) {
+        res.status(401).json({ message: "Authentication required" });
+        return null;
+    }
+
+    if (!allowedRoles.includes(actor.role)) {
+        res.status(403).json({ message: "You are not allowed to access this resource" });
+        return null;
+    }
+
+    return { userId: actor.userId, role: actor.role };
+}
+
+function rejectIdentityOverride(suppliedId, authenticatedId, res, fieldName) {
+    if (suppliedId === undefined) return false;
+
+    if (!isValidObjectId(suppliedId)) {
+        clientError(res, `${fieldName} must be a valid id`);
+        return true;
+    }
+
+    if (!sameId(suppliedId, authenticatedId)) {
+        res.status(403).json({ message: `${fieldName} does not match the authenticated account` });
+        return true;
+    }
+
+    return false;
+}
+
 function getQuestionId(question) {
     return String(question && (question._id || question.id || ""));
 }
@@ -114,17 +149,22 @@ function createLearningQuizController({
     SubjectModel,
 }) {
     const learningQuizCreate = async (req, res) => {
+        const actor = getAuthenticatedActor(req, res, ["Teacher"]);
+        if (!actor) return;
+
         const body = req.body || {};
+        if (rejectIdentityOverride(body.teacherId, actor.userId, res, "teacherId")) return;
+
         const {
-            teacherId,
             title,
             description = "",
             topic = "",
             questions,
         } = body;
+        const teacherId = actor.userId;
 
         if (!isValidObjectId(teacherId)) {
-            return clientError(res, "A valid teacherId is required");
+            return res.status(401).json({ message: "Authentication required" });
         }
         if (typeof title !== "string" || title.trim().length < 3 || title.trim().length > 160) {
             return clientError(res, "Title must contain between 3 and 160 characters");
@@ -217,6 +257,9 @@ function createLearningQuizController({
     };
 
     const learningQuizList = async (req, res) => {
+        const actor = getAuthenticatedActor(req, res, ["Teacher", "Student"]);
+        if (!actor) return;
+
         const schoolId = req.params && req.params.id;
         const queryParams = (req && req.query) || {};
         const { classId, subjectId, teacherId, status } = queryParams;
@@ -229,27 +272,94 @@ function createLearningQuizController({
             return clientError(res, "status must be draft, published, or archived");
         }
 
-        if (!teacherId && !classId) {
-            return clientError(res, "classId is required when listing student quizzes");
-        }
-        if (!teacherId && status && status !== "published") {
-            return res.status(403).json({ message: "Students can only list published quizzes" });
-        }
-
         try {
-            const filter = { school: schoolId };
-            if (classId) filter.class = classId;
-            if (subjectId) filter.subject = subjectId;
+            let filter;
+            let teacherView = false;
 
-            if (teacherId) {
-                const teacher = await TeacherModel.findById(teacherId);
-                if (!teacher || !sameId(teacher.school, schoolId)) {
-                    return res.status(404).json({ message: "Teacher not found in this school" });
+            if (actor.role === "Teacher") {
+                if (rejectIdentityOverride(teacherId, actor.userId, res, "teacherId")) return;
+
+                const teacher = await TeacherModel.findById(actor.userId);
+                if (!teacher || !teacher.school || !teacher.teachSclass || !teacher.teachSubject) {
+                    return res.status(404).json({ message: "Teacher not found or not assigned to a class and subject" });
                 }
-                filter.createdByTeacher = teacher._id || teacherId;
+                if (!sameId(teacher.school, schoolId)) {
+                    return res.status(404).json({ message: "Learning quizzes not found for this school" });
+                }
+                if (classId !== undefined && !sameId(classId, teacher.teachSclass)) {
+                    return res.status(403).json({ message: "You cannot list quizzes outside your assigned class" });
+                }
+                if (subjectId !== undefined && !sameId(subjectId, teacher.teachSubject)) {
+                    return res.status(403).json({ message: "You cannot list quizzes outside your assigned subject" });
+                }
+
+                const [schoolClass, subject] = await Promise.all([
+                    SclassModel.findById(teacher.teachSclass),
+                    SubjectModel.findById(teacher.teachSubject),
+                ]);
+                if (
+                    !schoolClass ||
+                    !subject ||
+                    !sameId(schoolClass.school, teacher.school) ||
+                    !sameId(subject.school, teacher.school) ||
+                    !sameId(subject.sclassName, teacher.teachSclass) ||
+                    (subject.teacher && !sameId(subject.teacher, actor.userId))
+                ) {
+                    return res.status(403).json({ message: "Your current class and subject assignments are not valid" });
+                }
+
+                filter = {
+                    school: teacher.school,
+                    class: teacher.teachSclass,
+                    subject: teacher.teachSubject,
+                    createdByTeacher: actor.userId,
+                };
                 if (status) filter.status = status;
+                teacherView = true;
             } else {
-                filter.status = "published";
+                if (teacherId !== undefined) {
+                    return res.status(403).json({ message: "Student requests cannot use a teacher identity" });
+                }
+                if (!classId) {
+                    return clientError(res, "classId is required when listing student quizzes");
+                }
+                if (status !== undefined && status !== "published") {
+                    return res.status(403).json({ message: "Students can only list published quizzes" });
+                }
+
+                const student = await StudentModel.findById(actor.userId);
+                if (!student || !student.school || !student.sclassName) {
+                    return res.status(404).json({ message: "Student not found or not assigned to a class" });
+                }
+                if (!sameId(student.school, schoolId)) {
+                    return res.status(404).json({ message: "Learning quizzes not found for this school" });
+                }
+                if (!sameId(classId, student.sclassName)) {
+                    return res.status(403).json({ message: "You cannot list quizzes outside your assigned class" });
+                }
+
+                const schoolClass = await SclassModel.findById(student.sclassName);
+                if (!schoolClass || !sameId(schoolClass.school, student.school)) {
+                    return res.status(404).json({ message: "Student class not found in this school" });
+                }
+
+                filter = {
+                    school: student.school,
+                    class: student.sclassName,
+                    status: "published",
+                };
+
+                if (subjectId !== undefined) {
+                    const subject = await SubjectModel.findById(subjectId);
+                    if (
+                        !subject ||
+                        !sameId(subject.school, student.school) ||
+                        !sameId(subject.sclassName, student.sclassName)
+                    ) {
+                        return res.status(404).json({ message: "Subject not found in the student's class" });
+                    }
+                    filter.subject = subject._id || subjectId;
+                }
             }
 
             const quizzes = await LearningQuizModel.find(filter)
@@ -259,29 +369,39 @@ function createLearningQuizController({
                 .sort({ createdAt: -1 })
                 .exec();
 
-            return res.status(200).json(teacherId ? quizzes : quizzes.map(toStudentQuiz));
+            return res.status(200).json(teacherView ? quizzes : quizzes.map(toStudentQuiz));
         } catch (error) {
             return res.status(500).json({ message: "Unable to list learning quizzes" });
         }
     };
 
     const publishLearningQuiz = async (req, res) => {
+        const actor = getAuthenticatedActor(req, res, ["Teacher"]);
+        if (!actor) return;
+
         const quizId = req.params && req.params.id;
         const body = req.body || {};
-        const { teacherId } = body;
 
         if (!isValidObjectId(quizId)) return clientError(res, "A valid quiz id is required");
-        if (!isValidObjectId(teacherId)) return clientError(res, "A valid teacherId is required");
+        if (rejectIdentityOverride(body.teacherId, actor.userId, res, "teacherId")) return;
 
         try {
+            const teacher = await TeacherModel.findById(actor.userId);
+            if (!teacher) return res.status(404).json({ message: "Teacher not found" });
+
+            const quizScope = {
+                _id: quizId,
+                createdByTeacher: actor.userId,
+                school: teacher.school,
+            };
             const publishedQuiz = await LearningQuizModel.findOneAndUpdate(
-                { _id: quizId, createdByTeacher: teacherId, status: "draft" },
+                { ...quizScope, status: "draft" },
                 { $set: { status: "published", publishedAt: new Date() } },
                 { new: true, runValidators: true }
             );
             if (publishedQuiz) return res.status(200).json(publishedQuiz);
 
-            const ownedQuiz = await LearningQuizModel.findOne({ _id: quizId, createdByTeacher: teacherId });
+            const ownedQuiz = await LearningQuizModel.findOne(quizScope);
             if (!ownedQuiz) return res.status(404).json({ message: "Quiz not found for this teacher" });
             return res.status(409).json({ message: "Only draft quizzes can be published" });
         } catch (error) {
@@ -293,12 +413,16 @@ function createLearningQuizController({
     };
 
     const learningQuizSubmit = async (req, res) => {
+        const actor = getAuthenticatedActor(req, res, ["Student"]);
+        if (!actor) return;
+
         const quizId = req.params && req.params.id;
         const body = req.body || {};
-        const { studentId, idempotencyKey, answers, durationMs } = body;
+        const { studentId: suppliedStudentId, idempotencyKey, answers, durationMs } = body;
+        const studentId = actor.userId;
 
         if (!isValidObjectId(quizId)) return clientError(res, "A valid quiz id is required");
-        if (!isValidObjectId(studentId)) return clientError(res, "A valid studentId is required");
+        if (rejectIdentityOverride(suppliedStudentId, studentId, res, "studentId")) return;
         if (typeof idempotencyKey !== "string" || idempotencyKey.trim().length < 8 ||
             idempotencyKey.trim().length > 128) {
             return clientError(res, "idempotencyKey must contain between 8 and 128 characters");
@@ -331,7 +455,25 @@ function createLearningQuizController({
             if (!quiz) return res.status(404).json({ message: "Quiz not found" });
 
             const student = await StudentModel.findById(studentId);
-            if (!student || !sameId(student.school, quiz.school) || !sameId(student.sclassName, quiz.class)) {
+            if (
+                !student ||
+                !sameId(student.school, quiz.school) ||
+                !sameId(student.sclassName, quiz.class)
+            ) {
+                return res.status(404).json({ message: "Quiz not found for this student" });
+            }
+
+            const [schoolClass, subject] = await Promise.all([
+                SclassModel.findById(student.sclassName),
+                SubjectModel.findById(quiz.subject),
+            ]);
+            if (
+                !schoolClass ||
+                !sameId(schoolClass.school, student.school) ||
+                !subject ||
+                !sameId(subject.school, student.school) ||
+                !sameId(subject.sclassName, student.sclassName)
+            ) {
                 return res.status(404).json({ message: "Quiz not found for this student" });
             }
 
