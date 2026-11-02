@@ -28,6 +28,7 @@ const { gameActivityCreate, gameActivityList, publishGameActivity, archiveGameAc
 const { learningQuizCreate, learningQuizList, publishLearningQuiz, learningQuizSubmit } = require('../controllers/learning-quiz-controller.js');
 const { getAuthSession, authLogout } = require('../controllers/auth-controller.js');
 const { authenticateSession } = require('../middleware/authenticateSession.js');
+const { authorizeRoles } = require('../middleware/authorizeRoles.js');
 
 // Admin
 router.post('/AdminReg', adminRegister);
@@ -121,19 +122,19 @@ router.delete("/Subjects/:id", deleteSubjects)
 router.delete("/SubjectsClass/:id", deleteSubjectsByClass)
 
 // Game Zone
-router.post('/GameActivityCreate', gameActivityCreate);
-router.get('/GameActivityList/:id', gameActivityList);
-router.put('/GameActivityPublish/:id', publishGameActivity);
-router.put('/GameActivityArchive/:id', archiveGameActivity);
+router.post('/GameActivityCreate', authenticateSession, authorizeRoles("Teacher"), gameActivityCreate);
+router.get('/GameActivityList/:id', authenticateSession, authorizeRoles("Teacher", "Student"), gameActivityList);
+router.put('/GameActivityPublish/:id', authenticateSession, authorizeRoles("Teacher"), publishGameActivity);
+router.put('/GameActivityArchive/:id', authenticateSession, authorizeRoles("Teacher"), archiveGameActivity);
 
 // Authentication session
 router.get('/AuthSession', authenticateSession, getAuthSession);
 router.post('/AuthLogout', authLogout);
 
 // AI Learning Studio: first-party, server-graded quizzes
-router.post('/LearningQuizCreate', learningQuizCreate);
-router.get('/LearningQuizList/:id', learningQuizList);
-router.put('/LearningQuizPublish/:id', publishLearningQuiz);
-router.post('/LearningQuizSubmit/:id', learningQuizSubmit);
+router.post('/LearningQuizCreate', authenticateSession, authorizeRoles("Teacher"), learningQuizCreate);
+router.get('/LearningQuizList/:id', authenticateSession, authorizeRoles("Teacher", "Student"), learningQuizList);
+router.put('/LearningQuizPublish/:id', authenticateSession, authorizeRoles("Teacher"), publishLearningQuiz);
+router.post('/LearningQuizSubmit/:id', authenticateSession, authorizeRoles("Student"), learningQuizSubmit);
 
 module.exports = router;
