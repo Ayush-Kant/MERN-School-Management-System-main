@@ -173,7 +173,11 @@ function createUpdateStudentHandler({
             if (typeof body.password !== "string" || body.password.length === 0) {
                 return res.status(400).json({ message: "Password must be a non-empty string" });
             }
-            updates.password = await hashPassword(body.password);
+            try {
+                updates.password = await hashPassword(body.password);
+            } catch (error) {
+                return res.status(500).json({ message: "Unable to update student" });
+            }
         }
 
         if (Object.keys(updates).length === 0) {
