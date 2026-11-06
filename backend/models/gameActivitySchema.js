@@ -90,15 +90,20 @@ const gameActivitySchema = new mongoose.Schema({
     },
     archiveReason: {
         type: String,
-        enum: [
-            "manual",
-            "teacher_deleted",
-            "teacher_reassigned",
-            "class_deleted",
-            "subject_deleted",
-            "school_resources_deleted",
-        ],
         default: null,
+        validate: {
+            validator(value) {
+                return value === null || [
+                    "manual",
+                    "teacher_deleted",
+                    "teacher_reassigned",
+                    "class_deleted",
+                    "subject_deleted",
+                    "school_resources_deleted",
+                ].includes(value);
+            },
+            message: "Unsupported GameActivity archive reason",
+        },
     },
 }, { timestamps: true });
 
