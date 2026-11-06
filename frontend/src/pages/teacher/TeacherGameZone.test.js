@@ -1,15 +1,18 @@
 import React from "react";
 import { act } from "react-dom/test-utils";
 import { createRoot } from "react-dom/client";
-import axios from "axios";
+import apiClient from "../../utils/apiClient";
 import { useSelector } from "react-redux";
 import TeacherGameZone from "./TeacherGameZone";
 import { getEntityId, isOfficialWordwallEmbedUrl } from "../../utils/wordwallUrl";
 
-jest.mock("axios", () => ({
-    get: jest.fn(),
-    post: jest.fn(),
-    put: jest.fn(),
+jest.mock("../../utils/apiClient", () => ({
+    __esModule: true,
+    default: {
+        get: jest.fn(),
+        post: jest.fn(),
+        put: jest.fn(),
+    },
 }));
 
 jest.mock("react-redux", () => ({
@@ -20,7 +23,6 @@ const TEACHER_ID = "bbbbbbbbbbbbbbbbbbbbbbbb";
 const SCHOOL_ID = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const ACTIVITY_ID = "111111111111111111111111";
 const EMBED_URL = "https://wordwall.net/embed/123456";
-const API_BASE_URL = (process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
 const CURRENT_USER = {
     _id: TEACHER_ID,
     role: "Teacher",
@@ -78,9 +80,9 @@ beforeEach(() => {
     useSelector.mockImplementation((selector) => selector({
         user: { currentUser: CURRENT_USER },
     }));
-    axios.get.mockResolvedValue({ data: [] });
-    axios.post.mockResolvedValue({ data: { ...draftActivity, status: "draft" } });
-    axios.put.mockResolvedValue({ data: { ...draftActivity, status: "published" } });
+    apiClient.get.mockResolvedValue({ data: [] });
+    apiClient.post.mockResolvedValue({ data: { ...draftActivity, status: "draft" } });
+    apiClient.put.mockResolvedValue({ data: { ...draftActivity, status: "published" } });
     window.confirm = jest.fn(() => true);
 });
 
@@ -114,7 +116,7 @@ test("loads the teacher's own activities using the existing backend API", async 
     await renderPage();
 
     expect(axios.get).toHaveBeenCalledWith(
-        `${API_BASE_URL}/GameActivityList/${SCHOOL_ID}?teacherId=${TEACHER_ID}`
+        `/GameActivityList/${SCHOOL_ID}?teacherId=${TEACHER_ID}`
     );
     expect(document.body.textContent).toContain("Fractions Challenge");
     expect(document.body.textContent).toContain("Your activities");
@@ -138,7 +140,7 @@ test("creates a draft from form details and refreshes the activity list", async 
     });
 
     expect(axios.post).toHaveBeenCalledWith(
-        `${API_BASE_URL}/GameActivityCreate`,
+        "/GameActivityCreate",
         {
             teacherId: TEACHER_ID,
             title: "Fractions Challenge",
@@ -175,7 +177,7 @@ test("publishes a draft through the existing transition endpoint", async () => {
     });
 
     expect(axios.put).toHaveBeenCalledWith(
-        `${API_BASE_URL}/GameActivityPublish/${ACTIVITY_ID}`,
+        `/GameActivityPublish/${ACTIVITY_ID}`,
         { teacherId: TEACHER_ID },
         { headers: { "Content-Type": "application/json" } }
     );
@@ -195,7 +197,7 @@ test("asks before archiving a published activity and sends the teacher id", asyn
 
     expect(window.confirm).toHaveBeenCalled();
     expect(axios.put).toHaveBeenCalledWith(
-        `${API_BASE_URL}/GameActivityArchive/${ACTIVITY_ID}`,
+        `/GameActivityArchive/${ACTIVITY_ID}`,
         { teacherId: TEACHER_ID },
         { headers: { "Content-Type": "application/json" } }
     );
