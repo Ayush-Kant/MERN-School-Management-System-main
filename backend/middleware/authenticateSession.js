@@ -1,3 +1,4 @@
+const { sendApiError } = require("../utils/apiResponse.js");
 const {
     getSessionConfig,
     verifySessionToken,
@@ -15,14 +16,12 @@ function createAuthenticateSession(dependencies = {}) {
         try {
             config = getConfig();
         } catch (error) {
-            return res.status(503).json({
-                message: "Authentication is not configured on this server",
-            });
+            return sendApiError(res, 503, "Authentication is not configured on this server");
         }
 
         const token = readSessionCookie(req);
         if (!token) {
-            return res.status(401).json({ message: "Authentication required" });
+            return sendApiError(res, 401, "Authentication required");
         }
 
         try {
@@ -30,7 +29,7 @@ function createAuthenticateSession(dependencies = {}) {
             return next();
         } catch (error) {
             clearSessionCookie(res);
-            return res.status(401).json({ message: "Session is invalid or expired" });
+            return sendApiError(res, 401, "Session is invalid or expired");
         }
     };
 }
