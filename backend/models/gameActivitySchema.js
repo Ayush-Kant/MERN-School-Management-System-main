@@ -84,6 +84,10 @@ const gameActivitySchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
+    unpublishedAt: {
+        type: Date,
+        default: null,
+    },
     archivedAt: {
         type: Date,
         default: null,
