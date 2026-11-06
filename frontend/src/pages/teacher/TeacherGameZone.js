@@ -27,7 +27,8 @@ import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlin
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
-import { getEntityId, isOfficialWordwallEmbedUrl } from "../../utils/wordwallUrl";
+import { getEntityId, isOfficialWordwallEmbedUrl, normalizeWordwallEmbedInput } from "../../utils/wordwallUrl";
+import WordwallEmbed from "../../components/WordwallEmbed";
 
 const API_BASE_URL = (process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
 
@@ -140,8 +141,11 @@ const TeacherGameZone = () => {
             return;
         }
 
-        if (!isOfficialWordwallEmbedUrl(form.embedUrl)) {
-            setError("Enter an HTTPS Wordwall embed URL copied from Wordwall's Embed interface.");
+        let normalizedEmbedUrl;
+        try {
+            normalizedEmbedUrl = normalizeWordwallEmbedInput(form.embedUrl);
+        } catch {
+            setError("Paste a valid HTTPS Wordwall embed URL or its official iframe snippet.");
             return;
         }
 
@@ -155,7 +159,7 @@ const TeacherGameZone = () => {
                 title: form.title.trim(),
                 description: form.description.trim(),
                 topic: form.topic.trim(),
-                embedUrl: form.embedUrl.trim(),
+                embedUrl: normalizedEmbedUrl,
             }, {
                 headers: { "Content-Type": "application/json" },
             });
@@ -336,11 +340,13 @@ const TeacherGameZone = () => {
                                         required
                                         fullWidth
                                         name="embedUrl"
-                                        label="Wordwall embed URL"
-                                        placeholder="https://wordwall.net/embed/..."
+                                        label="Wordwall embed URL or iframe snippet"
+                                        placeholder="https://wordwall.net/embed/... or paste Wordwall's iframe snippet"
                                         value={form.embedUrl}
                                         onChange={handleFieldChange}
-                                        helperText="Use the HTTPS URL from Wordwall's Embed interface."
+                                        multiline
+                                        minRows={2}
+                                        helperText="Paste the HTTPS embed URL or the iframe snippet copied from Wordwall. Only its validated src URL is saved."
                                         sx={fieldSx}
                                     />
                                     <Button
@@ -513,25 +519,15 @@ const TeacherGameZone = () => {
                     {previewActivity?.title || "Activity preview"}
                 </DialogTitle>
                 <DialogContent dividers sx={{ borderColor: "#263449" }}>
-                    {previewActivity && isOfficialWordwallEmbedUrl(previewActivity.embedUrl) ? (
-                        <Box sx={{ width: "100%", minHeight: 300 }}>
-                            <iframe
-                                title={`Wordwall preview: ${previewActivity.title}`}
-                                src={previewActivity.embedUrl}
-                                loading="lazy"
-                                allowFullScreen
-                                style={{
-                                    width: "100%",
-                                    height: "min(65vh, 560px)",
-                                    border: 0,
-                                    borderRadius: 8,
-                                    background: "#FFFFFF",
-                                }}
-                            />
-                        </Box>
+                    {previewActivity ? (
+                        <WordwallEmbed
+                            title={`Wordwall preview: ${previewActivity.title}`}
+                            embedUrl={previewActivity.embedUrl}
+                            height="min(65vh, 560px)"
+                        />
                     ) : (
                         <Alert severity="warning">
-                            This activity does not contain a supported Wordwall embed URL.
+                            Select an activity to preview its Wordwall embed.
                         </Alert>
                     )}
                     <Typography sx={{ color: "#94A3B8", mt: 1.5, fontSize: ".9rem" }}>
