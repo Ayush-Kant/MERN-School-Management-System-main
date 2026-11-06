@@ -32,6 +32,8 @@ function assertProtectedRoute(method, path, roles) {
 test("Game Zone create and state transitions require a Teacher session", () => {
     assertProtectedRoute("post", "/GameActivityCreate", ["Teacher"]);
     assertProtectedRoute("put", "/GameActivityPublish/:id", ["Teacher"]);
+    assertProtectedRoute("put", "/GameActivityUpdate/:id", ["Teacher"]);
+    assertProtectedRoute("put", "/GameActivityUnpublish/:id", ["Teacher"]);
     assertProtectedRoute("put", "/GameActivityArchive/:id", ["Teacher"]);
 });
 
