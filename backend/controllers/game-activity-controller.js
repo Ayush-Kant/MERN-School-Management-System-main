@@ -1,4 +1,4 @@
-const { validateWordwallEmbedUrl } = require("../utils/wordwallUrl");
+const { normalizeWordwallEmbedInput } = require("../utils/wordwallUrl");
 const { sendApiError } = require("../utils/apiResponse.js");
 const {
     validateGameActivityRelationships,
@@ -67,7 +67,7 @@ function createGameActivityController({
     SclassModel,
     SubjectModel,
     StudentModel,
-    validateEmbedUrl = validateWordwallEmbedUrl,
+    validateEmbedUrl = normalizeWordwallEmbedInput,
 }) {
     const gameActivityCreate = async (req, res) => {
         const actor = getAuthenticatedActor(req, res, ["Teacher"]);
