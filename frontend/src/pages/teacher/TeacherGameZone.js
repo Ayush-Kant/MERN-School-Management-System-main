@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import apiClient from "../../utils/apiClient";
 import { useSelector } from "react-redux";
 import {
     Alert,
@@ -29,8 +29,6 @@ import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import { getEntityId, isOfficialWordwallEmbedUrl, normalizeWordwallEmbedInput } from "../../utils/wordwallUrl";
 import WordwallEmbed from "../../components/WordwallEmbed";
-
-const API_BASE_URL = (process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
 
 function getErrorMessage(error, fallback) {
     return error?.response?.data?.message || fallback;
@@ -102,8 +100,8 @@ const TeacherGameZone = () => {
 
         try {
             const params = new URLSearchParams({ teacherId });
-            const response = await axios.get(
-                `${API_BASE_URL}/GameActivityList/${encodeURIComponent(schoolId)}?${params.toString()}`
+            const response = await apiClient.get(
+                `/GameActivityList/${encodeURIComponent(schoolId)}?${params.toString()}`
             );
             setActivities(Array.isArray(response.data) ? response.data : []);
         } catch (requestError) {
@@ -154,7 +152,7 @@ const TeacherGameZone = () => {
         setNotice("");
 
         try {
-            await axios.post(`${API_BASE_URL}/GameActivityCreate`, {
+            await apiClient.post(`/GameActivityCreate`, {
                 teacherId,
                 title: form.title.trim(),
                 description: form.description.trim(),
@@ -191,8 +189,8 @@ const TeacherGameZone = () => {
 
         const route = nextStatus === "published" ? "GameActivityPublish" : "GameActivityArchive";
         try {
-            await axios.put(
-                `${API_BASE_URL}/${route}/${encodeURIComponent(activity._id)}`,
+            await apiClient.put(
+                `/${route}/${encodeURIComponent(activity._id)}`,
                 { teacherId },
                 { headers: { "Content-Type": "application/json" } }
             );
