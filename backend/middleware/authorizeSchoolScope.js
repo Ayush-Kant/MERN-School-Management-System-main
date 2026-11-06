@@ -122,7 +122,7 @@ function createAuthorizeSchoolScope(models = {}) {
 
             if (resource === "self") {
                 if (!sameId(resourceId, actor.userId)) {
-                    return res.status(404).json({ message: "Resource not found" });
+                    return sendApiError(res, 404, "Resource not found");
                 }
                 return next();
             }
@@ -132,7 +132,7 @@ function createAuthorizeSchoolScope(models = {}) {
                 const document = await selectFields(query, definition.projection);
 
                 if (!document || !sameId(document.school, actor.schoolId)) {
-                    return res.status(404).json({ message: "Resource not found" });
+                    return sendApiError(res, 404, "Resource not found");
                 }
 
                 // A Teacher or Student may only traverse the class assigned to
@@ -142,7 +142,7 @@ function createAuthorizeSchoolScope(models = {}) {
                     actor.role !== "Admin" &&
                     !sameId(document._id, actor.classId)
                 ) {
-                    return res.status(404).json({ message: "Resource not found" });
+                    return sendApiError(res, 404, "Resource not found");
                 }
 
                 // A Student may inspect only their own record. A Teacher may
@@ -154,7 +154,7 @@ function createAuthorizeSchoolScope(models = {}) {
                         (actor.role === "Teacher" && !sameId(document.sclassName, actor.classId))
                     )
                 ) {
-                    return res.status(404).json({ message: "Resource not found" });
+                    return sendApiError(res, 404, "Resource not found");
                 }
 
                 // Teachers may inspect only their own profile; students have no
@@ -166,7 +166,7 @@ function createAuthorizeSchoolScope(models = {}) {
                         actor.role === "Student"
                     )
                 ) {
-                    return res.status(404).json({ message: "Resource not found" });
+                    return sendApiError(res, 404, "Resource not found");
                 }
 
                 // Teachers are limited to their assigned subject. Students may
@@ -181,7 +181,7 @@ function createAuthorizeSchoolScope(models = {}) {
                         (actor.role === "Student" && !sameId(document.sclassName, actor.classId))
                     )
                 ) {
-                    return res.status(404).json({ message: "Resource not found" });
+                    return sendApiError(res, 404, "Resource not found");
                 }
 
                 if (belongsTo) {
@@ -194,7 +194,7 @@ function createAuthorizeSchoolScope(models = {}) {
                             readPath(relatedResource, belongsTo.resourceField)
                         )
                     ) {
-                        return res.status(404).json({ message: "Resource not found" });
+                        return sendApiError(res, 404, "Resource not found");
                     }
                 }
 
