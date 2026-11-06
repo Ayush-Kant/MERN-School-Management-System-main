@@ -26,6 +26,7 @@ import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import { getEntityId, isOfficialWordwallEmbedUrl } from "../../utils/wordwallUrl";
+import WordwallEmbed from "../../components/WordwallEmbed";
 
 const API_BASE_URL = (process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
 
@@ -351,25 +352,14 @@ const StudentGameZone = () => {
                     {selectedActivity?.title || "Play game"}
                 </DialogTitle>
                 <DialogContent dividers sx={{ borderColor: "#263449" }}>
-                    {selectedActivity && isOfficialWordwallEmbedUrl(selectedActivity.embedUrl) ? (
-                        <Box sx={{ width: "100%", minHeight: 300 }}>
-                            <iframe
-                                title={`Wordwall game: ${selectedActivity.title}`}
-                                src={selectedActivity.embedUrl}
-                                loading="lazy"
-                                allowFullScreen
-                                style={{
-                                    width: "100%",
-                                    height: "min(68vh, 600px)",
-                                    border: 0,
-                                    borderRadius: 8,
-                                    background: "#FFFFFF",
-                                }}
-                            />
-                        </Box>
+                    {selectedActivity ? (
+                        <WordwallEmbed
+                            title={`Wordwall game: ${selectedActivity.title}`}
+                            embedUrl={selectedActivity.embedUrl}
+                        />
                     ) : (
                         <Alert severity="warning">
-                            This game does not contain a supported Wordwall embed URL.
+                            Select a game to start playing.
                         </Alert>
                     )}
                 </DialogContent>
