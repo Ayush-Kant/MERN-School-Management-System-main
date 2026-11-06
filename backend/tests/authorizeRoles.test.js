@@ -50,6 +50,7 @@ test("rejects malformed or unsupported session actors", () => {
         });
 
         assert.equal(res.statusCode, 401);
+        assert.equal(res.body.code, "AUTHENTICATION_REQUIRED");
         assert.equal(nextCalled, false);
     }
 });
@@ -64,6 +65,7 @@ test("rejects a valid session whose role is not allowed", () => {
     });
 
     assert.equal(res.statusCode, 403);
+    assert.equal(res.body.code, "FORBIDDEN");
     assert.equal(nextCalled, false);
 });
 
@@ -109,6 +111,7 @@ test("does not allow request-supplied role fields to override session role", () 
     });
 
     assert.equal(res.statusCode, 403);
+    assert.equal(res.body.code, "FORBIDDEN");
     assert.equal(nextCalled, false);
 });
 
