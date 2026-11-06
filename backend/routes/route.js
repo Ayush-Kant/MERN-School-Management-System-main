@@ -24,7 +24,7 @@ const {
     removeStudentAttendance } = require('../controllers/student_controller.js');
 const { subjectCreate, classSubjects, deleteSubjectsByClass, getSubjectDetail, deleteSubject, freeSubjectList, allSubjects, deleteSubjects } = require('../controllers/subject-controller.js');
 const { teacherRegister, teacherLogIn, getTeachers, getTeacherDetail, deleteTeachers, deleteTeachersByClass, deleteTeacher, updateTeacherSubject, teacherAttendance } = require('../controllers/teacher-controller.js');
-const { gameActivityCreate, gameActivityList, publishGameActivity, archiveGameActivity } = require('../controllers/game-activity-controller.js');
+const { gameActivityCreate, gameActivityList, gameActivityUpdate, publishGameActivity, unpublishGameActivity, archiveGameActivity } = require('../controllers/game-activity-controller.js');
 const { learningQuizCreate, learningQuizList, publishLearningQuiz, learningQuizSubmit } = require('../controllers/learning-quiz-controller.js');
 const { getAuthSession, authLogout } = require('../controllers/auth-controller.js');
 const { authenticateSession } = require('../middleware/authenticateSession.js');
@@ -234,7 +234,9 @@ router.delete("/SubjectsClass/:id", ...requireAdmin, classParam, deleteSubjectsB
 // Game Zone
 router.post('/GameActivityCreate', ...requireTeacher, asyncHandler(gameActivityCreate));
 router.get('/GameActivityList/:id', ...requireTeacherOrStudent, asyncHandler(gameActivityList));
+router.put('/GameActivityUpdate/:id', ...requireTeacher, asyncHandler(gameActivityUpdate));
 router.put('/GameActivityPublish/:id', ...requireTeacher, asyncHandler(publishGameActivity));
+router.put('/GameActivityUnpublish/:id', ...requireTeacher, asyncHandler(unpublishGameActivity));
 router.put('/GameActivityArchive/:id', ...requireTeacher, asyncHandler(archiveGameActivity));
 
 // Authentication session
