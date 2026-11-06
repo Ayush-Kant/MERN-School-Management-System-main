@@ -130,35 +130,35 @@ function createGameActivityLifecycle({ GameActivityModel, clock = () => new Date
     }
 
     return Object.freeze({
-        archiveBySchool(schoolId) {
+        async archiveBySchool(schoolId) {
             return archive(
                 { school: requireId(schoolId, "schoolId") },
                 "school_resources_deleted"
             );
         },
 
-        archiveByClass(classId) {
+        async archiveByClass(classId) {
             return archive(
                 { class: requireId(classId, "classId") },
                 "class_deleted"
             );
         },
 
-        archiveBySubject(subjectId) {
+        async archiveBySubject(subjectId) {
             return archive(
                 { subject: requireId(subjectId, "subjectId") },
                 "subject_deleted"
             );
         },
 
-        archiveByTeacher(teacherId) {
+        async archiveByTeacher(teacherId) {
             return archive(
                 { createdByTeacher: requireId(teacherId, "teacherId") },
                 "teacher_deleted"
             );
         },
 
-        archiveBySubjects(subjectIds) {
+        async archiveBySubjects(subjectIds) {
             if (!Array.isArray(subjectIds)) {
                 throw new TypeError("subjectIds must be an array");
             }
@@ -176,7 +176,7 @@ function createGameActivityLifecycle({ GameActivityModel, clock = () => new Date
             );
         },
 
-        archiveByTeachers(teacherIds) {
+        async archiveByTeachers(teacherIds) {
             if (!Array.isArray(teacherIds)) {
                 throw new TypeError("teacherIds must be an array");
             }
@@ -194,7 +194,7 @@ function createGameActivityLifecycle({ GameActivityModel, clock = () => new Date
             );
         },
 
-        archiveForTeacherReassignment(teacherId, nextAssignment = {}) {
+        async archiveForTeacherReassignment(teacherId, nextAssignment = {}) {
             const normalizedTeacherId = requireId(teacherId, "teacherId");
             const schoolId = requireId(nextAssignment.schoolId, "schoolId");
             const classId = requireId(nextAssignment.classId, "classId");
