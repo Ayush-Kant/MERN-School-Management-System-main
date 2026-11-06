@@ -112,10 +112,10 @@ test("accepts only official HTTPS Wordwall embed URLs", () => {
 });
 
 test("loads the teacher's own activities using the existing backend API", async () => {
-    axios.get.mockResolvedValue({ data: [draftActivity] });
+    apiClient.get.mockResolvedValue({ data: [draftActivity] });
     await renderPage();
 
-    expect(axios.get).toHaveBeenCalledWith(
+    expect(apiClient.get).toHaveBeenCalledWith(
         `/GameActivityList/${SCHOOL_ID}?teacherId=${TEACHER_ID}`
     );
     expect(document.body.textContent).toContain("Fractions Challenge");
@@ -139,7 +139,7 @@ test("creates a draft from form details and refreshes the activity list", async 
         await flushPromises();
     });
 
-    expect(axios.post).toHaveBeenCalledWith(
+    expect(apiClient.post).toHaveBeenCalledWith(
         "/GameActivityCreate",
         {
             teacherId: TEACHER_ID,
@@ -154,7 +154,7 @@ test("creates a draft from form details and refreshes the activity list", async 
 });
 
 test("previews a saved activity only when its Wordwall URL is valid", async () => {
-    axios.get.mockResolvedValue({ data: [draftActivity] });
+    apiClient.get.mockResolvedValue({ data: [draftActivity] });
     await renderPage();
 
     await act(async () => {
@@ -167,7 +167,7 @@ test("previews a saved activity only when its Wordwall URL is valid", async () =
 });
 
 test("publishes a draft through the existing transition endpoint", async () => {
-    axios.get.mockResolvedValue({ data: [draftActivity] });
+    apiClient.get.mockResolvedValue({ data: [draftActivity] });
     await renderPage();
 
     await act(async () => {
@@ -176,7 +176,7 @@ test("publishes a draft through the existing transition endpoint", async () => {
         await flushPromises();
     });
 
-    expect(axios.put).toHaveBeenCalledWith(
+    expect(apiClient.put).toHaveBeenCalledWith(
         `/GameActivityPublish/${ACTIVITY_ID}`,
         { teacherId: TEACHER_ID },
         { headers: { "Content-Type": "application/json" } }
@@ -184,7 +184,7 @@ test("publishes a draft through the existing transition endpoint", async () => {
 });
 
 test("asks before archiving a published activity and sends the teacher id", async () => {
-    axios.get.mockResolvedValue({
+    apiClient.get.mockResolvedValue({
         data: [{ ...draftActivity, status: "published" }],
     });
     await renderPage();
@@ -196,7 +196,7 @@ test("asks before archiving a published activity and sends the teacher id", asyn
     });
 
     expect(window.confirm).toHaveBeenCalled();
-    expect(axios.put).toHaveBeenCalledWith(
+    expect(apiClient.put).toHaveBeenCalledWith(
         `/GameActivityArchive/${ACTIVITY_ID}`,
         { teacherId: TEACHER_ID },
         { headers: { "Content-Type": "application/json" } }
