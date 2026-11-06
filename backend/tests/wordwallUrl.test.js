@@ -17,6 +17,13 @@ test("accepts official HTTPS Wordwall embed URLs and preserves query parameters"
     );
 });
 
+test("normalizes surrounding whitespace and host casing", () => {
+    assert.equal(
+        validateWordwallEmbedUrl("  https://WORDWALL.net/embed/123456  "),
+        "https://wordwall.net/embed/123456"
+    );
+});
+
 test("rejects unsafe schemes, nonstandard ports, credentials, and non-Wordwall hosts", () => {
     const invalidUrls = [
         "http://wordwall.net/embed/123",
@@ -72,6 +79,17 @@ test("normalizes self-closing and single-quoted iframe snippets", () => {
         normalizeWordwallEmbedInput("<iframe src='https://www.wordwall.net/embed/abc-1' />"),
         "https://www.wordwall.net/embed/abc-1"
     );
+});
+
+test("rejects iframe snippets without a src or with an invalid iframe shape", () => {
+    for (const value of [
+        "<iframe></iframe>",
+        "<iframe src=https://wordwall.net/embed/123></iframe>",
+        '<iframe src="https://wordwall.net/embed/123"',
+        '<iframe src="https://wordwall.net/embed/123">untrusted content</iframe>',
+    ]) {
+        assert.throws(() => extractWordwallEmbedSrc(value), TypeError);
+    }
 });
 
 test("rejects snippets without one unambiguous quoted src or with extra markup", () => {
