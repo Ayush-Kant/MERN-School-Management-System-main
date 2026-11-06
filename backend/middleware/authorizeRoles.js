@@ -1,3 +1,5 @@
+const { sendApiError } = require("../utils/apiResponse.js");
+
 const SUPPORTED_ROLES = new Set(["Admin", "Teacher", "Student"]);
 const OBJECT_ID_PATTERN = /^[a-f\d]{24}$/i;
 
@@ -24,11 +26,11 @@ function authorizeRoles(...allowedRoles) {
             typeof actor.userId !== "string" ||
             !OBJECT_ID_PATTERN.test(actor.userId)
         ) {
-            return res.status(401).json({ message: "Authentication required" });
+            return sendApiError(res, 401, "Authentication required");
         }
 
         if (!roleSet.has(actor.role)) {
-            return res.status(403).json({ message: "You are not allowed to access this resource" });
+            return sendApiError(res, 403, "You are not allowed to access this resource");
         }
 
         return next();
