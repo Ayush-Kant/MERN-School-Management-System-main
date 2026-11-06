@@ -84,6 +84,7 @@ test("normalizes self-closing and single-quoted iframe snippets", () => {
 test("rejects iframe snippets without a src or with an invalid iframe shape", () => {
     for (const value of [
         "<iframe></iframe>",
+        '<iframe data-src="https://wordwall.net/embed/123"></iframe>',
         "<iframe src=https://wordwall.net/embed/123></iframe>",
         '<iframe src="https://wordwall.net/embed/123"',
         '<iframe src="https://wordwall.net/embed/123">untrusted content</iframe>',
