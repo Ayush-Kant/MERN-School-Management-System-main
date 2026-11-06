@@ -1,4 +1,5 @@
 const { normalizeObjectId } = require("./loadActorContext.js");
+const { sendApiError } = require("../utils/apiResponse.js");
 
 const RESOURCE_DEFINITIONS = {
     class: {
@@ -99,7 +100,7 @@ function createAuthorizeSchoolScope(models = {}) {
                 !normalizeObjectId(actor.userId) ||
                 !normalizeObjectId(actor.schoolId)
             ) {
-                return res.status(401).json({ message: "Authentication required" });
+                return sendApiError(res, 401, "Authentication required");
             }
 
             const rawId = readPath(req, from);
@@ -109,12 +110,12 @@ function createAuthorizeSchoolScope(models = {}) {
 
             const resourceId = normalizeObjectId(rawId);
             if (!resourceId) {
-                return res.status(400).json({ message: "A valid resource id is required" });
+                return sendApiError(res, 400, "A valid resource id is required");
             }
 
             if (resource === "school") {
                 if (!sameId(resourceId, actor.schoolId)) {
-                    return res.status(404).json({ message: "Resource not found" });
+                    return sendApiError(res, 404, "Resource not found");
                 }
                 return next();
             }
@@ -202,9 +203,7 @@ function createAuthorizeSchoolScope(models = {}) {
 
                 return next();
             } catch (error) {
-                return res.status(503).json({
-                    message: "Unable to verify resource access",
-                });
+                return sendApiError(res, 503, "Unable to verify resource access");
             }
         };
 
