@@ -68,6 +68,8 @@ const EXPECTED_ROLE_ROUTES = new Map([
     ["POST /GameActivityCreate", ["Teacher"]],
     ["GET /GameActivityList/:id", ["Teacher", "Student"]],
     ["PUT /GameActivityPublish/:id", ["Teacher"]],
+    ["PUT /GameActivityUpdate/:id", ["Teacher"]],
+    ["PUT /GameActivityUnpublish/:id", ["Teacher"]],
     ["PUT /GameActivityArchive/:id", ["Teacher"]],
 
     ["POST /LearningQuizCreate", ["Teacher"]],
