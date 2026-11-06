@@ -232,6 +232,26 @@ test("rejects invalid Wordwall embed URLs before looking up the teacher", async 
     assert.deepEqual(calls.teacherLookup, []);
 });
 
+test("extracts and validates the src when a teacher submits an official iframe snippet", async () => {
+    const { controller, calls } = makeHarness();
+    const res = makeResponse();
+
+    await controller.gameActivityCreate({
+        body: {
+            teacherId: TEACHER_ID,
+            title: "Fractions Challenge",
+            embedUrl: '<iframe width="800" src="https://wordwall.net/embed/123456?themeId=1&amp;templateId=2" allowfullscreen></iframe>',
+        },
+    }, res);
+
+    assert.equal(res.statusCode, 201);
+    assert.equal(
+        calls.createdData.embedUrl,
+        "https://wordwall.net/embed/123456?themeId=1&templateId=2"
+    );
+    assert.equal(calls.createdData.status, "draft");
+});
+
 test("returns 404 when the teacher does not exist", async () => {
     const { controller } = makeHarness({ teacher: null });
     const res = makeResponse();
