@@ -153,16 +153,19 @@ Fixes are on the branch:
 - a11cd23b23fc532251a317d82d07be1214e7a926 — all seven public archive lifecycle methods made async.
 - 5f5950de0a874cf763f12bfa42536b7c44a0f78d — archiveReason custom validator accepts null or one of manual, teacher_deleted, teacher_reassigned, class_deleted, subject_deleted, school_resources_deleted.
 
-The test suite has NOT yet been rerun after these fixes. Expected result if fixes work: 171 passed, 0 failed. This is not a verified result.
+The user confirmed that the backend test suite ran properly after these fixes. Exact pass/fail counts were not supplied, so record this as user-confirmed passing rather than inventing a count.
 
-## Immediate next action
+## Immediate next action — Phase 10 verification
 From repository root in Windows PowerShell:
 ```powershell
 git pull --ff-only origin feature/learning-game-zones
 cd backend
 npm test
+cd ..\\frontend
+npm test -- --watchAll=false
+npm run build
 ```
-Send the complete output. If any failures remain, inspect their exact output and fix only demonstrated issues. Do not start Phase 10 until the post-fix test suite passes and the user confirms the gate.
+Send the complete backend/frontend test output and build result. Then perform the real Wordwall browser smoke test described in the Phase 10 section. Fix any demonstrated failures minimally. Do not start Phase 11 until Phase 10 tests, frontend build, and real embed compatibility have been verified.
 
 ## How to work
 1. Read this file and the harness first; verify actual remote branch HEAD and current source.
