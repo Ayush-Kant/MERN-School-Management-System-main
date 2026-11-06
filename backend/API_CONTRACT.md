@@ -6,7 +6,9 @@ This contract is applied to the new Games Zone and Learning Quiz endpoints:
 
 - `POST /GameActivityCreate`
 - `GET /GameActivityList/:id`
+- `PUT /GameActivityUpdate/:id`
 - `PUT /GameActivityPublish/:id`
+- `PUT /GameActivityUnpublish/:id`
 - `PUT /GameActivityArchive/:id`
 - `POST /LearningQuizCreate`
 - `GET /LearningQuizList/:id`
@@ -17,6 +19,34 @@ Successful response bodies remain unchanged. Error responses keep the existing
 root-level `message` property because current frontend screens read
 `response.data.message`. The stable `code` and optional `requestId` fields
 are additive.
+
+## GameActivity lifecycle and ownership
+
+The authenticated session and the current database Teacher/Student records determine
+identity and school/class/subject scope. Request-supplied `teacherId` is accepted
+only as an optional identity assertion; it cannot change the actor. School,
+class, subject, creator, provider, and lifecycle status cannot be set through the
+update payload.
+
+| Method and path | Role | Behavior |
+| --- | --- | --- |
+| `POST /GameActivityCreate` | Teacher | Creates a draft using the Teacher's current school/class/subject assignment |
+| `GET /GameActivityList/:id` | Teacher, Student | Teacher sees their own assigned-scope records; Student sees published records eligible for their own class and optional subject |
+| `PUT /GameActivityUpdate/:id` | Teacher | Updates only the Teacher's own draft; mutable fields are title, description, topic, embedUrl, and originalUrl |
+| `PUT /GameActivityPublish/:id` | Teacher | Transitions the Teacher's own draft to published |
+| `PUT /GameActivityUnpublish/:id` | Teacher | Transitions the Teacher's own published activity back to draft and records `unpublishedAt` |
+| `PUT /GameActivityArchive/:id` | Teacher | Archives the Teacher's own published activity |
+
+A published activity must be unpublished before it can be edited. Archived
+activities are immutable through this API. Each update uses an atomic scoped
+write against creator, school, class, subject, and expected status. Mongoose
+timestamps maintain `updatedAt`; publish, unpublish, and archive transitions
+also record their corresponding lifecycle timestamps. Students cannot request
+draft or archived records, and cannot supply teacher identity filters.
+
+Existing root-mounted GameActivity paths remain unchanged; the new operations
+are additive and do not introduce an Admin endpoint or a client-controlled
+scope override.
 
 ## Error body
 
