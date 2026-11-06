@@ -20,7 +20,7 @@ function extractWordwallEmbedSrc(value) {
         throw new TypeError("Paste one complete Wordwall iframe snippet or its embed URL");
     }
 
-    const srcAttributes = [...iframeMatch[1].matchAll(/\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)')/gi)];
+    const srcAttributes = [...iframeMatch[1].matchAll(/(?:^|\s)src\s*=\s*(?:"([^"]*)"|'([^']*)')/gi)];
     if (srcAttributes.length !== 1) {
         throw new TypeError("The iframe snippet must contain exactly one quoted src attribute");
     }
