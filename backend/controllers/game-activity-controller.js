@@ -298,6 +298,127 @@ function createGameActivityController({
         }
     };
 
+    const gameActivityUpdate = async (req, res) => {
+        const actor = getAuthenticatedActor(req, res, ["Teacher"]);
+        if (!actor) return;
+
+        const activityId = req.params && req.params.id;
+        const body = req.body || {};
+
+        if (!isValidObjectId(activityId)) {
+            return validationErrorResponse(res, "A valid game activity id is required");
+        }
+        if (!body || typeof body !== "object" || Array.isArray(body)) {
+            return validationErrorResponse(res, "Request body must be an object");
+        }
+        if (rejectIdentityOverride(body.teacherId, actor.userId, res, "teacherId")) return;
+
+        const mutableFields = new Set(["title", "description", "topic", "embedUrl", "originalUrl"]);
+        const suppliedFields = Object.keys(body).filter((field) => field !== "teacherId");
+        if (suppliedFields.some((field) => !mutableFields.has(field))) {
+            return validationErrorResponse(res, "Only title, description, topic, embedUrl, and originalUrl can be updated");
+        }
+        if (suppliedFields.length === 0) {
+            return validationErrorResponse(res, "At least one activity field must be supplied");
+        }
+
+        const updates = {};
+        if (Object.prototype.hasOwnProperty.call(body, "title")) {
+            if (typeof body.title !== "string" || body.title.trim().length < 2 || body.title.trim().length > 120) {
+                return validationErrorResponse(res, "Title must contain between 2 and 120 characters");
+            }
+            updates.title = body.title.trim();
+        }
+        if (Object.prototype.hasOwnProperty.call(body, "description")) {
+            if (typeof body.description !== "string" || body.description.trim().length > 1000) {
+                return validationErrorResponse(res, "Description must be a string of at most 1000 characters");
+            }
+            updates.description = body.description.trim();
+        }
+        if (Object.prototype.hasOwnProperty.call(body, "topic")) {
+            if (typeof body.topic !== "string" || body.topic.trim().length > 160) {
+                return validationErrorResponse(res, "Topic must be a string of at most 160 characters");
+            }
+            updates.topic = body.topic.trim();
+        }
+        if (Object.prototype.hasOwnProperty.call(body, "originalUrl")) {
+            if (typeof body.originalUrl !== "string" || body.originalUrl.trim().length > 2048) {
+                return validationErrorResponse(res, "Original URL must be a string of at most 2048 characters");
+            }
+            updates.originalUrl = body.originalUrl.trim();
+        }
+        if (Object.prototype.hasOwnProperty.call(body, "embedUrl")) {
+            try {
+                updates.embedUrl = normalizeWordwallEmbedInput(body.embedUrl);
+            } catch (error) {
+                return validationErrorResponse(
+                    res,
+                    error instanceof Error ? error.message : "Enter a valid Wordwall embed URL"
+                );
+            }
+        }
+
+        try {
+            const teacher = await TeacherModel.findById(actor.userId);
+            if (!teacher) {
+                return sendApiError(res, 404, "Teacher not found");
+            }
+
+            const [schoolRecord, schoolClass, subject] = await Promise.all([
+                AdminModel.findById(teacher.school),
+                SclassModel.findById(teacher.teachSclass),
+                SubjectModel.findById(teacher.teachSubject),
+            ]);
+            const relationshipError = validateGameActivityRelationships({
+                teacher,
+                schoolRecord,
+                schoolClass,
+                subject,
+            });
+            if (relationshipError) {
+                if (relationshipError.status === 400) {
+                    return validationErrorResponse(res, relationshipError.message);
+                }
+                return sendApiError(res, relationshipError.status, relationshipError.message);
+            }
+
+            const activityScope = {
+                _id: activityId,
+                createdByTeacher: actor.userId,
+                school: teacher.school,
+                class: teacher.teachSclass,
+                subject: teacher.teachSubject,
+            };
+            const updatedActivity = await GameActivityModel.findOneAndUpdate(
+                { ...activityScope, status: "draft" },
+                { $set: updates },
+                { new: true, runValidators: true }
+            );
+
+            if (updatedActivity) {
+                return res.status(200).json(updatedActivity);
+            }
+
+            const ownedActivity = await GameActivityModel.findOne(activityScope);
+            if (!ownedActivity) {
+                return sendApiError(res, 404, "Game activity not found for this teacher");
+            }
+
+            return sendApiError(
+                res,
+                409,
+                ownedActivity.status === "archived"
+                    ? "Archived activities cannot be edited"
+                    : "Unpublish the activity before editing it"
+            );
+        } catch (error) {
+            if (error && (error.name === "ValidationError" || error.name === "CastError")) {
+                return validationErrorResponse(res, "Request data failed validation");
+            }
+            return sendApiError(res, 500, "Unable to update game activity");
+        }
+    };
+
     const transitionGameActivity = (nextStatus) => async (req, res) => {
         const actor = getAuthenticatedActor(req, res, ["Teacher"]);
         if (!actor) return;
@@ -315,6 +436,8 @@ function createGameActivityController({
 
         if (nextStatus === "published") {
             update.$set.publishedAt = new Date();
+        } else if (nextStatus === "draft") {
+            update.$set.unpublishedAt = new Date();
         } else if (nextStatus === "archived") {
             update.$set.archivedAt = new Date();
             update.$set.archiveReason = "manual";
@@ -371,7 +494,9 @@ function createGameActivityController({
 
             const message = nextStatus === "published"
                 ? "Only draft activities can be published"
-                : "Only published activities can be archived";
+                : nextStatus === "draft"
+                    ? "Only published activities can be unpublished"
+                    : "Only published activities can be archived";
 
             return sendApiError(res, 409, message);
         } catch (error) {
@@ -380,15 +505,25 @@ function createGameActivityController({
             }
             const failureMessage = nextStatus === "published"
                 ? "Unable to publish game activity"
-                : "Unable to archive game activity";
+                : nextStatus === "draft"
+                    ? "Unable to unpublish game activity"
+                    : "Unable to archive game activity";
             return sendApiError(res, 500, failureMessage);
         }
     };
 
     const publishGameActivity = transitionGameActivity("published");
+    const unpublishGameActivity = transitionGameActivity("draft");
     const archiveGameActivity = transitionGameActivity("archived");
 
-    return { gameActivityCreate, gameActivityList, publishGameActivity, archiveGameActivity };
+    return {
+        gameActivityCreate,
+        gameActivityList,
+        gameActivityUpdate,
+        publishGameActivity,
+        unpublishGameActivity,
+        archiveGameActivity,
+    };
 }
 
 let defaultController;
@@ -412,16 +547,22 @@ const gameActivityCreate = (req, res) =>
     getDefaultController().gameActivityCreate(req, res);
 const gameActivityList = (req, res) =>
     getDefaultController().gameActivityList(req, res);
+const gameActivityUpdate = (req, res) =>
+    getDefaultController().gameActivityUpdate(req, res);
 
 const publishGameActivity = (req, res) =>
     getDefaultController().publishGameActivity(req, res);
+const unpublishGameActivity = (req, res) =>
+    getDefaultController().unpublishGameActivity(req, res);
 const archiveGameActivity = (req, res) =>
     getDefaultController().archiveGameActivity(req, res);
 
 module.exports = {
     gameActivityCreate,
     gameActivityList,
+    gameActivityUpdate,
     publishGameActivity,
+    unpublishGameActivity,
     archiveGameActivity,
     createGameActivityController,
 };
