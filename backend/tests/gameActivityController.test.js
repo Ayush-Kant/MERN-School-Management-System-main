@@ -675,3 +675,176 @@ test("does not let a teacher list games from another school", async () => {
     assert.equal(res.statusCode, 404);
     assert.equal(calls.listFilter, null);
 });
+
+
+test("updates only a teacher-owned draft and records the scoped update", async () => {
+    const { controller, calls } = makeHarness({
+        transitionResult: { _id: ACTIVITY_ID, title: "Updated Fractions", status: "draft" },
+    });
+    const res = makeResponse();
+
+    await controller.gameActivityUpdate({
+        params: { id: ACTIVITY_ID },
+        body: {
+            teacherId: TEACHER_ID,
+            title: "  Updated Fractions  ",
+            description: "  Revised practice  ",
+            topic: "  Equivalent fractions  ",
+            embedUrl: "https://wordwall.net/embed/987654",
+            originalUrl: "  https://wordwall.net/resource/987654  ",
+        },
+    }, res);
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.title, "Updated Fractions");
+    assert.deepEqual(calls.transitionFilter, {
+        _id: ACTIVITY_ID,
+        createdByTeacher: TEACHER_ID,
+        school: SCHOOL_ID,
+        class: CLASS_ID,
+        subject: SUBJECT_ID,
+        status: "draft",
+    });
+    assert.deepEqual(calls.transitionUpdate, {
+        $set: {
+            title: "Updated Fractions",
+            description: "Revised practice",
+            topic: "Equivalent fractions",
+            embedUrl: "https://wordwall.net/embed/987654",
+            originalUrl: "https://wordwall.net/resource/987654",
+        },
+    });
+    assert.deepEqual(calls.transitionOptions, { new: true, runValidators: true });
+});
+
+test("rejects update attempts to change lifecycle, ownership, or scope fields", async () => {
+    const invalidBodies = [
+        { status: "published" },
+        { school: OTHER_SCHOOL_ID },
+        { class: OTHER_CLASS_ID },
+        { subject: SUBJECT_ID },
+        { createdByTeacher: OTHER_TEACHER_ID },
+        { provider: "custom" },
+    ];
+
+    for (const body of invalidBodies) {
+        const { controller, calls } = makeHarness();
+        const res = makeResponse();
+        await controller.gameActivityUpdate({
+            params: { id: ACTIVITY_ID },
+            body,
+        }, res);
+        assert.equal(res.statusCode, 400);
+        assert.equal(calls.transitionFilter, null);
+        assert.equal(calls.ownedLookupFilter, null);
+    }
+});
+
+test("rejects empty, invalid, and mismatched update requests before persistence", async () => {
+    const cases = [
+        { body: {} },
+        { body: { title: "x" } },
+        { body: { description: 12 } },
+        { body: { topic: "x".repeat(161) } },
+        { body: { embedUrl: "https://example.com/embed/123" } },
+        { body: { originalUrl: "x".repeat(2049) } },
+        { body: { teacherId: OTHER_TEACHER_ID, title: "A valid title" }, expected: 403 },
+    ];
+
+    for (const item of cases) {
+        const { controller, calls } = makeHarness();
+        const res = makeResponse();
+        await controller.gameActivityUpdate({
+            params: { id: ACTIVITY_ID },
+            body: item.body,
+        }, res);
+        assert.equal(res.statusCode, item.expected || 400);
+        assert.equal(calls.transitionFilter, null);
+    }
+});
+
+test("prevents editing published or archived activities until their lifecycle permits it", async () => {
+    for (const item of [
+        { status: "published", expected: /Unpublish the activity before editing/ },
+        { status: "archived", expected: /Archived activities cannot be edited/ },
+    ]) {
+        const { controller, calls } = makeHarness({ ownedActivity: item });
+        const res = makeResponse();
+        await controller.gameActivityUpdate({
+            params: { id: ACTIVITY_ID },
+            body: { title: "Updated title" },
+        }, res);
+        assert.equal(res.statusCode, 409);
+        assert.match(res.body.message, item.expected);
+        assert.deepEqual(calls.ownedLookupFilter, {
+            _id: ACTIVITY_ID,
+            createdByTeacher: TEACHER_ID,
+            school: SCHOOL_ID,
+            class: CLASS_ID,
+            subject: SUBJECT_ID,
+        });
+    }
+});
+
+test("unpublishes a published activity back to draft and records unpublishedAt", async () => {
+    const { controller, calls } = makeHarness({
+        transitionResult: {
+            _id: ACTIVITY_ID,
+            status: "draft",
+            unpublishedAt: new Date("2026-11-06T08:00:00.000Z"),
+        },
+    });
+    const res = makeResponse();
+
+    await controller.unpublishGameActivity({
+        params: { id: ACTIVITY_ID },
+        body: { teacherId: TEACHER_ID },
+    }, res);
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.status, "draft");
+    assert.equal(calls.transitionFilter.status, "published");
+    assert.equal(calls.transitionFilter.createdByTeacher, TEACHER_ID);
+    assert.equal(calls.transitionFilter.school, SCHOOL_ID);
+    assert.equal(calls.transitionFilter.class, CLASS_ID);
+    assert.equal(calls.transitionFilter.subject, SUBJECT_ID);
+    assert.equal(calls.transitionUpdate.$set.status, "draft");
+    assert.ok(calls.transitionUpdate.$set.unpublishedAt instanceof Date);
+    assert.deepEqual(calls.transitionOptions, { new: true, runValidators: true });
+});
+
+test("rejects unpublishing a draft or archived activity", async () => {
+    for (const status of ["draft", "archived"]) {
+        const { controller } = makeHarness({ ownedActivity: { status } });
+        const res = makeResponse();
+        await controller.unpublishGameActivity({
+            params: { id: ACTIVITY_ID },
+            body: { teacherId: TEACHER_ID },
+        }, res);
+        assert.equal(res.statusCode, 409);
+        assert.match(res.body.message, /Only published activities can be unpublished/);
+    }
+});
+
+test("denies Student and Admin update/unpublish actions", async () => {
+    for (const role of ["Student", "Admin"]) {
+        const { controller, calls } = makeHarness();
+        const updateRes = makeResponse();
+        await controller.gameActivityUpdate({
+            auth: { userId: STUDENT_ID, role },
+            params: { id: ACTIVITY_ID },
+            body: { title: "Updated title" },
+        }, updateRes);
+        assert.equal(updateRes.statusCode, 403);
+        assert.equal(calls.transitionFilter, null);
+
+        const unpublishRes = makeResponse();
+        await controller.unpublishGameActivity({
+            auth: { userId: STUDENT_ID, role },
+            params: { id: ACTIVITY_ID },
+            body: {},
+        }, unpublishRes);
+        assert.equal(unpublishRes.statusCode, 403);
+        assert.equal(calls.transitionFilter, null);
+    }
+});
