@@ -55,7 +55,7 @@ test("rejects requests without a session cookie", () => {
     });
 
     assert.equal(response.statusCode, 401);
-    assert.deepEqual(response.body, { message: "Authentication required" });
+    assert.deepEqual(response.body, { code: "AUTHENTICATION_REQUIRED", message: "Authentication required" });
     assert.equal(nextCalled, false);
 });
 
@@ -106,7 +106,7 @@ test("rejects invalid or expired session cookies", () => {
     });
 
     assert.equal(response.statusCode, 401);
-    assert.deepEqual(response.body, { message: "Session is invalid or expired" });
+    assert.deepEqual(response.body, { code: "AUTHENTICATION_REQUIRED", message: "Session is invalid or expired" });
     assert.match(response.headers["Set-Cookie"][0], /Max-Age=0/);
     assert.equal(nextCalled, false);
 });
@@ -125,6 +125,7 @@ test("fails closed when server session configuration is missing", () => {
 
     assert.equal(response.statusCode, 503);
     assert.deepEqual(response.body, {
+        code: "SERVICE_UNAVAILABLE",
         message: "Authentication is not configured on this server",
     });
 });
