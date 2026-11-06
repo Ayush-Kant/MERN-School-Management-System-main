@@ -40,6 +40,7 @@ test("extracts only the src from an official iframe snippet", () => {
 test("rejects ambiguous or malformed iframe snippets", () => {
     [
         "<iframe></iframe>",
+        '<iframe data-src="https://wordwall.net/embed/123"></iframe>',
         "<iframe src=https://wordwall.net/embed/123></iframe>",
         '<iframe src="https://wordwall.net/embed/123" src="https://wordwall.net/embed/456"></iframe>',
         '<iframe src="https://example.com/embed/123"></iframe>',
