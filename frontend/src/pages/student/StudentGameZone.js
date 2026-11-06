@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import apiClient from "../../utils/apiClient";
 import { useSelector } from "react-redux";
 import {
     Alert,
@@ -27,8 +27,6 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import { getEntityId, isOfficialWordwallEmbedUrl } from "../../utils/wordwallUrl";
 import WordwallEmbed from "../../components/WordwallEmbed";
-
-const API_BASE_URL = (process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
 
 const surfaceSx = {
     background: "#111827",
@@ -60,8 +58,8 @@ const StudentGameZone = () => {
 
         try {
             const params = new URLSearchParams({ classId });
-            const response = await axios.get(
-                `${API_BASE_URL}/GameActivityList/${encodeURIComponent(schoolId)}?${params.toString()}`
+            const response = await apiClient.get(
+                `/GameActivityList/${encodeURIComponent(schoolId)}?${params.toString()}`
             );
 
             // Student views must never render drafts/archived records, even if
