@@ -1,12 +1,15 @@
 import React from "react";
 import { act } from "react-dom/test-utils";
 import { createRoot } from "react-dom/client";
-import axios from "axios";
+import apiClient from "../../utils/apiClient";
 import { useSelector } from "react-redux";
 import StudentGameZone from "./StudentGameZone";
 
-jest.mock("axios", () => ({
-    get: jest.fn(),
+jest.mock("../../utils/apiClient", () => ({
+    __esModule: true,
+    default: {
+        get: jest.fn(),
+    },
 }));
 
 jest.mock("react-redux", () => ({
@@ -19,7 +22,6 @@ const CLASS_ID = "cccccccccccccccccccccccc";
 const SUBJECT_ID = "dddddddddddddddddddddddd";
 const ACTIVITY_ID = "111111111111111111111111";
 const EMBED_URL = "https://wordwall.net/embed/123456";
-const API_BASE_URL = (process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
 
 const CURRENT_USER = {
     _id: STUDENT_ID,
@@ -79,7 +81,7 @@ beforeEach(() => {
     useSelector.mockImplementation((selector) => selector({
         user: { currentUser: CURRENT_USER },
     }));
-    axios.get.mockResolvedValue({ data: [publishedActivity] });
+    apiClient.get.mockResolvedValue({ data: [publishedActivity] });
 });
 
 afterEach(async () => {
@@ -93,15 +95,15 @@ afterEach(async () => {
 test("requests games using the student's school and class", async () => {
     await renderPage();
 
-    expect(axios.get).toHaveBeenCalledWith(
-        `${API_BASE_URL}/GameActivityList/${SCHOOL_ID}?classId=${CLASS_ID}`
+    expect(apiClient.get).toHaveBeenCalledWith(
+        `/GameActivityList/${SCHOOL_ID}?classId=${CLASS_ID}`
     );
     expect(document.body.textContent).toContain("Fractions Challenge");
     expect(document.body.textContent).toContain("Mathematics");
 });
 
 test("renders only valid published activities, never drafts or archived games", async () => {
-    axios.get.mockResolvedValue({
+    apiClient.get.mockResolvedValue({
         data: [
             publishedActivity,
             { ...publishedActivity, _id: "222222222222222222222222", title: "Draft-only game", status: "draft" },
@@ -131,7 +133,7 @@ test("opens the selected Wordwall game in an embedded dialog", async () => {
 });
 
 test("filters published activities by title and topic", async () => {
-    axios.get.mockResolvedValue({
+    apiClient.get.mockResolvedValue({
         data: [
             publishedActivity,
             {
@@ -155,7 +157,7 @@ test("filters published activities by title and topic", async () => {
 });
 
 test("shows a useful empty state when no games have been published", async () => {
-    axios.get.mockResolvedValue({ data: [] });
+    apiClient.get.mockResolvedValue({ data: [] });
 
     await renderPage();
 
@@ -163,7 +165,7 @@ test("shows a useful empty state when no games have been published", async () =>
 });
 
 test("shows a recoverable error when the API request fails", async () => {
-    axios.get.mockRejectedValue(new Error("network unavailable"));
+    apiClient.get.mockRejectedValue(new Error("network unavailable"));
 
     await renderPage();
 
@@ -179,5 +181,5 @@ test("refresh retries the published-game request", async () => {
         await flushPromises();
     });
 
-    expect(axios.get).toHaveBeenCalledTimes(2);
+    expect(apiClient.get).toHaveBeenCalledTimes(2);
 });
