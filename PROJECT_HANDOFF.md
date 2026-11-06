@@ -10,6 +10,7 @@ Last updated: 2026-11-06 (Asia/Kolkata)
 - Phase plan: AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md
 - Phase 08 design: AI_LEARNING_MODULE_DESIGN.md
 - Phase 09 invariants: backend/GAME_ACTIVITY_INVARIANTS.md
+- Latest Phase 10 code checkpoint before this handoff update: `b79bd513215b4fedce9d5e3ca00d58473cfa8239`.
 
 ## Architecture decisions
 The MERN School Management System remains the host application. Preserve the legacy ChemAmaze-cbse repository as source/reference. Build two separate experiences: (1) school-scoped teacher-managed Wordwall Games Zone and (2) first-party AI Learning Studio with server-graded quizzes, learning attempts, mastery estimates, adaptive revision, curriculum-grounded explanations, and teacher-reviewed generated questions. Existing Admin/Teacher/Student and school/class/subject records remain authoritative.
@@ -62,6 +63,10 @@ Modified:
 - `7241ebd200374cdabaf062df0a840e139db91707` — expanded backend URL tests.
 - `3a787a0489110227cb63a471ad4bfbde2b89cead` — frontend URL tests.
 - `83a41c6a849a50a3d7c5e78f33038041be9492b3` — additional malformed snippet coverage.
+- `d5d5833b4c6d53b43d39ef4cc25be67623b9aaad` — tightened `src` attribute parsing so `data-src` cannot masquerade as `src`.
+- `c98d5395cabd68e48c8c254b3b12611037921660` — matching frontend `src` attribute parsing fix.
+- `f43e4de2bbaa9f476864795668a66226c02eb64b` — backend regression test for `data-src` rejection.
+- `b79bd513215b4fedce9d5e3ca00d58473cfa8239` — frontend regression test for `data-src` rejection.
 
 ### Diff review
 Compared against the branch checkpoint immediately before Phase 10 (`96088206b5f3c8cb4621e724ebf89c1fd3aa324f`). The Phase 10 diff contains exactly these 9 paths:
@@ -184,5 +189,6 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - User confirmed Phase 09 tests ran properly after the two fixes. Exact pass/fail counts were not provided; recorded as user-confirmed pass without inventing a count.
 - Implemented Phase 10 backend URL/snippet normalization, matching frontend validation, reusable fixed Wordwall embed component with external fallback, Teacher input/preview integration, and Student playback integration.
 - Added/expanded backend and frontend tests, including a controller test proving only the extracted validated URL is stored.
-- Phase 10 source/diff reviewed across 9 changed paths; no routes, authorization, dependencies, navigation, schema fields, or unrelated school workflows changed.
+- Phase 10 source/diff reviewed across 9 application paths (plus this handoff update); no routes, authorization, dependencies, navigation, schema fields, or unrelated school workflows changed.
+- During final review, tightened iframe attribute matching to require a true whitespace-delimited `src` attribute, preventing a `data-src` attribute from being mistaken for `src`; added backend and frontend regression cases.
 - Phase 10 local tests, frontend build, and real Wordwall browser compatibility are not yet verified. Phase 11 remains blocked until those checks pass.
