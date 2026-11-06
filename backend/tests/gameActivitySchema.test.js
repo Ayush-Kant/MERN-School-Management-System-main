@@ -25,6 +25,7 @@ test("valid GameActivity records keep safe defaults and validate successfully", 
 
     assert.equal(activity.provider, "wordwall");
     assert.equal(activity.status, "draft");
+    assert.equal(activity.unpublishedAt, null);
     assert.equal(activity.archivedAt, null);
     assert.equal(activity.archiveReason, null);
     assert.equal(activity.title, "Fractions Challenge");
