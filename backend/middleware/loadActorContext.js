@@ -1,4 +1,5 @@
 const { clearSessionCookie } = require("../utils/authSession.js");
+const { sendApiError } = require("../utils/apiResponse.js");
 
 const OBJECT_ID_PATTERN = /^[a-f0-9]{24}$/i;
 const SUPPORTED_ROLES = new Set(["Admin", "Teacher", "Student"]);
@@ -59,7 +60,7 @@ function createLoadActorContext(models = {}) {
         const role = claims && claims.role;
 
         if (!userId || !SUPPORTED_ROLES.has(role)) {
-            return res.status(401).json({ message: "Authentication required" });
+            return sendApiError(res, 401, "Authentication required");
         }
 
         const roleConfig = modelByRole[role];
@@ -74,9 +75,7 @@ function createLoadActorContext(models = {}) {
                 account.role !== role
             ) {
                 safeClearSessionCookie(res);
-                return res.status(401).json({
-                    message: "The account for this session is no longer available",
-                });
+                return sendApiError(res, 401, "The account for this session is no longer available");
             }
 
             const schoolId = role === "Admin"
@@ -84,9 +83,7 @@ function createLoadActorContext(models = {}) {
                 : normalizeObjectId(account.school);
 
             if (!schoolId) {
-                return res.status(403).json({
-                    message: "This account is not assigned to a school",
-                });
+                return sendApiError(res, 403, "This account is not assigned to a school");
             }
 
             const classId = role === "Teacher"
@@ -109,9 +106,7 @@ function createLoadActorContext(models = {}) {
 
             return next();
         } catch (error) {
-            return res.status(503).json({
-                message: "Unable to verify the authenticated account",
-            });
+            return sendApiError(res, 503, "Unable to verify the authenticated account");
         }
     };
 }
