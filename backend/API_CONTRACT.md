@@ -71,7 +71,7 @@ The list endpoint accepts these optional query parameters:
 | `status` | `all`, `draft`, `published`, or `archived` |
 | `provider` | `all` or `wordwall` |
 | `search` | Optional literal text search over title, description, and topic; maximum 100 characters |
-| `page` | Positive, one-based page number; default `1` |
+| `page` | Positive, one-based page number from 1 through 100000; default `1` |
 | `limit` | Page size from 1 through 100; default `25` |
 
 Unknown query parameters are rejected, including any attempted school/tenant
