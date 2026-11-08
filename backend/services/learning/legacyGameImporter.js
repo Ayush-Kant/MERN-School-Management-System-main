@@ -6,7 +6,7 @@ const {
     validateGameActivityRelationships,
 } = require("./gameActivityIntegrity");
 
-const OBJECT_ID_PATTERN = /^[a-f\\d]{24}$/i;
+const OBJECT_ID_PATTERN = /^[a-f\d]{24}$/i;
 const DEVELOPMENT_DATABASE_NAME = "school_management_dev";
 const APPLY_CONFIRMATION = "IMPORT_CHEMAMAZE_TO_SCHOOL_MANAGEMENT_DEV";
 
