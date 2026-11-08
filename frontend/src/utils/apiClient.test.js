@@ -1,23 +1,30 @@
-import axios from "axios";
-import apiClient from "./apiClient";
-
 jest.mock("axios", () => ({
     __esModule: true,
     default: {
-        create: jest.fn(() => ({
-            get: jest.fn(),
-            post: jest.fn(),
-            put: jest.fn(),
-        })),
+        create: jest.fn(),
     },
 }));
 
 test("shared API client sends the HttpOnly session cookie with every request", () => {
-    const expectedBaseUrl = (process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
+    jest.isolateModules(() => {
+        const axios = require("axios").default;
+        const mockedApiClient = {
+            get: jest.fn(),
+            post: jest.fn(),
+            put: jest.fn(),
+        };
 
-    expect(axios.create).toHaveBeenCalledWith({
-        baseURL: expectedBaseUrl,
-        withCredentials: true,
+        // react-scripts resets mock implementations before each test.
+        // Restore this factory before importing the module that creates the client.
+        axios.create.mockReturnValue(mockedApiClient);
+
+        const apiClient = require("./apiClient").default;
+        const expectedBaseUrl = (process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
+
+        expect(axios.create).toHaveBeenCalledWith({
+            baseURL: expectedBaseUrl,
+            withCredentials: true,
+        });
+        expect(apiClient).toBe(mockedApiClient);
     });
-    expect(apiClient).toBe(axios.create.mock.results[0].value);
 });
