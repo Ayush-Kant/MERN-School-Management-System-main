@@ -359,6 +359,34 @@ test("rejects a subject mapping that points to the wrong class subject", async (
     );
 });
 
+test("counts an identical concurrent unique-key insertion as unchanged", async () => {
+    const fake = createModels();
+    const targets = createTargets();
+    const plan = await prepareLegacyGameImport({
+        catalog,
+        schoolId: targets.schoolId,
+        assignments: targets.assignments,
+        models: fake.models,
+    });
+
+    const concurrentModel = {
+        findOne: fake.GameActivityModel.findOne,
+        async create(document) {
+            await fake.GameActivityModel.create(document);
+            const duplicate = new Error("duplicate key from concurrent importer");
+            duplicate.code = 11000;
+            throw duplicate;
+        },
+    };
+
+    const result = await applyLegacyGameImport(plan, concurrentModel);
+
+    assert.equal(result.inserted, 0);
+    assert.equal(result.unchanged, 18);
+    assert.equal(result.failures.length, 0);
+    assert.equal(fake.created.length, 18);
+});
+
 test("blocks the whole planned import when an existing source record was edited", async () => {
     const fake = createModels();
     const targets = createTargets();
