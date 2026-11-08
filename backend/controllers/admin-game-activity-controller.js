@@ -103,7 +103,7 @@ function createAdminGameActivityController({
             return validationError(res, "search must be a string of at most 100 characters");
         }
 
-        const page = parsePositiveInteger(query.page, 1, Number.MAX_SAFE_INTEGER);
+        const page = parsePositiveInteger(query.page, 1, 100000);
         const limit = parsePositiveInteger(query.limit, 25, 100);
         if (page === null) return validationError(res, "page must be a positive integer");
         if (limit === null) return validationError(res, "limit must be an integer between 1 and 100");
