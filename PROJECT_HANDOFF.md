@@ -14,7 +14,7 @@ Last updated: 2026-11-08 (Asia/Kolkata)
 - Latest Phase 11 application-code checkpoint before the test-only Jest correction: `3328d8946a6561e10d10303280d147b19d124bab`.
 - Latest verified Phase 13 application-source checkpoint, excluding subsequent handoff-only documentation commits: `059060efe1965c3b0247241113f013445bcce306`.
 - Latest Phase 14 Student Games Zone application-source checkpoint: `e90f3ff53ab909dd6eaa2f719c96aae3b1056a87`.
-- Latest Phase 14 Student Games Zone test checkpoint: `a35b4a07a32f5ba413b37cce8875ba9cff339169`.
+- Latest Phase 14 Student Games Zone test checkpoint: `8929062ba86f64d1ceb30500bc1753eccfca6501`.
 
 ## Architecture decisions
 The MERN School Management System remains the host application. Preserve the legacy ChemAmaze-cbse repository as source/reference. Build two separate experiences: (1) school-scoped teacher-managed Wordwall Games Zone and (2) first-party AI Learning Studio with server-graded quizzes, learning attempts, mastery estimates, adaptive revision, curriculum-grounded explanations, and teacher-reviewed generated questions. Existing Admin/Teacher/Student and school/class/subject records remain authoritative.
@@ -451,14 +451,15 @@ These existing Phase 11 tests were not changed in Phase 14.
 ### Phase 14 implementation commits
 - `89591d1fcefc1af03c9b63cd880a7fe8385a00df` — Student catalogue subject filter, activity detail context and refresh reconciliation.
 - `e90f3ff53ab909dd6eaa2f719c96aae3b1056a87` — use the MUI native-select API correctly for the subject selector.
-- `a35b4a07a32f5ba413b37cce8875ba9cff339169` — Student Game Zone subject-filter, details, refresh and assignment tests.
+- `a35b4a07a32f5ba413b37cce8875ba9cff339169` — initial Student Game Zone subject-filter, details, refresh and assignment tests.
+- `8929062ba86f64d1ceb30500bc1753eccfca6501` — strengthen refresh regression coverage to assert an unpublished activity is removed and its open play dialog closes.
 
 ### Phase 14 diff and verification status
 - [x] Re-read the harness and inspect the exact Student page, tests, dashboard/sidebar, API controller, model, safe embed component, and route authorization.
 - [x] Reuse the existing DB-backed Student school/class scope and published-only list endpoint; no redundant backend changes.
 - [x] Add subject selection, combined filters, clear action, activity details and stale-selection handling after refresh.
 - [x] Add focused Student page test cases (10 total).
-- [x] Compare the Phase 13 branch head `e3add1cd003d6faf10ca721643135d9d380f3bbd` with Phase 14 source/test head `a35b4a07a32f5ba413b37cce8875ba9cff339169`: exactly the two Student page/test paths listed above changed.
+- [x] Compare the Phase 13 branch head `e3add1cd003d6faf10ca721643135d9d380f3bbd` with Phase 14 source/test head `8929062ba86f64d1ceb30500bc1753eccfca6501`: exactly the two Student page/test paths listed above changed.
 - [ ] Backend `npm test` — not run in this environment.
 - [ ] Frontend `npm test -- --watchAll=false` — not run in this environment.
 - [ ] Frontend `npm run build` — not run in this environment.
@@ -591,9 +592,9 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Verified the remote feature branch head was `e3add1cd003d6faf10ca721643135d9d380f3bbd`. Re-read the handoff/harness and inspected StudentGameZone, its tests, Student dashboard/sidebar, Student model/subjects page, GameActivity controller/schema/routes, safe Wordwall component/validator and relevant existing controller/route tests.
 - Confirmed the Student route/sidebar and core catalogue were already present. The existing API derives Student identity from the authenticated session, checks requested school/class against the persisted Student record, and returns only published records for the current class. Reused this foundation without backend runtime changes.
 - Updated `frontend/src/pages/student/StudentGameZone.js`: added a subject filter composed with search; clear-filters and specific empty messages; richer topic/subject/class/description/teacher context in the play dialog; and refresh reconciliation so a selected activity closes when it is no longer returned as published.
-- Updated `frontend/src/pages/student/StudentGameZone.test.js`: 10 total focused cases now cover scope request selectors, published-only/valid embeds, search and subject filters, clearing filters, activity details/fallback, empty/error states, refresh removal, and missing assignment.
-- Compared Phase 13 branch head `e3add1cd003d6faf10ca721643135d9d380f3bbd` to Phase 14 source/test head `a35b4a07a32f5ba413b37cce8875ba9cff339169`; exactly the 2 listed Student frontend files changed. No backend, route, sidebar/dashboard, schema, dependency, Admin/Teacher, AI quiz or unrelated app file changed.
-- Phase 14 commits: `89591d1fcefc1af03c9b63cd880a7fe8385a00df`, `e90f3ff53ab909dd6eaa2f719c96aae3b1056a87`, `a35b4a07a32f5ba413b37cce8875ba9cff339169`. The branch source/test head before this handoff-only update was `a35b4a07a32f5ba413b37cce8875ba9cff339169`.
+- Updated `frontend/src/pages/student/StudentGameZone.test.js`: 10 total focused cases now cover scope request selectors, published-only/valid embeds, search and subject filters, clearing filters, activity details/fallback, empty/error states, refresh removal plus closure of an open play dialog, and missing assignment.
+- Compared Phase 13 branch head `e3add1cd003d6faf10ca721643135d9d380f3bbd` to Phase 14 source/test head `8929062ba86f64d1ceb30500bc1753eccfca6501`; exactly the 2 listed Student frontend files changed. No backend, route, sidebar/dashboard, schema, dependency, Admin/Teacher, AI quiz or unrelated app file changed.
+- Phase 14 commits: `89591d1fcefc1af03c9b63cd880a7fe8385a00df`, `e90f3ff53ab909dd6eaa2f719c96aae3b1056a87`, `8929062ba86f64d1ceb30500bc1753eccfca6501`. The branch source/test head before this handoff-only update was `8929062ba86f64d1ceb30500bc1753eccfca6501`.
 - Static source and diff review completed. Backend/frontend Jest suites, frontend production build and local Student browser/API checks have not been run or confirmed. GitHub returned no workflow runs for the Phase 14 test commit.
 - Immediate next action: pull the branch including this handoff update; run backend tests, frontend tests and production build; then validate the Phase 13 Teacher and Phase 14 Student acceptance scenarios listed above. Keep Phase 13/14 status pending until evidence is supplied. Do not start Phase 15.
 
