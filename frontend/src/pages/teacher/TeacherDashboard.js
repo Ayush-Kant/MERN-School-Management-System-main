@@ -231,8 +231,13 @@ const TeacherDashboard = () => {
                 />
 
                 <Route
-                    path="/Teacher/game-zone"
+                    path="/Teacher/my-games"
                     element={<TeacherGameZone />}
+                />
+
+                <Route
+                    path="/Teacher/game-zone"
+                    element={<Navigate to="/Teacher/my-games" replace />}
                 />
 
                 <Route
