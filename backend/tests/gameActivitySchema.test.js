@@ -94,6 +94,61 @@ test("archive metadata is constrained to the supported lifecycle reasons", async
     await validReason.validate();
 });
 
+test("legacy import provenance is optional for normal Teacher-created activities", async () => {
+    const activity = makeActivity();
+
+    await activity.validate();
+
+    assert.equal(activity.legacySource, undefined);
+});
+
+test("legacy import provenance validates and preserves source mapping metadata", async () => {
+    const legacySource = {
+        sourceKey: "chemamaze-cbse:science:class-6:chapter-1",
+        label: "ChemAmaze CBSE",
+        repository: "dikshaforsure/ChemAmaze-cbse",
+        revision: "513f7c254597d291446d31b45864c3856c518354",
+        path: "script.js",
+        grade: 6,
+        chapter: "Chapter 1",
+    };
+    const activity = makeActivity({ legacySource });
+
+    await activity.validate();
+
+    assert.equal(activity.legacySource.sourceKey, legacySource.sourceKey);
+    assert.equal(activity.legacySource.grade, 6);
+    assert.equal(activity.legacySource.chapter, "Chapter 1");
+});
+
+test("legacy import provenance rejects invalid keys, revisions, grades, and chapters", async () => {
+    const validSource = {
+        sourceKey: "chemamaze-cbse:science:class-6:chapter-1",
+        label: "ChemAmaze CBSE",
+        repository: "dikshaforsure/ChemAmaze-cbse",
+        revision: "513f7c254597d291446d31b45864c3856c518354",
+        path: "script.js",
+        grade: 6,
+        chapter: "Chapter 1",
+    };
+
+    for (const [field, value] of [
+        ["sourceKey", "other-source"],
+        ["revision", "not-a-full-commit-sha"],
+        ["grade", 9],
+        ["chapter", "Unknown chapter"],
+    ]) {
+        const activity = makeActivity({
+            legacySource: { ...validSource, [field]: value },
+        });
+
+        await assert.rejects(activity.validate(), (error) =>
+            error.name === "ValidationError" &&
+            Boolean(error.errors[`legacySource.${field}`])
+        );
+    }
+});
+
 test("GameActivity indexes support scope, creator, status, and provider lookups", () => {
     const indexes = GameActivity.schema.indexes().map(([keys]) => keys);
 
@@ -129,4 +184,13 @@ test("GameActivity indexes support scope, creator, status, and provider lookups"
         keys.status === 1 &&
         keys.createdAt === -1
     ));
+    const legacySourceIndex = GameActivity.schema.indexes().find(([keys]) =>
+        keys.school === 1 && keys["legacySource.sourceKey"] === 1
+    );
+    assert.ok(legacySourceIndex, "Expected a school/source-key idempotency index");
+    assert.equal(legacySourceIndex[1].unique, true);
+    assert.equal(
+        legacySourceIndex[1].partialFilterExpression["legacySource.sourceKey"].$type,
+        "string"
+    );
 });
