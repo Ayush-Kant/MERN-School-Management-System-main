@@ -6,9 +6,8 @@ const EXPECTED_GRADES = Object.freeze([6, 7, 8]);
 const EXPECTED_CHAPTERS_PER_GROUP = 3;
 const EXPECTED_RECORD_COUNT =
     EXPECTED_SUBJECTS.length * EXPECTED_GRADES.length * EXPECTED_CHAPTERS_PER_GROUP;
-const OBJECT_ID_PATTERN = /^[a-f\\d]{24}$/i;
-const SHA_PATTERN = /^[a-f\\d]{40}$/i;
-const SHARE_PATH_PATTERN = /^\\/play\\/\\d+\\/\\d+\\/\\d+\\/?$/;
+const SHA_PATTERN = /^[a-f\d]{40}$/i;
+const SHARE_PATH_PATTERN = /^\/play\/\d+\/\d+\/\d+\/?$/;
 
 function requireString(value, label, maxLength) {
     if (
@@ -16,7 +15,7 @@ function requireString(value, label, maxLength) {
         value.trim().length === 0 ||
         value.trim().length > maxLength
     ) {
-        throw new TypeError(`${label} must be a non-empty string of at most ${maxLength} characters`);
+        throw new TypeError(label + " must be a non-empty string of at most " + maxLength + " characters");
     }
 
     return value.trim();
@@ -62,16 +61,16 @@ function validateCatalogSource(source) {
     const path = requireString(source.path, "source.path", 240);
     const blobSha = requireString(source.blobSha, "source.blobSha", 40);
 
-    if (!/^[a-zA-Z0-9_.-]+\\/[a-zA-Z0-9_.-]+$/.test(repository)) {
+    if (!/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(repository)) {
         throw new TypeError("source.repository must be an owner/repository name");
     }
-    if (!/^https:\\/\\/github\\.com\\/[a-zA-Z0-9_.-]+\\/[a-zA-Z0-9_.-]+$/.test(repositoryUrl)) {
+    if (!/^https:\/\/github\.com\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(repositoryUrl)) {
         throw new TypeError("source.repositoryUrl must be the canonical GitHub repository URL");
     }
     if (!SHA_PATTERN.test(revision) || !SHA_PATTERN.test(blobSha)) {
         throw new TypeError("source revision and blobSha must be full 40-character Git commit/blob SHAs");
     }
-    if (path.startsWith("/") || path.split(/[\\\\/]/).includes("..")) {
+    if (path.startsWith("/") || path.includes(String.fromCharCode(92)) || path.split("/").includes("..")) {
         throw new TypeError("source.path must be a safe repository-relative path");
     }
 
@@ -83,10 +82,10 @@ function validateLegacyGameCatalog(catalog) {
         throw new TypeError("Legacy game catalog must be an object");
     }
     if (catalog.schemaVersion !== CATALOG_SCHEMA_VERSION) {
-        throw new TypeError(`Legacy game catalog schemaVersion must be ${CATALOG_SCHEMA_VERSION}`);
+        throw new TypeError("Legacy game catalog schemaVersion must be " + CATALOG_SCHEMA_VERSION);
     }
     if (!Array.isArray(catalog.records) || catalog.records.length !== EXPECTED_RECORD_COUNT) {
-        throw new TypeError(`ChemAmaze CBSE catalog must contain exactly ${EXPECTED_RECORD_COUNT} primary records`);
+        throw new TypeError("ChemAmaze CBSE catalog must contain exactly " + EXPECTED_RECORD_COUNT + " primary records");
     }
 
     const source = validateCatalogSource(catalog.source);
@@ -96,58 +95,59 @@ function validateLegacyGameCatalog(catalog) {
     const groupCounts = new Map();
 
     const records = catalog.records.map((record, index) => {
-        const label = `records[${index}]`;
+        const label = "records[" + index + "]";
         if (!record || typeof record !== "object" || Array.isArray(record)) {
-            throw new TypeError(`${label} must be an object`);
+            throw new TypeError(label + " must be an object");
         }
 
-        const subject = requireString(record.subject, `${label}.subject`, 40);
+        const subject = requireString(record.subject, label + ".subject", 40);
         const grade = Number(record.grade);
-        const classLabel = requireString(record.classLabel, `${label}.classLabel`, 40);
-        const chapter = requireString(record.chapter, `${label}.chapter`, 40);
-        const topic = requireString(record.topic, `${label}.topic`, 160);
-        const title = requireString(record.title, `${label}.title`, 120);
-        const sourceKey = requireString(record.sourceKey, `${label}.sourceKey`, 180);
+        const classLabel = requireString(record.classLabel, label + ".classLabel", 40);
+        const chapter = requireString(record.chapter, label + ".chapter", 40);
+        const topic = requireString(record.topic, label + ".topic", 160);
+        const title = requireString(record.title, label + ".title", 120);
+        const sourceKey = requireString(record.sourceKey, label + ".sourceKey", 180);
         const originalUrl = validateWordwallShareUrl(record.originalUrl);
         const embedUrl = validateWordwallEmbedUrl(record.embedUrl);
 
         if (!EXPECTED_SUBJECTS.includes(subject)) {
-            throw new TypeError(`${label}.subject must be Science or Mathematics`);
+            throw new TypeError(label + ".subject must be Science or Mathematics");
         }
         if (!EXPECTED_GRADES.includes(grade) || String(record.grade) !== String(grade)) {
-            throw new TypeError(`${label}.grade must be 6, 7, or 8`);
+            throw new TypeError(label + ".grade must be 6, 7, or 8");
         }
-        if (classLabel !== `Class ${grade}`) {
-            throw new TypeError(`${label}.classLabel must match its grade (Class ${grade})`);
+        if (classLabel !== "Class " + grade) {
+            throw new TypeError(label + ".classLabel must match its grade (Class " + grade + ")");
         }
 
         const chapterMatch = chapter.match(/^Chapter ([1-3])$/);
         if (!chapterMatch) {
-            throw new TypeError(`${label}.chapter must be Chapter 1, Chapter 2, or Chapter 3`);
+            throw new TypeError(label + ".chapter must be Chapter 1, Chapter 2, or Chapter 3");
         }
-        const expectedKey = `chemamaze-cbse:${subject.toLowerCase()}:class-${grade}:chapter-${chapterMatch[1]}`;
+        const expectedKey =
+            "chemamaze-cbse:" + subject.toLowerCase() + ":class-" + grade + ":chapter-" + chapterMatch[1];
         if (sourceKey !== expectedKey) {
-            throw new TypeError(`${label}.sourceKey must be the deterministic key ${expectedKey}`);
+            throw new TypeError(label + ".sourceKey must be the deterministic key " + expectedKey);
         }
-        if (title !== `${chapter}: ${topic}`) {
-            throw new TypeError(`${label}.title must preserve the chapter and topic labels`);
+        if (title !== chapter + ": " + topic) {
+            throw new TypeError(label + ".title must preserve the chapter and topic labels");
         }
 
         if (sourceKeys.has(sourceKey)) {
-            throw new TypeError(`Duplicate legacy sourceKey: ${sourceKey}`);
+            throw new TypeError("Duplicate legacy sourceKey: " + sourceKey);
         }
         if (originalUrls.has(originalUrl)) {
-            throw new TypeError(`Duplicate legacy originalUrl: ${originalUrl}`);
+            throw new TypeError("Duplicate legacy originalUrl: " + originalUrl);
         }
         if (embedUrls.has(embedUrl)) {
-            throw new TypeError(`Duplicate legacy embedUrl: ${embedUrl}`);
+            throw new TypeError("Duplicate legacy embedUrl: " + embedUrl);
         }
 
         sourceKeys.add(sourceKey);
         originalUrls.add(originalUrl);
         embedUrls.add(embedUrl);
 
-        const groupKey = `${grade}|${subject}`;
+        const groupKey = grade + "|" + subject;
         groupCounts.set(groupKey, (groupCounts.get(groupKey) || 0) + 1);
 
         return {
@@ -165,10 +165,11 @@ function validateLegacyGameCatalog(catalog) {
 
     for (const grade of EXPECTED_GRADES) {
         for (const subject of EXPECTED_SUBJECTS) {
-            const key = `${grade}|${subject}`;
+            const key = grade + "|" + subject;
             if (groupCounts.get(key) !== EXPECTED_CHAPTERS_PER_GROUP) {
                 throw new TypeError(
-                    `Catalog must contain exactly ${EXPECTED_CHAPTERS_PER_GROUP} chapters for Class ${grade} ${subject}`
+                    "Catalog must contain exactly " + EXPECTED_CHAPTERS_PER_GROUP +
+                    " chapters for Class " + grade + " " + subject
                 );
             }
         }
