@@ -20,6 +20,7 @@ import Logout from "../Logout";
 
 import AdminProfile from "./AdminProfile";
 import AdminHomePage from "./AdminHomePage";
+import AdminLearningGames from "./AdminLearningGames";
 
 import AddStudent from "./studentRelated/AddStudent";
 import SeeComplains from "./studentRelated/SeeComplains";
@@ -200,6 +201,7 @@ const AdminDashboard = () => {
           <Route path="*" element={<Navigate to="/" />} />
 
           <Route path="/Admin/dashboard" element={<AdminHomePage />} />
+          <Route path="/Admin/learning-games" element={<AdminLearningGames />} />
           <Route path="/Admin/profile" element={<AdminProfile />} />
           <Route path="/Admin/complains" element={<SeeComplains />} />
                     <Route
