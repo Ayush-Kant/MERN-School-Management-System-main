@@ -255,6 +255,37 @@ Fixes are on the branch:
 
 The user confirmed that the backend test suite ran properly after these fixes. Exact pass/fail counts were not supplied, so record this as user-confirmed passing rather than inventing a count.
 
+## Local troubleshooting — /AuthSession returns HTTP 503 (2026-11-08)
+
+User reported local startup succeeds and MongoDB connects, but `GET /AuthSession` returns HTTP 503. Current source inspection confirms the route is registered as `authenticateSession` followed by `getAuthSession`; it does not run `loadActorContext`. The 503 therefore comes from the `getSessionConfig()` catch in `backend/middleware/authenticateSession.js`, before the request cookie is checked. The middleware's 503 response message is `Authentication is not configured on this server`.
+
+`backend/utils/authSession.js` requires:
+- `AUTH_SESSION_SECRET` with at least 32 UTF-8 bytes;
+- `AUTH_SESSION_TTL_SECONDS`, when set, as an integer from 300 through 86400 (default 3600 if unset);
+- `AUTH_COOKIE_SAME_SITE` as one of `lax`, `strict`, or `none` (default `lax`).
+
+Most likely local cause: missing/short `AUTH_SESSION_SECRET`, or invalid TTL/SameSite setting in `backend/.env`. The backend entry point calls `dotenv.config()` before registering routes. The example env file leaves `AUTH_SESSION_SECRET` blank. `backend/.gitignore` includes `/.env`, so the real local secret should remain uncommitted.
+
+Safe diagnostic (run from `backend`; does not print secret contents):
+```powershell
+node -e "require('dotenv').config(); const s=process.env.AUTH_SESSION_SECRET || ''; const raw=process.env.AUTH_SESSION_TTL_SECONDS; const ttl=raw === undefined ? 3600 : Number(raw); const sameSite=(process.env.AUTH_COOKIE_SAME_SITE || 'lax').toLowerCase(); console.log({secretConfigured:s.length>0, secretBytes:Buffer.byteLength(s,'utf8'), ttlValid:Number.isSafeInteger(ttl)&&ttl>=300&&ttl<=86400, sameSite, sameSiteValid:['lax','strict','none'].includes(sameSite)});"
+```
+
+If the secret is absent/too short, generate a fresh one locally:
+```powershell
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+Add the generated value (never a placeholder) to local `backend/.env`:
+```env
+AUTH_SESSION_SECRET=PASTE_YOUR_GENERATED_SECRET_HERE
+AUTH_SESSION_TTL_SECONDS=3600
+AUTH_COOKIE_SAME_SITE=lax
+AUTH_COOKIE_SECURE=false
+```
+Restart the backend. A request to `/AuthSession` with no session cookie should then return 401, not 503; after successful login with a valid cookie it should return 200. If it returns 401 after login, next inspect browser cookie transport and CORS; do not rotate or expose the secret in logs.
+
+This is a local environment diagnosis, not an application-code defect demonstrated by the log. No runtime source changes were made for this report. Phase 11 tests/build remain pending user output.
+
 ## Immediate next action — Phase 11 verification
 
 From repository root in Windows PowerShell:
@@ -315,3 +346,11 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Phase 11 code checkpoint before the tracker commits: `3328d8946a6561e10d10303280d147b19d124bab`.
 - Phase 11 implementation commits are listed in the Phase 11 section above.
 - Immediate next action: run backend tests, frontend tests, frontend build, then verify cross-origin credentials, GameActivity lifecycle/scope behavior, and the outstanding real Wordwall embed/browser compatibility check. Do not start Phase 12 yet.
+
+### 2026-11-08 — Local /AuthSession 503 diagnosis
+- User shared logs showing backend and MongoDB start successfully but `GET /AuthSession` responds 503 twice.
+- Inspected current `route.js`, `authenticateSession.js`, `authSession.js`, `index.js`, `backend/.env.example`, CORS configuration, and backend gitignore.
+- Confirmed the 503 is emitted by the `getSessionConfig()` catch in `authenticateSession`, before cookie validation. The route does not include actor-context middleware.
+- Most likely cause is unset/short `AUTH_SESSION_SECRET`, invalid `AUTH_SESSION_TTL_SECONDS`, or invalid `AUTH_COOKIE_SAME_SITE` in local `backend/.env`. The actual local env was not accessible, so the exact failing value has not been verified.
+- Provided a non-secret-printing PowerShell diagnostic and local secret-generation/configuration steps. No application runtime code was changed.
+- Phase 11 automated test/build and browser/API verification remain pending; do not start Phase 12.
