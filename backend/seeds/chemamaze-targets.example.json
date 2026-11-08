@@ -1,0 +1,47 @@
+{
+  "schoolId": "000000000000000000000000",
+  "assignments": {
+    "6|Science": {
+      "grade": 6,
+      "classId": "000000000000000000000006",
+      "className": "Class 6",
+      "subjectId": "000000000000000000000061",
+      "teacherId": "000000000000000000000601"
+    },
+    "6|Mathematics": {
+      "grade": 6,
+      "classId": "000000000000000000000006",
+      "className": "Class 6",
+      "subjectId": "000000000000000000000062",
+      "teacherId": "000000000000000000000602"
+    },
+    "7|Science": {
+      "grade": 7,
+      "classId": "000000000000000000000007",
+      "className": "Class 7",
+      "subjectId": "000000000000000000000071",
+      "teacherId": "000000000000000000000701"
+    },
+    "7|Mathematics": {
+      "grade": 7,
+      "classId": "000000000000000000000007",
+      "className": "Class 7",
+      "subjectId": "000000000000000000000072",
+      "teacherId": "000000000000000000000702"
+    },
+    "8|Science": {
+      "grade": 8,
+      "classId": "000000000000000000000008",
+      "className": "Class 8",
+      "subjectId": "000000000000000000000081",
+      "teacherId": "000000000000000000000801"
+    },
+    "8|Mathematics": {
+      "grade": 8,
+      "classId": "000000000000000000000008",
+      "className": "Class 8",
+      "subjectId": "000000000000000000000082",
+      "teacherId": "000000000000000000000802"
+    }
+  }
+}
