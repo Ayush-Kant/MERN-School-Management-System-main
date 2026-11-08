@@ -21,7 +21,7 @@ afterEach(async () => {
     container.remove();
 });
 
-test("renders the Learning & Games Admin navigation link and marks it active", async () => {
+test("renders the Learning & Games Admin navigation link", async () => {
     await act(async () => {
         root.render(
             <MemoryRouter initialEntries={["/Admin/learning-games"]}>
