@@ -92,7 +92,7 @@ No route URLs, role authorization rules, dashboard navigation, data model fields
 - Phase 11 implementation: code and tests have been committed to the feature branch. The remote diff was reviewed against the Phase 10 tracker checkpoint and contains exactly the 21 paths listed below.
 - Phase 11 backend tests, frontend tests, and frontend build: **not yet run/confirmed by the user**. The GitHub connector cannot execute npm commands on the user's Windows environment.
 
-Immediate next action: pull the branch and run the Phase 11 backend/frontend tests and frontend production build, then perform the listed browser/API smoke checks. Do not begin Phase 12 until Phase 11's exit gate is verified and the user asks to continue.
+Immediate next action: correct only the failing `frontend/src/utils/apiClient.test.js` import/reset ordering, rerun the frontend suite, and capture the production-build result. Backend tests and basic frontend/browser verification have now been reported successful by the user. Do not begin Phase 12 until the frontend suite and remaining Phase 11 exit checks are verified and the user asks to continue.
 
 From repository root in Windows PowerShell:
 ```powershell
@@ -194,12 +194,12 @@ Source review confirms:
 - Teacher and Student Game Zone requests now go through the credential-aware shared client.
 - Existing Game Zone component tests were migrated to mock the shared client rather than bare Axios.
 
-**Not verified yet:** Phase 11 backend tests, Phase 11 frontend tests, production build, and real-browser cross-origin cookie/Wordwall behavior. These require the user's local execution/browser environment.
+**Current verification evidence (2026-11-08):** Backend test suite: user reports pass (exact count not supplied). Frontend runtime: user reports successful; the development server printed “webpack compiled successfully”. Browser verification: user reports successful, but the specific scenarios were not itemized. Frontend Jest suite: 4/5 suites and 24/25 tests passed; only `apiClient.test.js` failed due to the import-time Axios mock call not being present when asserted. The minimal test-only correction is proposed but not yet applied or run. A distinct `npm run build` result was not included in the latest output. Keep granular cross-origin cookie/lifecycle tests and the explicit real Wordwall load/fullscreen/fallback checks open until their results are stated.
 
 ### Phase 11 exit checks
-- [ ] Backend test suite passes.
-- [ ] Frontend test suite passes.
-- [ ] Frontend production build passes.
+- [x] Backend test suite passes — user-reported on 2026-11-08; exact count not supplied.
+- [ ] Frontend test suite passes — latest run: 4/5 suites, 24/25 tests; `apiClient.test.js` remains failing under diagnosis.
+- [ ] Frontend production build passes — no distinct production-build result supplied in the latest output.
 - [ ] Teacher can create a draft in only the currently assigned school/class/subject.
 - [ ] Teacher can update only their own draft; attempts to mutate status, school, class, subject, creator, or provider are rejected.
 - [ ] Teacher can publish, unpublish (published → draft), edit, republish, and archive only owned activities in their current assignment.
@@ -286,7 +286,9 @@ Restart the backend. A request to `/AuthSession` with no session cookie should t
 
 This is a local environment diagnosis, not an application-code defect demonstrated by the log. No runtime source changes were made for this report. Phase 11 tests/build remain pending user output.
 
-## Immediate next action — Phase 11 verification
+## Immediate next action — Phase 11 frontend test correction
+
+The latest run confirms the backend suite and browser/runtime checks were successful per the user, but the frontend Jest suite has one remaining test-harness failure. Apply the isolated-module correction documented in the 2026-11-08 interaction log, rerun the full frontend suite with watch mode disabled, and capture the production build result.
 
 From repository root in Windows PowerShell:
 ```powershell
