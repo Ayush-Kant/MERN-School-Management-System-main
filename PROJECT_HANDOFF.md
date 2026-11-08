@@ -12,7 +12,7 @@ Last updated: 2026-11-08 (Asia/Kolkata)
 - Phase 09 invariants: backend/GAME_ACTIVITY_INVARIANTS.md
 - Latest Phase 10 code checkpoint: `b79bd513215b4fedce9d5e3ca00d58473cfa8239`.
 - Latest Phase 11 application-code checkpoint before the test-only Jest correction: `3328d8946a6561e10d10303280d147b19d124bab`.
-- Latest verified Phase 12 application-source checkpoint, excluding subsequent handoff-only documentation commits: `a045153afac6cdaa17faba20f9be49b9856a40d0`.
+- Latest verified Phase 13 application-source checkpoint, excluding subsequent handoff-only documentation commits: `059060efe1965c3b0247241113f013445bcce306`.
 
 ## Architecture decisions
 The MERN School Management System remains the host application. Preserve the legacy ChemAmaze-cbse repository as source/reference. Build two separate experiences: (1) school-scoped teacher-managed Wordwall Games Zone and (2) first-party AI Learning Studio with server-graded quizzes, learning attempts, mastery estimates, adaptive revision, curriculum-grounded explanations, and teacher-reviewed generated questions. Existing Admin/Teacher/Student and school/class/subject records remain authoritative.
@@ -220,8 +220,9 @@ Source review confirms:
 | 09 | GameActivity schema and invariants | **Completed — user confirmed post-fix backend test suite passed (2026-11-06); exact count not supplied** |
 | 10 | Safe Wordwall URL validation and embed component | **Implementation and automated tests/build user-confirmed passed; real-browser Wordwall check still pending** |
 | 11 | Role-scoped Game APIs | **User-confirmed all backend/frontend tests and production build passed (2026-11-08); general browser success reported; granular scenario checklist not itemized** |
-| 12 | Admin Learning & Games management | **Implementation committed to feature branch; Phase 12 local tests/build pending** |
-| 13–30 | Remaining roadmap | Not started; follow harness exactly |
+| 12 | Admin Learning & Games management | **Completed — user confirmed tests, build, and acceptance checks were good (2026-11-08); exact output/counts not supplied** |
+| 13 | Teacher My Games management | **Implementation committed to feature branch; Phase 13 tests/build pending** |
+| 14–30 | Remaining roadmap | Not started; follow harness exactly |
 
 Do not redo completed phases unless source inspection shows a regression. Follow the detailed scope and exit gates in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md.
 
@@ -261,7 +262,7 @@ Do not redo completed phases unless source inspection shows a regression. Follow
 
 ## Phase 12 — Admin Learning & Games management (implementation)
 
-**Status:** Application implementation committed to `feature/learning-game-zones`; local Phase 12 test/build execution is pending user output. No Phase 12 runtime test or production build is claimed as passed.
+**Status:** Completed. The user confirmed that Phase 12 tests, build, and acceptance checks were good on 2026-11-08. Exact counts/output were not supplied, so no test totals are invented.
 
 ### Implemented backend contract
 Added a dedicated Admin controller at `backend/controllers/admin-game-activity-controller.js`; existing Teacher-specific GameActivity controller methods and permissions were not widened.
@@ -327,78 +328,82 @@ The Phase 12 implementation was committed incrementally to the feature branch. T
 - [x] Admin role and persisted actor-context route chain covered by route tests.
 - [x] Controller tests added for school scoping, filters, invalid inputs, pagination, transitions, and conflict/not-found behavior.
 - [x] Frontend tests added for loading, empty, error/retry, filtered requests, metadata, action confirmation/success/failure, and draft/archived action visibility.
-- [ ] Backend `npm test` — not run in this environment.
-- [ ] Frontend `npm test -- --watchAll=false` — not run in this environment.
-- [ ] Frontend `npm run build` — not run in this environment.
-- [ ] Local browser verification with an Admin account, including other-school filter IDs, unpublish/archive state changes, and regression checks for Teacher/Student pages — pending.
+- [x] Backend `npm test` — user confirmed Phase 12 tests passed; exact count not supplied.
+- [x] Frontend `npm test -- --watchAll=false` — user confirmed Phase 12 tests passed; exact count not supplied.
+- [x] Frontend `npm run build` — user confirmed successful.
+- [x] Local Admin catalogue and acceptance checks — user reported everything was good; individual browser scenarios were not itemized.
 
-GitHub returned no CI status checks and no workflow runs for the latest Phase 12 commits. The GitHub connector can edit and inspect repository files but did not execute the local npm commands.
+GitHub returned no CI status checks/workflow runs. The npm test/build results above are user-confirmed local results, not connector-executed commands.
 
-### Immediate next action
-Pull the branch and run the Phase 12 verification commands listed at the end of this handoff. Report complete backend/frontend test output and build output. Fix only demonstrated failures. Do not begin Phase 13 until Phase 12 exit checks pass and the user asks to continue.
+### Phase 12 completion and transition
+The user confirmed that Phase 12 was good and explicitly requested Phase 13. Phase 12 is treated as complete. The next active phase and its verification gate are recorded below.
 
 ---
 
-## Phase 09 implementation snapshot
-Files added:
-- backend/GAME_ACTIVITY_INVARIANTS.md
-- backend/services/learning/gameActivityIntegrity.js
-- backend/tests/gameActivitySchema.test.js
-- backend/tests/gameActivityLifecycle.test.js
-- backend/tests/gameActivityLifecycleControllers.test.js
+## Phase 13 — Teacher My Games management (implementation)
 
-Files modified:
-- backend/models/gameActivitySchema.js
-- backend/controllers/game-activity-controller.js
-- backend/controllers/class-controller.js
-- backend/controllers/subject-controller.js
-- backend/controllers/teacher-controller.js
-- backend/tests/gameActivityController.test.js
+**Status:** Application implementation committed to `feature/learning-game-zones`; local Phase 13 Jest/build/browser verification is pending user output. The current source/diff review is complete. Do not mark this phase complete until the user confirms its verification gate.
 
-The implementation adds a separate GameActivity model and indexes, persisted relationship validation for Teacher/school/Class/Subject, archive lifecycle methods, archive metadata, and archive-before-delete/reassignment handling. No frontend, dashboard, route URL, dependency, or quiz code was changed in Phase 09.
+### Source audit and reuse decisions
+- Phase 11 already added and tested the secured Teacher GameActivity endpoints: create draft, list own assigned-scope activities, update own draft, publish, unpublish, and archive.
+- The backend controller re-resolves the signed-in Teacher record on each request. Create/update call `validateGameActivityRelationships` using the Teacher's persisted school, current class and subject. Lifecycle operations constrain activity ID, creator, school, class, subject, and expected status; request-supplied `teacherId` is only an identity assertion checked against the authenticated actor.
+- Existing route authorization tests already assert Teacher-only access for create, update, publish, unpublish and archive and Teacher/Student access for listing. Existing controller tests cover assignment scope, cross-teacher identity attempts, draft-only update, field allowlisting, publish/unpublish/archive state transitions, and invalid lifecycle transitions.
+- The existing `TeacherGameZone.js` was the Phase 11 foundation. It already supported list/create/preview/publish/archive; Phase 13 extends it instead of introducing a duplicate game management page or a second API client.
+- No backend application changes were necessary for Phase 13: the required update/unpublish endpoints and their backend authorization/ownership validation already existed and are reused.
 
-Before the latest fixes, user ran npm test: 171 total, 169 passed, 2 failed:
-1. Invalid ObjectId threw synchronously in lifecycle archive method, while assert.rejects expected a rejected promise.
-2. archiveReason had default null, but enum validation rejected null.
+### Implemented Teacher experience
+- The existing Teacher game page now presents itself as **My Games**.
+- Added a new route `/Teacher/my-games` and changed the Teacher sidebar link to **My Games**.
+- Preserved old bookmarks: `/Teacher/game-zone` redirects to `/Teacher/my-games`.
+- The signed-in Teacher's current class and subject are displayed as read-only assignment context. If either assignment is missing, create/edit submission is disabled and the page explains why.
+- Assignment IDs are not sent as authority in the create/update payload. The backend continues to determine them from the authenticated Teacher record and validates their relationships on every create/update.
+- Added draft editing with fields for title, topic, description, validated Wordwall embed URL/iframe snippet, and optional original activity URL. Updates call the existing `PUT /GameActivityUpdate/:id` endpoint; only draft activities show the Edit action.
+- Added unpublish for published activities. It asks for confirmation and calls the existing `PUT /GameActivityUnpublish/:id` endpoint, which changes published → draft and records `unpublishedAt`.
+- Preserved publish for drafts and archive for published records. Archived activities remain immutable through this UI.
+- Retained safe preview through the existing fixed `WordwallEmbed` component; pasted HTML is never rendered.
+- Added the current Wordwall embed instructions: My Activities → three-dot menu → Embed → IFrame → Copy. A link to Wordwall's official help instructions is included.
+- Added an optional original Wordwall activity/source URL field and retained the shared credential-aware `apiClient`.
 
-Fixes are on the branch:
-- a11cd23b23fc532251a317d82d07be1214e7a926 — all seven public archive lifecycle methods made async.
-- 5f5950de0a874cf763f12bfa42536b7c44a0f78d — archiveReason custom validator accepts null or one of manual, teacher_deleted, teacher_reassigned, class_deleted, subject_deleted, school_resources_deleted.
+### Phase 13 changed files
+- `frontend/src/pages/teacher/TeacherGameZone.js` — add edit/unpublish, assignment context, original URL field, current Wordwall Embed instructions and status-specific actions.
+- `frontend/src/pages/teacher/TeacherDashboard.js` — register `/Teacher/my-games` and preserve the old route with a redirect.
+- `frontend/src/pages/teacher/TeacherSideBar.js` — rename the Game Zone navigation entry to My Games and point it at the new path.
+- `frontend/src/pages/teacher/TeacherGameZone.test.js` — extend page tests for assignment display, original URL, draft editing, unpublish, cancel confirmation, missing assignment and edit failure.
+- `frontend/src/pages/teacher/TeacherSideBar.test.js` — new navigation test.
 
-The user confirmed that the backend test suite ran properly after these fixes. Exact pass/fail counts were not supplied, so record this as user-confirmed passing rather than inventing a count.
+Diff review from the Phase 12 checkpoint `443f8518fcdc26f5eb68c1cedefd6f39ebe132ba` shows exactly these 5 paths. No backend controller/routes, schema, Admin page, Student page, AI quiz, dependency, or unrelated school-management path changed.
 
-## Local troubleshooting — /AuthSession returns HTTP 503 (2026-11-08)
+### Existing backend coverage reused
+- `backend/tests/gameActivityController.test.js`: 34 test cases currently cover Teacher/Student controller ownership, assignment, update, publish, unpublish and archive behavior.
+- `backend/tests/learningRouteAuthorization.test.js`: 6 test cases currently cover Teacher-only create/update/publish/unpublish/archive route permissions and allowed list roles.
+These are existing Phase 11 tests; Phase 13 did not modify them or claim new backend test results.
 
-User reported local startup succeeds and MongoDB connects, but `GET /AuthSession` returns HTTP 503. Current source inspection confirms the route is registered as `authenticateSession` followed by `getAuthSession`; it does not run `loadActorContext`. The 503 therefore comes from the `getSessionConfig()` catch in `backend/middleware/authenticateSession.js`, before the request cookie is checked. The middleware's 503 response message is `Authentication is not configured on this server`.
+### Phase 13 frontend tests
+- `TeacherGameZone.test.js`: 13 test cases covering list, Wordwall validation, creation, metadata/assignment display, preview, publish, editing drafts, denial of edit action for published/archived records, unpublish confirmation, cancel confirmation, update failure, missing assignment, and archive.
+- `TeacherSideBar.test.js`: 1 test case for the My Games navigation destination.
 
-`backend/utils/authSession.js` requires:
-- `AUTH_SESSION_SECRET` with at least 32 UTF-8 bytes;
-- `AUTH_SESSION_TTL_SECONDS`, when set, as an integer from 300 through 86400 (default 3600 if unset);
-- `AUTH_COOKIE_SAME_SITE` as one of `lax`, `strict`, or `none` (default `lax`).
+### Phase 13 implementation commits
+- `d8c3263688b7ab8ddc968c5ff4edfc792caef886` — Teacher My Games edit/unpublish UI and Wordwall/source form.
+- `53846a37c699e6f46059830f0f74ced3698391e6` — new Teacher route and old-route redirect.
+- `c1f0d5f11a2f6ebd1636917138efd9a5ce559481` — Teacher sidebar navigation rename.
+- `120937b77e7ce678857c628315ab3035b905676f` — draft editing and unpublish UI tests.
+- `161b2006f99d172fa1bcefc4123de397977477d0` — Teacher sidebar test.
+- `059060efe1965c3b0247241113f013445bcce306` — assignment guard, edit-failure and cancellation test cases.
 
-Most likely local cause: missing/short `AUTH_SESSION_SECRET`, or invalid TTL/SameSite setting in `backend/.env`. The backend entry point calls `dotenv.config()` before registering routes. The example env file leaves `AUTH_SESSION_SECRET` blank. `backend/.gitignore` includes `/.env`, so the real local secret should remain uncommitted.
+### Phase 13 verification status
+- [x] Source review of the Teacher page, Teacher dashboard/sidebar, GameActivity controller, and existing controller/route tests.
+- [x] Reused update/unpublish APIs already protected by authenticated Teacher role and current assignment ownership.
+- [x] Diff comparison confirms only the 5 listed frontend files changed.
+- [x] Added focused Teacher page and sidebar tests.
+- [ ] Backend `npm test` — not run in this environment; should confirm existing GameActivity update/unpublish regressions still pass.
+- [ ] Frontend `npm test -- --watchAll=false` — not run in this environment.
+- [ ] Frontend `npm run build` — not run in this environment.
+- [ ] Local Teacher browser/API verification — pending: create draft, preview, edit own draft, publish, unpublish, edit after unpublish, republish, archive, and verify legacy route redirect.
+- [ ] Security regression check — pending local/API confirmation that a Teacher cannot update/transition another Teacher's activity or override school/class/subject/creator fields.
 
-Safe diagnostic (run from `backend`; does not print secret contents):
-```powershell
-node -e "require('dotenv').config(); const s=process.env.AUTH_SESSION_SECRET || ''; const raw=process.env.AUTH_SESSION_TTL_SECONDS; const ttl=raw === undefined ? 3600 : Number(raw); const sameSite=(process.env.AUTH_COOKIE_SAME_SITE || 'lax').toLowerCase(); console.log({secretConfigured:s.length>0, secretBytes:Buffer.byteLength(s,'utf8'), ttlValid:Number.isSafeInteger(ttl)&&ttl>=300&&ttl<=86400, sameSite, sameSiteValid:['lax','strict','none'].includes(sameSite)});"
-```
+GitHub returned no CI status checks for the latest Phase 13 commits. The GitHub connector can inspect and update source files but did not execute npm commands.
 
-If the secret is absent/too short, generate a fresh one locally:
-```powershell
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-Add the generated value (never a placeholder) to local `backend/.env`:
-```env
-AUTH_SESSION_SECRET=PASTE_YOUR_GENERATED_SECRET_HERE
-AUTH_SESSION_TTL_SECONDS=3600
-AUTH_COOKIE_SAME_SITE=lax
-AUTH_COOKIE_SECURE=false
-```
-Restart the backend. A request to `/AuthSession` with no session cookie should then return 401, not 503; after successful login with a valid cookie it should return 200. If it returns 401 after login, next inspect browser cookie transport and CORS; do not rotate or expose the secret in logs.
-
-This is a local environment diagnosis, not an application-code defect demonstrated by the log. No runtime source changes were made for this report. Subsequent Phase 11 test and browser evidence is recorded in the current verification section above.
-
-## Immediate next action — verify Phase 12 locally
+### Immediate next action — verify Phase 13 locally
 
 Pull the latest `feature/learning-game-zones` branch, then run from the repository root in Windows PowerShell:
 
@@ -408,14 +413,14 @@ git pull --ff-only origin feature/learning-game-zones
 cd backend
 npm test
 
-cd ..\frontend
+cd ..\\frontend
 npm test -- --watchAll=false
 npm run build
 ```
 
-Then sign in as an Admin and verify the Learning & Games page. Check the school's full catalogue and filter options; class/subject/teacher/status/provider/search filters; pagination; source and creator metadata; empty/loading/error/retry behavior; confirmation; unpublish (published → draft); archive (published → archived); and rejection of an activity or filter ID belonging to another school. Confirm draft and archived records have no Admin lifecycle action. Also regress Teacher and Student Game Zone access and ensure the existing root-mounted routes still work.
+Then sign in as a Teacher and verify `/Teacher/my-games`: confirm the persisted current class/subject is displayed; create a draft; preview it; edit that draft; publish it; unpublish it; edit the resulting draft; republish; then archive. Confirm published and archived activities cannot be edited, archived records cannot be republished, and unpublishing removes an activity from the Student catalogue. Test an incorrect/foreign Teacher ID and attempts to change school/class/subject/creator/status in update requests; the backend must reject them. Confirm the legacy `/Teacher/game-zone` URL redirects correctly and Student/Admin pages are unaffected.
 
-The Phase 12 application implementation is committed, but do not treat it as complete until the backend suite, frontend suite, build, and local Admin browser/API checks pass. Fix only failures supported by the output. Stop for review before Phase 13.
+Phase 13 remains open until the backend suite, frontend suite, build, and local Teacher/API checks pass. Fix only failures supported by the output. Stop for review before Phase 14.
 
 
 ## How to work
@@ -502,3 +507,15 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Subsequent handoff-only documentation syncs are recorded in Git history; fetch the feature branch ref for the current overall HEAD.
 - Source/diff review is complete. Phase 12 backend/frontend tests, production build, and local Admin browser/API checks are **not yet run or verified**. The latest commit has no GitHub CI status entries or workflow runs.
 - Immediate next action: pull the latest branch and run backend tests, frontend tests, frontend build, then verify the Admin flows and cross-school restrictions. Do not start Phase 13 until these checks pass and the user asks to continue.
+
+### 2026-11-08 — Phase 12 user confirmation and Phase 13 Teacher My Games implementation
+- User confirmed Phase 12 was good and explicitly asked to proceed to Phase 13. Phase 12 is now recorded as user-confirmed complete; exact test totals/output were not supplied.
+- Re-read the current handoff/harness Phase 13 scope and inspected the existing TeacherGameZone page, Teacher dashboard/sidebar, GameActivity controller, route authorization tests, API contract and Wordwall embed component.
+- Confirmed Phase 11 already provides Teacher-scoped create/list/update/publish/unpublish/archive APIs, including database-derived current assignment validation and ownership/state constraints. Reused those APIs; no backend runtime/controller/route change was necessary.
+- Extended the existing Teacher Game Zone rather than creating a duplicate page: added draft edit, published-to-draft unpublish with confirmation, original source URL entry, current assigned class/subject display, missing-assignment guard, status-specific action controls, and official Wordwall Embed workflow instructions.
+- Added `/Teacher/my-games`, renamed the sidebar item to My Games, and preserved `/Teacher/game-zone` as a redirect to the new route.
+- Added frontend coverage: 13 Teacher page test cases and one Teacher sidebar test. Existing backend GameActivity controller (34 test cases) and learning route authorization (6 test cases) already cover the backend edit/unpublish scope and permissions.
+- Diff comparison from Phase 12 checkpoint `443f8518fcdc26f5eb68c1cedefd6f39ebe132ba` shows exactly 5 changed paths, all frontend Teacher files. No backend route/controller/schema, Admin/Student page, AI quiz, dependency or unrelated app code changed.
+- Latest Phase 13 application-source checkpoint: `059060efe1965c3b0247241113f013445bcce306`.
+- Static source/diff review completed. Phase 13 backend/frontend Jest runs, frontend production build and local Teacher browser/API checks have **not yet been run or verified**. GitHub returned no CI status checks for this checkpoint.
+- Immediate next action: run the backend test suite, frontend Jest suite and production build, then verify Teacher create/edit/preview/publish/unpublish/republish/archive plus cross-teacher/scope protections. Do not begin Phase 14 until the Phase 13 exit gate passes and the user asks to continue.
