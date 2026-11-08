@@ -15,7 +15,7 @@ Last updated: 2026-11-08 (Asia/Kolkata)
 - Latest verified Phase 13 application-source checkpoint, excluding subsequent handoff-only documentation commits: `059060efe1965c3b0247241113f013445bcce306`.
 - Latest Phase 14 Student Games Zone application-source checkpoint: `e90f3ff53ab909dd6eaa2f719c96aae3b1056a87`.
 - Latest Phase 14 Student Games Zone test checkpoint: `8929062ba86f64d1ceb30500bc1753eccfca6501`.
-- Latest Phase 15 application/test checkpoint before the handoff update: `8c2133b9fb1eec5c0fd5959088a750bb46d81ee3`.
+- Latest Phase 15 application/test checkpoint before the handoff update: `f2217ccda01244823f00aec9c74ceef46aaa0098`.
 
 ## Architecture decisions
 The MERN School Management System remains the host application. Preserve the legacy ChemAmaze-cbse repository as source/reference. Build two separate experiences: (1) school-scoped teacher-managed Wordwall Games Zone and (2) first-party AI Learning Studio with server-graded quizzes, learning attempts, mastery estimates, adaptive revision, curriculum-grounded explanations, and teacher-reviewed generated questions. Existing Admin/Teacher/Student and school/class/subject records remain authoritative.
@@ -560,13 +560,17 @@ No new npm dependency, route, controller, role permission, frontend page, Admin/
 - `564fd9cc81d9c6a3564767292fdfd5ccfe4bb942` — clarify dry-run/apply index behavior in the import guide.
 - `8c2133b9fb1eec5c0fd5959088a750bb46d81ee3` — disable Mongoose auto-indexing for the CLI and create GameActivity indexes only in apply mode.
 - `3a0fda11dd56440e8b65ebbfcdebd9a8cda4c423` — document the apply-only index creation behavior.
+- `1d1a305fe5e8bc4ea1ea2636816e2f61ac85dd74` — block remote MongoDB hosts by default.
+- `38d707e9ad7d9042bf9a1bcab06654e91a512571` — add the explicit remote-development URI opt-in to the CLI.
+- `f2217ccda01244823f00aec9c74ceef46aaa0098` — cover remote host blocking and opt-in in importer tests.
+- `8829e264f7620e4a4ffc7820970f1513dcbe8139` — document the remote development opt-in guard.
 
 ### Phase 15 verification status
 - [x] Inspect canonical and derivative source repositories, pin commit/blob provenance, and compare all 18 primary records.
 - [x] Account for the six derivative-only supplemental entries and their explicit non-import reasons.
 - [x] Add schema, validator, importer, CLI, target template, operator guide and focused tests.
 - [x] Static source review confirms the importer derives school/class/subject/Teacher records from MongoDB and only creates draft GameActivity records.
-- [x] Mongoose auto-indexing is disabled in the importer CLI; dry-run does not create indexes or insert documents; apply mode explicitly creates the GameActivity indexes and is guarded by the exact development database name and an explicit confirmation token.
+- [x] Mongoose auto-indexing is disabled in the importer CLI; dry-run does not create indexes or insert documents; remote MongoDB hosts are blocked by default; apply mode explicitly creates the GameActivity indexes and is guarded by the exact development database name and an explicit confirmation token.
 - [ ] `npm run seed:chemamaze:validate` — not run in this environment.
 - [ ] Backend `npm test` — not run in this environment.
 - [ ] Development target mapping — user must populate local-only IDs from the dedicated development database.
@@ -727,11 +731,11 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Inspected the canonical source `dikshaforsure/ChemAmaze-cbse` and derivative `StemGames/ChemAmaze-cbseGames`. Pinned canonical `script.js` to commit `513f7c254597d291446d31b45864c3856c518354` and blob `1e32228d9bd7ec583bb2e2b81f2688e7aab1b0e9`.
 - Parsed and compared all 18 primary Wordwall entries across the two repositories (Science/Mathematics, Classes 6–8, three chapters each); all 18 match. Recorded exact topic, original share URL, and embed src URL in the manifest. Six derivative-only additional entries are explicitly accounted for separately: a Google Drive crossword, two Wayground links, and three unresolved Math placeholders.
 - Added a versioned canonical seed manifest, supplemental review inventory, strict catalog/share/embed validator, database-backed idempotent importer, development-only validate/dry-run/apply CLI, local target mapping template, optional immutable GameActivity provenance, and school/source-key partial unique index.
-- The importer resolves every school/class/subject/Teacher target from MongoDB and reuses `validateGameActivityRelationships`; no mapping is accepted as authorization authority. Imported entries start as drafts. Existing content/lifecycle state is not overwritten; conflicting modified records stop new inserts. Concurrent exact unique-key insertions are counted as unchanged. Apply mode checks exact `NODE_ENV=development`, database `school_management_dev`, and an explicit confirmation token. Mongoose automatic index creation is disabled for the CLI; dry-run does not write records or create indexes; apply explicitly creates the GameActivity indexes before inserts.
-- Added 7 catalog tests, 11 importer tests, and 3 schema/provenance tests (21 new test cases in total). Added `backend/LEGACY_GAME_IMPORT.md` and updated `backend/GAME_ACTIVITY_INVARIANTS.md`.
+- The importer resolves every school/class/subject/Teacher target from MongoDB and reuses `validateGameActivityRelationships`; no mapping is accepted as authorization authority. Imported entries start as drafts. Existing content/lifecycle state is not overwritten; conflicting modified records stop new inserts. Concurrent exact unique-key insertions are counted as unchanged. Apply mode checks exact `NODE_ENV=development`, database `school_management_dev`, and an explicit confirmation token. Loopback MongoDB hosts are allowed by default; remote hosts require `CHEMAMAZE_ALLOW_REMOTE_DEV_IMPORT=true` for an independently verified isolated development cluster. Mongoose automatic index creation is disabled for the CLI; dry-run does not write records or create indexes; apply explicitly creates the GameActivity indexes before inserts.
+- Added 7 catalog tests, 12 importer tests, and 3 schema/provenance tests (22 new test cases in total). Added `backend/LEGACY_GAME_IMPORT.md` and updated `backend/GAME_ACTIVITY_INVARIANTS.md`.
 - Phase 15 changes are limited to the backend seed manifest/review data, import service/script, GameActivity provenance schema/index, associated backend tests, package scripts, gitignore, invariant doc and import guide. No frontend, application routes, role authorization, controller or legacy source repository was modified.
 - Important corrective review changes: fixed regex escaping in the catalog and ObjectId validators; ensured dry-run does not build database indexes; ensure identical concurrent insert races count as unchanged; added a regression for preserving an already-published state on a repeat import.
-- The exact implementation commits and file-level scope are recorded in the Phase 15 section above. Phase 15 source/test checkpoint before handoff update: `8c2133b9fb1eec5c0fd5959088a750bb46d81ee3`; the latest import-guide clarification is `3a0fda11dd56440e8b65ebbfcdebd9a8cda4c423`.
+- The exact implementation commits and file-level scope are recorded in the Phase 15 section above. Phase 15 source/test checkpoint before handoff update: `f2217ccda01244823f00aec9c74ceef46aaa0098`; the latest import-guide clarification is `8829e264f7620e4a4ffc7820970f1513dcbe8139`.
 - Backend Jest/test suite, catalog CLI validation, development dry-run, and actual development import have **not** been executed. No development database or local target IDs were accessed; no database records were written. Do not claim the migration is imported until the user runs and confirms it.
 - Immediate next action: run backend seed validator and backend suite, then Phase 14 frontend tests/build and Student browser acceptance. Next, configure the ignored target mapping from the dedicated development database, inspect the dry-run, and only then explicitly apply and verify 18 drafts plus idempotent rerun. Do not start Phase 16.
 
