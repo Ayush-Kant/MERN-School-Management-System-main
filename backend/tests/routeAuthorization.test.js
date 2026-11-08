@@ -71,6 +71,9 @@ const EXPECTED_ROLE_ROUTES = new Map([
     ["PUT /GameActivityUpdate/:id", ["Teacher"]],
     ["PUT /GameActivityUnpublish/:id", ["Teacher"]],
     ["PUT /GameActivityArchive/:id", ["Teacher"]],
+    ["GET /AdminGameActivityList", ["Admin"]],
+    ["PUT /AdminGameActivityUnpublish/:id", ["Admin"]],
+    ["PUT /AdminGameActivityArchive/:id", ["Admin"]],
 
     ["POST /LearningQuizCreate", ["Teacher"]],
     ["GET /LearningQuizList/:id", ["Teacher", "Student"]],
@@ -298,6 +301,24 @@ test("all legacy school-management routes have explicit resource/school scope ch
 
     for (const [key, expectedScopes] of EXPECTED_SCOPE_ROUTES) {
         assert.deepEqual(getMiddlewareScopes(findRoute(key)), expectedScopes, key);
+    }
+});
+
+test("Admin Learning & Games routes require an Admin session and database-backed actor context", () => {
+    for (const key of [
+        "GET /AdminGameActivityList",
+        "PUT /AdminGameActivityUnpublish/:id",
+        "PUT /AdminGameActivityArchive/:id",
+    ]) {
+        const route = findRoute(key);
+        assert.equal(route.stack[0].handle, authenticateSession, key);
+        const roleIndex = route.stack.findIndex((entry) =>
+            Array.isArray(entry.handle.allowedRoles)
+        );
+        assert.notEqual(roleIndex, -1, key);
+        assert.deepEqual(route.stack[roleIndex].handle.allowedRoles, ["Admin"], key);
+        assert.equal(route.stack[roleIndex + 1].handle, loadActorContext, key);
+        assert.equal(route.stack[roleIndex + 2].handle.isAsyncHandler, true, key);
     }
 });
 
