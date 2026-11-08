@@ -514,7 +514,7 @@ Phase 13 is user-confirmed good. Phase 14 remains unverified until the current b
 - Existing imported records are compared with the pinned source metadata and mapped scope. Identical rows are skipped. Existing edited/conflicting rows block the new inserts for that run; the importer never overwrites Teacher/Admin content or lifecycle status. A concurrent unique-key race is reconciled as unchanged only when the stored record exactly matches the pinned seed.
 - `backend/models/gameActivitySchema.js`: optional immutable `legacySource` metadata for imported records and a unique partial compound index on school + stable source key. Regular Teacher-created GameActivity documents do not require this metadata and remain outside the partial unique index.
 - `backend/scripts/import-chemamaze-games.js`: supports catalog-only validation, database dry-run and explicit apply.
-- Safety locks: importer requires `NODE_ENV=development` and the exact database name `school_management_dev`; write mode additionally requires `CHEMAMAZE_SEED_CONFIRM=IMPORT_CHEMAMAZE_TO_SCHOOL_MANAGEMENT_DEV`. Apply mode initializes the unique index before inserts; dry-run does not build indexes or write documents.
+- Safety locks: importer requires `NODE_ENV=development` and the exact database name `school_management_dev`; loopback hosts are allowed by default and remote hosts require `CHEMAMAZE_ALLOW_REMOTE_DEV_IMPORT=true` for an independently verified isolated development cluster. Write mode additionally requires `CHEMAMAZE_SEED_CONFIRM=IMPORT_CHEMAMAZE_TO_SCHOOL_MANAGEMENT_DEV`. Mongoose auto-indexing is disabled for the CLI; apply mode explicitly creates the unique indexes before inserts; dry-run does not build indexes or write documents.
 - Target school/class/subject/Teacher IDs are provided in a local-only ignored file, not committed. The checked-in example uses placeholders.
 - Partial failures are reported and can be resumed. The import is sequential and idempotent; no transaction was added because MongoDB deployment topology has not been verified as a replica set.
 
@@ -527,7 +527,7 @@ Phase 13 is user-confirmed good. Phase 14 remains unverified until the current b
 - `backend/scripts/import-chemamaze-games.js` — validate-only, dry-run and explicitly confirmed development apply modes.
 - `backend/models/gameActivitySchema.js` — optional immutable provenance subdocument and partial unique per-school source key.
 - `backend/tests/legacyGameCatalog.test.js` — 7 catalog/source/link validation tests.
-- `backend/tests/legacyGameImporter.test.js` — 10 development guard, assignment mapping, draft planning, idempotency, conflict and concurrent insert tests.
+- `backend/tests/legacyGameImporter.test.js` — 12 development/remote-host guard, assignment mapping, draft planning, idempotency, conflict and concurrent insert tests.
 - `backend/tests/gameActivitySchema.test.js` — 3 added provenance/unique-index tests; existing schema tests retained.
 - `backend/package.json` — seed validation/dry-run/apply commands.
 - `backend/.gitignore` — ignores local school/Teacher target IDs.
@@ -599,7 +599,7 @@ npm run build
 
 Then complete the Phase 14 Student browser/API checks at `/Student/game-zone`: published-only scope, subject/search filters, clear filters, metadata, Wordwall embed/fallback, removal and dialog closure after unpublish/archive, mobile layout, and foreign school/class/subject rejection.
 
-For Phase 15, use only a dedicated local development database named `school_management_dev`. From `backend`, copy `seeds/chemamaze-targets.example.json` to the ignored `seeds/chemamaze-targets.local.json`, replace the placeholders with real IDs from that development database, and ensure each Teacher is assigned to the mapped school/class/subject. Then set:
+For Phase 15, use only a dedicated development database named `school_management_dev`. The CLI accepts loopback hosts by default. For a remote development cluster (for example, a dedicated Atlas dev cluster), verify that the cluster/database is isolated, then set `$env:CHEMAMAZE_ALLOW_REMOTE_DEV_IMPORT = "true"`; never use a production cluster. From `backend`, copy `seeds/chemamaze-targets.example.json` to the ignored `seeds/chemamaze-targets.local.json`, replace the placeholders with real IDs from that development database, and ensure each Teacher is assigned to the mapped school/class/subject. Then set:
 
 ```powershell
 $env:NODE_ENV = "development"
