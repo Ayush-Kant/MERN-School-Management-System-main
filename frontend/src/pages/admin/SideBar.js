@@ -9,6 +9,7 @@ import {
 import { Link, useLocation } from "react-router-dom";
 
 import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
+import ExtensionRoundedIcon from "@mui/icons-material/ExtensionRounded";
 
 import HomeIcon from "@mui/icons-material/Home";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
@@ -220,6 +221,23 @@ const SideBar = () => {
         }}
     />
 </ListItemButton>
+
+                <ListItemButton
+                    component={Link}
+                    to="/Admin/learning-games"
+                    sx={itemStyle(location.pathname.startsWith("/Admin/learning-games"))}
+                >
+                    <ListItemIcon
+                        sx={iconStyle(location.pathname.startsWith("/Admin/learning-games"))}
+                    >
+                        <ExtensionRoundedIcon />
+                    </ListItemIcon>
+
+                    <ListItemText
+                        primary="Learning & Games"
+                        primaryTypographyProps={{ sx: textStyle }}
+                    />
+                </ListItemButton>
 
             </React.Fragment>
 
