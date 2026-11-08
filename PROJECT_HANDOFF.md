@@ -12,7 +12,7 @@ Last updated: 2026-11-08 (Asia/Kolkata)
 - Phase 09 invariants: backend/GAME_ACTIVITY_INVARIANTS.md
 - Latest Phase 10 code checkpoint: `b79bd513215b4fedce9d5e3ca00d58473cfa8239`.
 - Latest Phase 11 application-code checkpoint before the test-only Jest correction: `3328d8946a6561e10d10303280d147b19d124bab`.
-- Latest verified feature branch head after the Phase 12 implementation and documentation updates: `a045153afac6cdaa17faba20f9be49b9856a40d0`.
+- Latest verified feature branch head after the Phase 12 handoff update: `9b4f11186602107040f63223be7906c7ad4c560a`.
 
 ## Architecture decisions
 The MERN School Management System remains the host application. Preserve the legacy ChemAmaze-cbse repository as source/reference. Build two separate experiences: (1) school-scoped teacher-managed Wordwall Games Zone and (2) first-party AI Learning Studio with server-graded quizzes, learning attempts, mastery estimates, adaptive revision, curriculum-grounded explanations, and teacher-reviewed generated questions. Existing Admin/Teacher/Student and school/class/subject records remain authoritative.
@@ -408,7 +408,7 @@ git pull --ff-only origin feature/learning-game-zones
 cd backend
 npm test
 
-cd ..\\frontend
+cd ..\frontend
 npm test -- --watchAll=false
 npm run build
 ```
@@ -499,6 +499,6 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Added the Admin Learning & Games page, Admin sidebar link, and Admin dashboard route. The page uses the shared credential-aware API client and includes loading/empty/error/retry states, filters, pagination, metadata and source links, action confirmation, and action feedback.
 - Added backend controller and route-authorization tests, plus frontend catalogue-page and sidebar tests.
 - Diff comparison from the Phase 11 checkpoint `73078210593cb68e62e72bf20fdf8bcdc004e984` shows exactly 10 changed paths. No schema, Teacher/Student page, AI quiz, dependency, or unrelated school-management paths changed.
-- Latest remote branch head at handoff update: `a045153afac6cdaa17faba20f9be49b9856a40d0`.
+- Latest remote branch head after the Phase 12 handoff update: `9b4f11186602107040f63223be7906c7ad4c560a`.
 - Source/diff review is complete. Phase 12 backend/frontend tests, production build, and local Admin browser/API checks are **not yet run or verified**. The latest commit has no GitHub CI status entries or workflow runs.
 - Immediate next action: pull the latest branch and run backend tests, frontend tests, frontend build, then verify the Admin flows and cross-school restrictions. Do not start Phase 13 until these checks pass and the user asks to continue.
