@@ -72,7 +72,7 @@ npm run seed:chemamaze:validate
 npm run seed:chemamaze:dry-run
 ~~~
 
-The dry-run must report 18 records, zero conflicts, and a create/unchanged count appropriate to the current development database. It performs no GameActivity writes.
+The dry-run must report 18 records, zero conflicts, and a create/unchanged count appropriate to the current development database. It performs no document writes and does not build database indexes.
 
 Only after reviewing the dry-run, run the explicit development import:
 
@@ -83,7 +83,7 @@ npm run seed:chemamaze:apply
 
 Expected first clean import: 18 inserted, 0 unchanged, 0 failures. A repeat with no intervening edits: 0 inserted, 18 unchanged, 0 failures. The exact output from the user's database is not known until these commands are run locally.
 
-The script independently checks `NODE_ENV`, parses the connected database name, and verifies the live Mongoose connection is still `school_management_dev`. `--apply` additionally requires the confirmation token. The database unique index is initialized before the plan is applied. Inserts are sequential and resumable: if the database fails part-way through, the next run identifies already inserted source keys and only proposes missing records. It does not use a multi-document transaction because the deployment's replica-set topology has not been established.
+The script independently checks `NODE_ENV`, parses the connected database name, and verifies the live Mongoose connection is still `school_management_dev`. `--apply` additionally requires the confirmation token. Apply mode initializes the unique source-key index before the first insert; dry-run mode does not mutate the database. Inserts are sequential and resumable: if the database fails part-way through, the next run identifies already inserted source keys and only proposes missing records. It does not use a multi-document transaction because the deployment's replica-set topology has not been established.
 
 ## Validation commands
 
