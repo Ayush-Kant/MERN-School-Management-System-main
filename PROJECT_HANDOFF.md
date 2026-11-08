@@ -406,24 +406,9 @@ These are existing Phase 11 tests; Phase 13 did not modify them or claim new bac
 
 GitHub returned no CI status checks for the latest Phase 13 commits. The GitHub connector can inspect and update source files but did not execute npm commands.
 
-### Immediate next action — verify Phase 13 locally
+### Phase 13 validation gate (still pending)
 
-Pull the latest `feature/learning-game-zones` branch, then run from the repository root in Windows PowerShell:
-
-```powershell
-git pull --ff-only origin feature/learning-game-zones
-
-cd backend
-npm test
-
-cd ..\\frontend
-npm test -- --watchAll=false
-npm run build
-```
-
-Then sign in as a Teacher and verify `/Teacher/my-games`: confirm the persisted current class/subject is displayed; create a draft; preview it; edit that draft; publish it; unpublish it; edit the resulting draft; republish; then archive. Confirm published and archived activities cannot be edited, archived records cannot be republished, and unpublishing removes an activity from the Student catalogue. Test an incorrect/foreign Teacher ID and attempts to change school/class/subject/creator/status in update requests; the backend must reject them. Confirm the legacy `/Teacher/game-zone` URL redirects correctly and Student/Admin pages are unaffected.
-
-Phase 13 remains open until the backend suite, frontend suite, build, and local Teacher/API checks pass. The user explicitly requested Phase 14 implementation before validating Phase 13; this sequencing exception is recorded below. Do not proceed to Phase 15 until both Phase 13 and Phase 14 exit checks are validated.
+Phase 13's test/build and Teacher browser/API checklist remain open. Because the user explicitly requested Phase 14 implementation before validating Phase 13, the combined commands and acceptance checklist are recorded under the Phase 14 immediate-next-action section below. Do not mark Phase 13 complete until the user supplies the current-branch test/build results and confirms the Teacher flow and ownership/scope checks.
 
 ## Phase 14 — Student Games Zone (implementation)
 
