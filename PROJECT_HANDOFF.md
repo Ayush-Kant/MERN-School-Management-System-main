@@ -1,6 +1,6 @@
 # Project Handoff — MERN School Management + AI Learning & Games
 
-Last updated: 2026-11-06 (Asia/Kolkata)
+Last updated: 2026-11-08 (Asia/Kolkata)
 
 ## Repository
 - Repository: Ayush-Kant/MERN-School-Management-System-main
@@ -222,7 +222,7 @@ Source review confirms:
 | 08 | Learning module boundaries and route integration design | Completed; AI_LEARNING_MODULE_DESIGN.md committed as 726f86080a1e8e8a85d95cb0d9cc13dad88f5cf4 |
 | 09 | GameActivity schema and invariants | **Completed — user confirmed post-fix backend test suite passed (2026-11-06); exact count not supplied** |
 | 10 | Safe Wordwall URL validation and embed component | **Implementation and automated tests/build user-confirmed passed; real-browser Wordwall check still pending** |
-| 11 | Role-scoped Game APIs | **Implementation committed; backend/frontend tests, build, and browser/API checks pending** |
+| 11 | Role-scoped Game APIs | **Backend tests user-confirmed pass; frontend runtime/browser reported successful; frontend Jest 24/25 pass with one test-harness failure under diagnosis; production build result not shown** |
 | 12–30 | Remaining roadmap | Not started; follow harness exactly |
 
 Do not redo completed phases unless source inspection shows a regression. Follow the detailed scope and exit gates in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md.
@@ -354,3 +354,15 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Most likely cause is unset/short `AUTH_SESSION_SECRET`, invalid `AUTH_SESSION_TTL_SECONDS`, or invalid `AUTH_COOKIE_SAME_SITE` in local `backend/.env`. The actual local env was not accessible, so the exact failing value has not been verified.
 - Provided a non-secret-printing PowerShell diagnostic and local secret-generation/configuration steps. No application runtime code was changed.
 - Phase 11 automated test/build and browser/API verification remain pending; do not start Phase 12.
+
+
+### 2026-11-08 — Phase 11 local verification: frontend API-client test
+- User reports the backend, frontend runtime, and browser verification were successful. The user then ran the frontend Jest suite and supplied the complete summary: **5 suites total; 4 passed and 1 failed; 24 tests passed and 1 failed**.
+- Passing suites: `src/utils/wordwallUrl.test.js`, `src/redux/userRelated/userHandle.test.js`, `src/pages/student/StudentGameZone.test.js`, and `src/pages/teacher/TeacherGameZone.test.js`.
+- Failing suite: `src/utils/apiClient.test.js`, test “shared API client sends the HttpOnly session cookie with every request”. Assertion expected `axios.create({ baseURL: "http://localhost:5000", withCredentials: true })`, but Jest reported zero recorded calls.
+- Inspected the exact branch versions of `frontend/src/utils/apiClient.js`, `frontend/src/utils/apiClient.test.js`, and `frontend/package.json`. The client creates its Axios instance at module-evaluation time, while the test statically imports both Axios and the client before the test body, then inspects the recorded call inside the test.
+- Diagnosis: this is consistent with Create React App / `react-scripts` Jest's `resetMocks` behavior clearing mock call history before the test body. The assertion is observing the mock after the import-time call history was reset. The evidence points to a test isolation/order issue, not a demonstrated defect in the application API client; runtime and browser checks reported by the user succeeded.
+- Minimal proposed test-only fix: remove the top-level imports of Axios and `apiClient`; keep the Axios mock declaration; inside the test body use `jest.isolateModules(() => { const axios = require("axios").default; const apiClient = require("./apiClient").default; ...assertions...; });`. This makes module evaluation and the `axios.create` call occur during the test, after Jest's per-test reset. No production code change is indicated.
+- No code fix has been committed yet, and the proposed test-only fix has **not** been run locally. The user's output is evidence for 24 passing tests and 1 failing test; do not mark the frontend test suite as passed.
+- The user’s message did not include a distinct `npm run build` result. Record the production build as not confirmed by this output, even though the development frontend reported “webpack compiled successfully”.
+- Immediate next action: apply the minimal change only to `frontend/src/utils/apiClient.test.js` (or provide the replacement test to the user), then rerun the frontend suite with watch mode disabled and share the complete output. Keep Phase 11 open until the frontend suite passes and the remaining scope/lifecycle/API checks and production build have documented results. Do not start Phase 12.
