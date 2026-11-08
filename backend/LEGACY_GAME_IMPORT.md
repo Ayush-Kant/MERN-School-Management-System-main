@@ -83,7 +83,9 @@ npm run seed:chemamaze:apply
 
 Expected first clean import: 18 inserted, 0 unchanged, 0 failures. A repeat with no intervening edits: 0 inserted, 18 unchanged, 0 failures. The exact output from the user's database is not known until these commands are run locally.
 
-The script disables Mongoose automatic index creation before connecting, independently checks `NODE_ENV`, parses the connected database name, and verifies the live Mongoose connection is still `school_management_dev`. `--apply` additionally requires the confirmation token. Apply mode explicitly creates the GameActivity indexes before the first insert; dry-run mode does not create indexes or write documents. Inserts are sequential and resumable: if the database fails part-way through, the next run identifies already inserted source keys and only proposes missing records. It does not use a multi-document transaction because the deployment's replica-set topology has not been established.
+The script disables Mongoose automatic index creation before connecting, independently checks `NODE_ENV`, parses the connected database name, and verifies the live Mongoose connection is still `school_management_dev`. `--apply` additionally requires the confirmation token. Apply mode explicitly creates the GameActivity indexes before the first insert; dry-run mode does not create indexes or write documents.
+
+By default, the MongoDB URL must point to a local loopback host (`localhost`, `127.0.0.1`, or `::1`). A remote development cluster is blocked unless you explicitly set `CHEMAMAZE_ALLOW_REMOTE_DEV_IMPORT=true` after independently verifying that the URI points to an isolated development cluster/database. This opt-in does not replace the exact database-name check or the apply confirmation token. Never use a production cluster or real-school dataset. Inserts are sequential and resumable: if the database fails part-way through, the next run identifies already inserted source keys and only proposes missing records. It does not use a multi-document transaction because the deployment's replica-set topology has not been established.
 
 ## Validation commands
 
