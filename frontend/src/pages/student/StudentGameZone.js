@@ -43,6 +43,7 @@ const StudentGameZone = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
+    const [selectedSubjectId, setSelectedSubjectId] = useState("");
     const [selectedActivity, setSelectedActivity] = useState(null);
 
     const loadActivities = useCallback(async () => {
@@ -72,6 +73,11 @@ const StudentGameZone = () => {
                 : [];
 
             setActivities(publishedActivities);
+            setSelectedActivity((current) =>
+                current
+                    ? publishedActivities.find((activity) => activity._id === current._id) || null
+                    : null
+            );
         } catch (requestError) {
             setError(
                 requestError?.response?.data?.message ||
@@ -87,18 +93,48 @@ const StudentGameZone = () => {
         loadActivities();
     }, [loadActivities]);
 
+    const subjectOptions = useMemo(() => {
+        const uniqueSubjects = new Map();
+
+        activities.forEach((activity) => {
+            const subjectId = getEntityId(activity.subject);
+            const subjectName = typeof activity.subject?.subName === "string"
+                ? activity.subject.subName.trim()
+                : "";
+
+            if (subjectId && subjectName && !uniqueSubjects.has(subjectId)) {
+                uniqueSubjects.set(subjectId, {
+                    id: subjectId,
+                    name: subjectName,
+                });
+            }
+        });
+
+        return Array.from(uniqueSubjects.values()).sort((left, right) =>
+            left.name.localeCompare(right.name)
+        );
+    }, [activities]);
+
     const visibleActivities = useMemo(() => {
         const term = search.trim().toLowerCase();
-        if (!term) return activities;
 
-        return activities.filter((activity) => [
-            activity.title,
-            activity.description,
-            activity.topic,
-            activity.subject?.subName,
-            activity.class?.sclassName,
-        ].some((value) => typeof value === "string" && value.toLowerCase().includes(term)));
-    }, [activities, search]);
+        return activities.filter((activity) => {
+            const matchesSearch = !term || [
+                activity.title,
+                activity.description,
+                activity.topic,
+                activity.subject?.subName,
+                activity.class?.sclassName,
+            ].some((value) =>
+                typeof value === "string" && value.toLowerCase().includes(term)
+            );
+
+            const matchesSubject = !selectedSubjectId ||
+                getEntityId(activity.subject) === selectedSubjectId;
+
+            return matchesSearch && matchesSubject;
+        });
+    }, [activities, search, selectedSubjectId]);
 
     const subjectsCount = useMemo(
         () => new Set(activities.map((activity) => activity.subject?.subName).filter(Boolean)).size,
@@ -213,27 +249,60 @@ const StudentGameZone = () => {
                             These activities are selected by your teachers for classroom practice.
                         </Typography>
                     </Box>
-                    <TextField
-                        name="search"
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Search games or topics"
-                        aria-label="Search games or topics"
-                        size="small"
-                        InputProps={{
-                            startAdornment: <SearchRoundedIcon sx={{ color: "#64748B", mr: 1 }} />,
-                        }}
-                        sx={{
-                            minWidth: { xs: "100%", sm: 270 },
-                            "& .MuiOutlinedInput-root": {
-                                color: "#F8FAFC",
-                                borderRadius: "12px",
-                                bgcolor: "#0B1220",
-                                "& fieldset": { borderColor: "#334155" },
-                            },
-                            "& input::placeholder": { color: "#94A3B8", opacity: 1 },
-                        }}
-                    />
+                    <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={1.5}
+                        sx={{ width: { xs: "100%", sm: "auto" } }}
+                    >
+                        <TextField
+                            name="search"
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            placeholder="Search games or topics"
+                            aria-label="Search games or topics"
+                            size="small"
+                            InputProps={{
+                                startAdornment: <SearchRoundedIcon sx={{ color: "#64748B", mr: 1 }} />,
+                            }}
+                            sx={{
+                                minWidth: { xs: "100%", sm: 250 },
+                                "& .MuiOutlinedInput-root": {
+                                    color: "#F8FAFC",
+                                    borderRadius: "12px",
+                                    bgcolor: "#0B1220",
+                                    "& fieldset": { borderColor: "#334155" },
+                                },
+                                "& input::placeholder": { color: "#94A3B8", opacity: 1 },
+                            }}
+                        />
+                        <TextField
+                            select
+                            native
+                            name="subjectFilter"
+                            label="Filter by subject"
+                            value={selectedSubjectId}
+                            onChange={(event) => setSelectedSubjectId(event.target.value)}
+                            size="small"
+                            SelectProps={{ native: true }}
+                            sx={{
+                                minWidth: { xs: "100%", sm: 210 },
+                                "& .MuiOutlinedInput-root": {
+                                    color: "#F8FAFC",
+                                    borderRadius: "12px",
+                                    bgcolor: "#0B1220",
+                                    "& fieldset": { borderColor: "#334155" },
+                                },
+                                "& .MuiNativeSelect-select": { color: "#F8FAFC" },
+                            }}
+                        >
+                            <option value="">All subjects</option>
+                            {subjectOptions.map((subject) => (
+                                <option key={subject.id} value={subject.id}>
+                                    {subject.name}
+                                </option>
+                            ))}
+                        </TextField>
+                    </Stack>
                 </Stack>
                 <Divider sx={{ borderColor: "#1E293B", mb: 2.5 }} />
 
@@ -254,13 +323,34 @@ const StudentGameZone = () => {
                     }}>
                         <SportsEsportsRoundedIcon sx={{ color: "#475569", fontSize: 56 }} />
                         <Typography sx={{ color: "#E2E8F0", fontWeight: 700, fontSize: "1.1rem" }}>
-                            {search.trim() ? "No games match your search" : "No games published yet"}
+                            {activities.length === 0
+                                ? "No games published yet"
+                                : selectedSubjectId && !search.trim()
+                                    ? "No games for this subject"
+                                    : "No games match your filters"}
                         </Typography>
                         <Typography sx={{ color: "#94A3B8", maxWidth: 450, lineHeight: 1.7 }}>
-                            {search.trim()
-                                ? "Try another title, topic, or subject."
-                                : "When your teacher publishes a game for your class, it will appear here."}
+                            {activities.length === 0
+                                ? "When your teacher publishes a game for your class, it will appear here."
+                                : "Try another title or topic, choose a different subject, or clear your filters."}
                         </Typography>
+                        {(search.trim() || selectedSubjectId) && (
+                            <Button
+                                variant="outlined"
+                                onClick={() => {
+                                    setSearch("");
+                                    setSelectedSubjectId("");
+                                }}
+                                sx={{
+                                    mt: 0.5,
+                                    color: "#BFDBFE",
+                                    borderColor: "#334155",
+                                    textTransform: "none",
+                                }}
+                            >
+                                Clear filters
+                            </Button>
+                        )}
                     </Box>
                 ) : (
                     <Grid container spacing={2}>
@@ -351,10 +441,44 @@ const StudentGameZone = () => {
                 </DialogTitle>
                 <DialogContent dividers sx={{ borderColor: "#263449" }}>
                     {selectedActivity ? (
-                        <WordwallEmbed
-                            title={`Wordwall game: ${selectedActivity.title}`}
-                            embedUrl={selectedActivity.embedUrl}
-                        />
+                        <>
+                            <Stack spacing={1.5} sx={{ mb: 2.5 }}>
+                                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                                    {selectedActivity.topic && (
+                                        <Chip
+                                            size="small"
+                                            label={`Topic: ${selectedActivity.topic}`}
+                                            sx={{ bgcolor: "rgba(37,99,235,.14)", color: "#93C5FD" }}
+                                        />
+                                    )}
+                                    {selectedActivity.subject?.subName && (
+                                        <Chip
+                                            size="small"
+                                            label={`Subject: ${selectedActivity.subject.subName}`}
+                                            sx={{ bgcolor: "rgba(16,185,129,.12)", color: "#6EE7B7" }}
+                                        />
+                                    )}
+                                    <Chip
+                                        size="small"
+                                        label={`Class: ${selectedActivity.class?.sclassName || currentUser?.sclassName?.sclassName || "Your class"}`}
+                                        sx={{ bgcolor: "rgba(148,163,184,.12)", color: "#CBD5E1" }}
+                                    />
+                                </Stack>
+                                <Typography sx={{ color: "#CBD5E1", lineHeight: 1.7, overflowWrap: "anywhere" }}>
+                                    {selectedActivity.description || "A practice activity prepared by your teacher."}
+                                </Typography>
+                                {selectedActivity.createdByTeacher?.name && (
+                                    <Typography sx={{ color: "#94A3B8", fontSize: ".85rem" }}>
+                                        Shared by {selectedActivity.createdByTeacher.name}
+                                    </Typography>
+                                )}
+                            </Stack>
+                            <Divider sx={{ borderColor: "#263449", mb: 2 }} />
+                            <WordwallEmbed
+                                title={`Wordwall game: ${selectedActivity.title}`}
+                                embedUrl={selectedActivity.embedUrl}
+                            />
+                        </>
                     ) : (
                         <Alert severity="warning">
                             Select a game to start playing.
