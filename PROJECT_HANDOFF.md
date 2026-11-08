@@ -320,7 +320,7 @@ AUTH_COOKIE_SECURE=false
 ```
 Restart the backend. A request to `/AuthSession` with no session cookie should then return 401, not 503; after successful login with a valid cookie it should return 200. If it returns 401 after login, next inspect browser cookie transport and CORS; do not rotate or expose the secret in logs.
 
-This is a local environment diagnosis, not an application-code defect demonstrated by the log. No runtime source changes were made for this report. Phase 11 tests/build remain pending user output.
+This is a local environment diagnosis, not an application-code defect demonstrated by the log. No runtime source changes were made for this report. Subsequent Phase 11 test and browser evidence is recorded in the current verification section above.
 
 ## Immediate next action — complete Phase 11 verification before Phase 12
 
