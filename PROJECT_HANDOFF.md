@@ -12,7 +12,7 @@ Last updated: 2026-11-08 (Asia/Kolkata)
 - Phase 09 invariants: backend/GAME_ACTIVITY_INVARIANTS.md
 - Latest Phase 10 code checkpoint: `b79bd513215b4fedce9d5e3ca00d58473cfa8239`.
 - Latest Phase 11 application-code checkpoint before the test-only Jest correction: `3328d8946a6561e10d10303280d147b19d124bab`.
-- Latest verified feature branch head after the Jest test correction: `3d31c2823a3756df85e510cd305a8e4bf5231815` (changes only `frontend/src/utils/apiClient.test.js`).
+- Latest verified feature branch head after the Phase 12 implementation and documentation updates: `a045153afac6cdaa17faba20f9be49b9856a40d0`.
 
 ## Architecture decisions
 The MERN School Management System remains the host application. Preserve the legacy ChemAmaze-cbse repository as source/reference. Build two separate experiences: (1) school-scoped teacher-managed Wordwall Games Zone and (2) first-party AI Learning Studio with server-graded quizzes, learning attempts, mastery estimates, adaptive revision, curriculum-grounded explanations, and teacher-reviewed generated questions. Existing Admin/Teacher/Student and school/class/subject records remain authoritative.
@@ -187,28 +187,23 @@ Frontend credential transport:
 - `08cf3a7694c9d06be189dbd5d2832bf595cf6e60`, `2cede3d41bd9042d2b8a086747ee58be49cef988`, and `3328d8946a6561e10d10303280d147b19d124bab` — update Teacher/Student Game Zone component-test mocks and expectations to use the shared client.
 
 ### Phase 11 diff review and verification
-Compared with Phase 10 tracker checkpoint `0b06f56dd1d01503a46de03113f32564f5a16815`, the remote branch is ahead by 24 commits and the Phase 11 diff contains exactly the 21 files listed above. No other paths are changed in this Phase 11 compare.
+Compared with Phase 10 tracker checkpoint `0b06f56dd1d01503a46de03113f32564f5a16815`, the Phase 11 application diff contains exactly the 21 files listed above. No unrelated school-management paths were included.
 
 Source review confirms:
-- New update and unpublish routes use the same authenticate-session → role-check → persisted actor-context chain as existing GameActivity routes.
+- New update and unpublish routes use the authenticate-session → role-check → persisted actor-context chain.
 - Update and transition database filters constrain activity ownership and the Teacher's current school/class/subject.
-- No Admin endpoint/UI, dashboard redesign, quiz change, dependency addition, or unrelated school-management feature was included.
-- Teacher and Student Game Zone requests now go through the credential-aware shared client.
-- Existing Game Zone component tests were migrated to mock the shared client rather than bare Axios.
+- Teacher and Student Game Zone requests use the credential-aware shared client.
+- The shared API client test correction was committed as `3d31c2823a3756df85e510cd305a8e4bf5231815`.
 
-**Current verification evidence (2026-11-08):** Backend test suite: user reports pass (exact count not supplied). Frontend runtime: user reports successful; the development server printed “webpack compiled successfully”. Browser verification: user reports successful, but the specific scenarios were not itemized. Frontend Jest suite: 4/5 suites and 24/25 tests passed; only `apiClient.test.js` failed due to the import-time Axios mock call not being present when asserted. A minimal test-only correction was committed as `3d31c2823a3756df85e510cd305a8e4bf5231815`; the corrected suite has not yet been rerun. A distinct `npm run build` result was not included in the latest output. Keep granular cross-origin cookie/lifecycle tests and the explicit real Wordwall load/fullscreen/fallback checks open until their results are stated.
+**Verification evidence (2026-11-08):** The user has now confirmed that all Phase 11 tests passed and the production build was successful. Exact test/suite counts and the build output were not supplied in this conversation, so no counts are recorded. The user also previously reported successful browser/frontend runtime behavior; the detailed cross-origin cookie, lifecycle scenario, and real Wordwall load/fullscreen/fallback checklist was not individually itemized in the handoff evidence. The user explicitly confirmed the Phase 11 gate and asked to proceed to Phase 12. Phase 11 is therefore treated as user-confirmed complete for this phase transition; do not claim independently executed local verification.
 
 ### Phase 11 exit checks
-- [x] Backend test suite passes — user-reported on 2026-11-08; exact count not supplied.
-- [ ] Frontend test suite passes — the pre-fix run was 4/5 suites and 24/25 tests; a test-only correction is now committed as `3d31c2823a3756df85e510cd305a8e4bf5231815`; rerun pending.
-- [ ] Frontend production build passes — no distinct production-build result supplied in the latest output.
-- [ ] Teacher can create a draft in only the currently assigned school/class/subject.
-- [ ] Teacher can update only their own draft; attempts to mutate status, school, class, subject, creator, or provider are rejected.
-- [ ] Teacher can publish, unpublish (published → draft), edit, republish, and archive only owned activities in their current assignment.
-- [ ] Student list contains only published items in the student's current school/class and eligible subject; draft, archived, foreign-class, and foreign-school records remain inaccessible.
-- [ ] Cross-role and cross-school attempts are rejected.
-- [ ] With frontend and backend on separate local/deployed origins, Game Zone requests carry the signed HttpOnly session cookie and complete successfully — user reported browser success generally, but this exact scenario has not been itemized.
-- [ ] A real approved Wordwall embed loads, fullscreen behaves as expected, and the external fallback works — user reported browser success generally, but these three checks have not been itemized. This also closes the outstanding Phase 10 manual browser check.
+- [x] Backend test suite passes — user-confirmed.
+- [x] Frontend Jest suite passes after the committed API-client test isolation correction — user-confirmed.
+- [x] Frontend production build passes — user-confirmed.
+- [x] General frontend/browser runtime behavior — user-reported successful.
+- [ ] Detailed cross-origin HttpOnly-cookie transport and each lifecycle/browser scenario — exact individual observations were not supplied; retain as manual regression checks when testing the integrated Phase 12 branch.
+- [ ] Real Wordwall embed load, fullscreen and fallback — general browser success was reported, but these specific scenarios were not itemized; retain as manual regression checks when testing the integrated Phase 12 branch.
 
 
 ## Phase status
@@ -224,16 +219,17 @@ Source review confirms:
 | 08 | Learning module boundaries and route integration design | Completed; AI_LEARNING_MODULE_DESIGN.md committed as 726f86080a1e8e8a85d95cb0d9cc13dad88f5cf4 |
 | 09 | GameActivity schema and invariants | **Completed — user confirmed post-fix backend test suite passed (2026-11-06); exact count not supplied** |
 | 10 | Safe Wordwall URL validation and embed component | **Implementation and automated tests/build user-confirmed passed; real-browser Wordwall check still pending** |
-| 11 | Role-scoped Game APIs | **Backend suite and general frontend/browser runtime user-reported successful; frontend Jest mock correction committed, corrected rerun pending; production build and granular API/browser checks still need verification** |
-| 12–30 | Remaining roadmap | Not started; follow harness exactly |
+| 11 | Role-scoped Game APIs | **User-confirmed all backend/frontend tests and production build passed (2026-11-08); general browser success reported; granular scenario checklist not itemized** |
+| 12 | Admin Learning & Games management | **Implementation committed to feature branch; Phase 12 local tests/build pending** |
+| 13–30 | Remaining roadmap | Not started; follow harness exactly |
 
 Do not redo completed phases unless source inspection shows a regression. Follow the detailed scope and exit gates in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md.
 
 
 
-## Phase 12 preparation audit — Admin Learning & Games management (2026-11-08)
+## Phase 12 source audit before implementation (2026-11-08)
 
-**Phase 12 has not started.** The harness objective is: add an Admin sidebar entry and a management page to filter/inspect the school's game records, view publication state, archive/unpublish, and review source URL/creator metadata. The exit gate requires the Admin to manage only the signed-in school's catalogue, with working empty/loading/error states and tested secured actions.
+**Historical preparation snapshot:** Phase 12 had not started when this audit was written. The harness objective is: add an Admin sidebar entry and a management page to filter/inspect the school's game records, view publication state, archive/unpublish, and review source URL/creator metadata. The exit gate requires the Admin to manage only the signed-in school's catalogue, with working empty/loading/error states and tested secured actions.
 
 ### Source facts verified on the feature branch
 - `frontend/src/App.js` renders `AdminDashboard` only when the restored authenticated role is `Admin`; no root-level route redesign is needed.
@@ -256,12 +252,92 @@ Do not redo completed phases unless source inspection shows a regression. Follow
 - Add backend controller tests for Admin-only access, school-scoped list filters, cross-school IDs, valid and invalid state transitions, and route authorization tests asserting the authentication → Admin role → actor-context chain.
 - Add frontend tests for loading, empty, error, filtered results, metadata rendering, confirmation/action success, and action failure. Reuse the existing credential-aware `frontend/src/utils/apiClient.js`; do not introduce a second Axios client.
 
-### Phase 12 expected source areas (not yet modified)
+### Phase 12 implementation source areas
 - Backend: `backend/controllers/game-activity-controller.js`, `backend/routes/route.js`, `backend/API_CONTRACT.md`, `backend/tests/gameActivityController.test.js` (or a dedicated Admin controller test file), and `backend/tests/routeAuthorization.test.js`.
 - Frontend: new Admin catalogue page under `frontend/src/pages/admin/`, `frontend/src/pages/admin/SideBar.js`, `frontend/src/pages/admin/AdminDashboard.js`, plus focused page/sidebar tests.
 - No AI quiz, Teacher My Games, Student Games Zone, GameActivity schema, or unrelated Admin dashboard redesign belongs in Phase 12.
 
-**Next-phase gate:** do not modify these Phase 12 application paths until the corrected Phase 11 frontend Jest suite and production build pass and the remaining Phase 11 browser/API checks are confirmed.
+**Gate outcome:** The user subsequently confirmed all Phase 11 tests and the production build passed, and explicitly asked to proceed. The Phase 12 implementation and its current verification status are recorded below.
+
+## Phase 12 — Admin Learning & Games management (implementation)
+
+**Status:** Application implementation committed to `feature/learning-game-zones`; local Phase 12 test/build execution is pending user output. No Phase 12 runtime test or production build is claimed as passed.
+
+### Implemented backend contract
+Added a dedicated Admin controller at `backend/controllers/admin-game-activity-controller.js`; existing Teacher-specific GameActivity controller methods and permissions were not widened.
+
+New routes:
+- `GET /AdminGameActivityList` — Admin-only; derives the school from the authenticated, persisted actor context. Does not accept a client-supplied school ID.
+- `PUT /AdminGameActivityUnpublish/:id` — Admin-only; atomically changes a published activity in the Admin's school to draft and records `unpublishedAt`.
+- `PUT /AdminGameActivityArchive/:id` — Admin-only; atomically archives a published activity in the Admin's school and records `archivedAt` plus `archiveReason: "manual"`.
+
+The list supports class, subject, teacher, status, provider, and literal search filters, plus bounded pagination (page 1–100000; limit 1–100). Class/subject/teacher filter IDs are resolved and validated against the authenticated Admin's school. A subject must also belong to the selected class when both are supplied. Unsupported query keys, including any school override, are rejected. Search metacharacters are escaped.
+
+The list response includes:
+- Paginated and populated activities (class name, subject name/code, creator name only).
+- School-wide counts for total, draft, published, and archived records.
+- School-scoped class, subject, and teacher filter options.
+
+Lifecycle writes constrain activity ID, Admin school, and expected current status (`published`) in one atomic database update. Out-of-school/missing records return 404; same-school records not currently published return 409. Admin has no content-edit, delete, or draft-publish capability in this phase.
+
+### Implemented frontend
+- Added `frontend/src/pages/admin/AdminLearningGames.js`.
+- Added the Admin sidebar entry at `/Admin/learning-games`.
+- Registered the page in `AdminDashboard.js`.
+- Reused `frontend/src/utils/apiClient.js` with its credential-aware Axios configuration.
+- Added school catalogue summary cards, search and class/subject/teacher/status/provider filters, paginated table, status and lifecycle timestamps, creator metadata, and separately rendered original-source/validated-embed links.
+- Added confirmation before unpublish/archive, success/error feedback, refresh, retry, loading, empty, and error states.
+- External links are restricted to HTTPS without credentials, nonstandard ports, or fragments; embed links additionally require an exact Wordwall hostname and embed path.
+
+### Phase 12 changed files
+Backend:
+- `backend/controllers/admin-game-activity-controller.js` (new)
+- `backend/routes/route.js`
+- `backend/API_CONTRACT.md`
+- `backend/tests/adminGameActivityController.test.js` (new)
+- `backend/tests/routeAuthorization.test.js`
+
+Frontend:
+- `frontend/src/pages/admin/AdminLearningGames.js` (new)
+- `frontend/src/pages/admin/AdminLearningGames.test.js` (new)
+- `frontend/src/pages/admin/SideBar.js`
+- `frontend/src/pages/admin/SideBar.test.js` (new)
+- `frontend/src/pages/admin/AdminDashboard.js`
+
+Diff review from Phase 11 checkpoint `73078210593cb68e62e72bf20fdf8bcdc004e984` to the implementation branch showed exactly these 10 paths. No GameActivity schema, Teacher/Student game page, quiz, dependency, or unrelated school-management file changed.
+
+### Phase 12 commits
+The Phase 12 implementation was committed incrementally to the feature branch. The final implementation-related commits include:
+- `a9545a4d60030fb1f7fcf1a9487b5c846bc13b3a` — Admin controller with corrected ID/search validation.
+- `4a5cc19cc14245d5c3ecc0ccbdd36e4c02f83378` — Admin controller tests.
+- `e5d29426d88be20685d8116da89acdaf9f88da0b` — Admin routes.
+- `50fdf71699e336a9e4e198802ffc432df9528f27` — route authorization tests.
+- `e1a8776e69d934479e9ca3d3a518af838e1d6e60` — API contract.
+- `138ea2a2d7fd4f6103549cce39323e296b2bd584` — Admin catalogue page.
+- `62716a956da620bd0d29e3cd1b0930f14c1d41d5` — Admin dashboard route.
+- `8a65133b92405970a6c095de81d34cf532f30d5a` — Admin sidebar navigation.
+- `8c6984927937c1c31a6b511f949d8be2159bf747` — frontend page tests.
+- `462913bcc30629d14b2101d2a12517e46b7dfd6b` — sidebar test.
+- `b7f2f7b6e317828d7d49f6fe9eab09dfd530ed9a` — bounded pagination.
+- `c48ad0ae436a48680e023cbdbc0fa6b492390447` — hardened external link rendering.
+- `a045153afac6cdaa17faba20f9be49b9856a40d0` — API contract pagination bound.
+
+### Phase 12 verification status
+- [x] Source review and branch diff review — completed.
+- [x] Admin role and persisted actor-context route chain covered by route tests.
+- [x] Controller tests added for school scoping, filters, invalid inputs, pagination, transitions, and conflict/not-found behavior.
+- [x] Frontend tests added for loading, empty, error/retry, filtered requests, metadata, action confirmation/success/failure, and draft/archived action visibility.
+- [ ] Backend `npm test` — not run in this environment.
+- [ ] Frontend `npm test -- --watchAll=false` — not run in this environment.
+- [ ] Frontend `npm run build` — not run in this environment.
+- [ ] Local browser verification with an Admin account, including other-school filter IDs, unpublish/archive state changes, and regression checks for Teacher/Student pages — pending.
+
+GitHub returned no CI status checks and no workflow runs for the latest Phase 12 commits. The GitHub connector can edit and inspect repository files but did not execute the local npm commands.
+
+### Immediate next action
+Pull the branch and run the Phase 12 verification commands listed at the end of this handoff. Report complete backend/frontend test output and build output. Fix only demonstrated failures. Do not begin Phase 13 until Phase 12 exit checks pass and the user asks to continue.
+
+---
 
 ## Phase 09 implementation snapshot
 Files added:
@@ -322,25 +398,25 @@ Restart the backend. A request to `/AuthSession` with no session cookie should t
 
 This is a local environment diagnosis, not an application-code defect demonstrated by the log. No runtime source changes were made for this report. Subsequent Phase 11 test and browser evidence is recorded in the current verification section above.
 
-## Immediate next action — complete Phase 11 verification before Phase 12
+## Immediate next action — verify Phase 12 locally
 
-The test-only correction is already committed in `3d31c2823a3756df85e510cd305a8e4bf5231815`. Pull the latest branch, rerun the full frontend Jest suite with watch mode disabled, and capture the production build result. Confirm the specific lifecycle, cross-role/cross-school, credential-transport, and Wordwall browser cases. Phase 12 has been source-audited and scoped, but its application changes remain blocked until this Phase 11 exit gate is verified.
+Pull the latest `feature/learning-game-zones` branch, then run from the repository root in Windows PowerShell:
 
-From repository root in Windows PowerShell:
 ```powershell
 git pull --ff-only origin feature/learning-game-zones
+
 cd backend
 npm test
-cd ..\frontend
+
+cd ..\\frontend
 npm test -- --watchAll=false
 npm run build
 ```
 
-Then verify the Teacher and Student Game Zone flows with the backend and frontend on separate origins. Confirm that requests carry the HttpOnly session cookie; the Teacher sees only their own assigned-scope records; the new update endpoint changes only drafts; unpublish moves published records back to draft; publish/archive transitions reject invalid states; Students receive only published eligible activities; and cross-role/cross-school access is denied.
+Then sign in as an Admin and verify the Learning & Games page. Check the school's full catalogue and filter options; class/subject/teacher/status/provider/search filters; pagination; source and creator metadata; empty/loading/error/retry behavior; confirmation; unpublish (published → draft); archive (published → archived); and rejection of an activity or filter ID belonging to another school. Confirm draft and archived records have no Admin lifecycle action. Also regress Teacher and Student Game Zone access and ensure the existing root-mounted routes still work.
 
-Also perform the real Wordwall browser test described in Phase 10: confirm the approved embed loads in the supported browser, fullscreen works, and the “Open on Wordwall” fallback points to the validated URL. This manual check remains outstanding even though the user confirmed Phase 10 automated tests and build passed.
+The Phase 12 application implementation is committed, but do not treat it as complete until the backend suite, frontend suite, build, and local Admin browser/API checks pass. Fix only failures supported by the output. Stop for review before Phase 13.
 
-Send the exact backend/frontend test results, build result, and browser/API observations. Diagnose and fix only demonstrated failures. Do not begin Phase 12 until Phase 11's full exit gate is verified and the user asks to continue.
 
 ## How to work
 1. Read this file and the harness first; verify actual remote branch HEAD and current source.
@@ -414,3 +490,15 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Inspected Phase 12 harness requirements and the current Admin routes/sidebar/dashboard, Admin actor-context behavior, GameActivity controller/model/routes, and API contract. Recorded the Phase 12 source audit and scope boundary above. No Phase 12 application implementation has started.
 - User-reported evidence remains: backend suite passed (exact counts not supplied); frontend/browser runtime succeeded generally; prior frontend Jest run was 4/5 suites and 24/25 tests. Specific cross-origin/lifecycle/Wordwall browser scenarios and a separate production build result remain unitemized.
 - Immediate next action: run the corrected frontend test suite with watch mode disabled and run the production build. Only after Phase 11 exit checks are verified should Phase 12 implementation begin.
+
+### 2026-11-08 — Phase 12 Admin Learning & Games implementation
+- User confirmed all Phase 11 tests and the frontend production build passed and explicitly asked to begin Phase 12.
+- Added a separate Admin GameActivity controller; did not widen the existing Teacher endpoints. Admin identity and school scope are taken from persisted `req.actor` context, and both values must identify the same Admin record.
+- Added secured Admin catalogue list, unpublish, and archive endpoints. Lists and lifecycle writes are school-constrained; filter IDs are validated against the Admin's school. Only currently published records can be unpublished or archived.
+- Added paginated search/filter catalogue data, status summary counts, and school-scoped class/subject/teacher filter options. Updated the API contract.
+- Added the Admin Learning & Games page, Admin sidebar link, and Admin dashboard route. The page uses the shared credential-aware API client and includes loading/empty/error/retry states, filters, pagination, metadata and source links, action confirmation, and action feedback.
+- Added backend controller and route-authorization tests, plus frontend catalogue-page and sidebar tests.
+- Diff comparison from the Phase 11 checkpoint `73078210593cb68e62e72bf20fdf8bcdc004e984` shows exactly 10 changed paths. No schema, Teacher/Student page, AI quiz, dependency, or unrelated school-management paths changed.
+- Latest remote branch head at handoff update: `a045153afac6cdaa17faba20f9be49b9856a40d0`.
+- Source/diff review is complete. Phase 12 backend/frontend tests, production build, and local Admin browser/API checks are **not yet run or verified**. The latest commit has no GitHub CI status entries or workflow runs.
+- Immediate next action: pull the latest branch and run backend tests, frontend tests, frontend build, then verify the Admin flows and cross-school restrictions. Do not start Phase 13 until these checks pass and the user asks to continue.
