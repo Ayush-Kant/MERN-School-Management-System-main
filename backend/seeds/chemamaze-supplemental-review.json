@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "label": "ChemAmaze CBSE derivative — supplemental game list",
+    "repository": "StemGames/ChemAmaze-cbseGames",
+    "repositoryUrl": "https://github.com/StemGames/ChemAmaze-cbseGames",
+    "branch": "main",
+    "revision": "825bb63e1138b66fbdd3b992dd700d65e5928fcc",
+    "path": "script.js",
+    "blobSha": "56478d6d8479c63fffe29e7b57210e6202c4117e",
+    "relationship": "Separate derivative repository; its 18 primary Wordwall records are byte-for-byte equivalent in record metadata/URLs to the 18 canonical records above."
+  },
+  "entries": [
+    {
+      "sourceKey": "stemgames:science:class-6:crossword-mindful-eating",
+      "subject": "Science",
+      "grade": 6,
+      "classLabel": "Class 6",
+      "name": "Crossword(Mindful eating)",
+      "resourceType": "google-drive-file",
+      "originalUrl": "https://drive.google.com/file/d/1YYsArRDm_vTGFtCv_M6xnnw0xzNBGemH/view",
+      "status": "excluded",
+      "reason": "Not a Wordwall embed; current GameActivity provider/schema only supports validated Wordwall embeds."
+    },
+    {
+      "sourceKey": "stemgames:science:class-7:maze-chase-acid-base",
+      "subject": "Science",
+      "grade": 7,
+      "classLabel": "Class 7",
+      "name": "Maze-Chase (acid-base)",
+      "resourceType": "wayground-game",
+      "originalUrl": "https://wayground.com/join/game/U2FsdGVkX18hLhpo7WlXF8rSzBiVEAf2DWxmB2f7JMV9n4mKFPy0Je6Fj%252Faz6p1U?gameType=async",
+      "status": "excluded",
+      "reason": "Non-Wordwall provider; retain for a separate provider-capability and link-review phase."
+    },
+    {
+      "sourceKey": "stemgames:science:class-8:whack-a-mole-health",
+      "subject": "Science",
+      "grade": 8,
+      "classLabel": "Class 8",
+      "name": "Whach-a-mole (Health)",
+      "resourceType": "wayground-game",
+      "originalUrl": "https://wayground.com/join/pre-game/running/U2FsdGVkX1%252FDHqLpEPD4osOgKGNdOzWP1PYLIWYJ3N5alGW1ywkoHx3T4Ne5HfCIRk9ShnXayT%252FTR%252BArRebAysDOfQu0Fw3UkD97Dr50AmM%253D/start",
+      "status": "excluded",
+      "reason": "Non-Wordwall provider; retain for a separate provider-capability and link-review phase."
+    },
+    {
+      "sourceKey": "stemgames:mathematics:class-6:number-challenge-placeholder",
+      "subject": "Mathematics",
+      "grade": 6,
+      "classLabel": "Class 6",
+      "name": "Number Challenge",
+      "resourceType": "unresolved-placeholder",
+      "originalUrl": "LINK_FOR_CLASS6_MATH_GAME1",
+      "status": "excluded",
+      "reason": "The source contains a placeholder instead of a working share URL."
+    },
+    {
+      "sourceKey": "stemgames:mathematics:class-7:algebra-puzzle-placeholder",
+      "subject": "Mathematics",
+      "grade": 7,
+      "classLabel": "Class 7",
+      "name": "Algebra Puzzle",
+      "resourceType": "unresolved-placeholder",
+      "originalUrl": "LINK_FOR_CLASS7_MATH_GAME1",
+      "status": "excluded",
+      "reason": "The source contains a placeholder instead of a working share URL."
+    },
+    {
+      "sourceKey": "stemgames:mathematics:class-8:geometry-quest-placeholder",
+      "subject": "Mathematics",
+      "grade": 8,
+      "classLabel": "Class 8",
+      "name": "Geometry Quest",
+      "resourceType": "unresolved-placeholder",
+      "originalUrl": "LINK_FOR_CLASS8_MATH_GAME1",
+      "status": "excluded",
+      "reason": "The source contains a placeholder instead of a working share URL."
+    }
+  ]
+}
