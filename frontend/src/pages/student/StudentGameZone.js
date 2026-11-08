@@ -277,7 +277,6 @@ const StudentGameZone = () => {
                         />
                         <TextField
                             select
-                            native
                             name="subjectFilter"
                             label="Filter by subject"
                             value={selectedSubjectId}
