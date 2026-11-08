@@ -308,6 +308,57 @@ test("applies the seed once and treats a repeat run as unchanged", async () => {
     assert.equal(fake.created.length, 18);
 });
 
+test("preserves a Teacher/Admin lifecycle status on an unchanged seed rerun", async () => {
+    const fake = createModels();
+    const targets = createTargets();
+    const firstPlan = await prepareLegacyGameImport({
+        catalog,
+        schoolId: targets.schoolId,
+        assignments: targets.assignments,
+        models: fake.models,
+    });
+    await applyLegacyGameImport(firstPlan, fake.GameActivityModel);
+
+    const key = SCHOOL_ID + "|chemamaze-cbse:science:class-6:chapter-1";
+    fake.records.get(key).status = "published";
+
+    const rerunPlan = await prepareLegacyGameImport({
+        catalog,
+        schoolId: targets.schoolId,
+        assignments: targets.assignments,
+        models: fake.models,
+    });
+
+    assert.equal(rerunPlan.toInsert.length, 0);
+    assert.equal(rerunPlan.alreadyPresent.length, 18);
+    assert.equal(rerunPlan.conflicts.length, 0);
+
+    const rerun = await applyLegacyGameImport(rerunPlan, fake.GameActivityModel);
+    assert.equal(rerun.inserted, 0);
+    assert.equal(rerun.unchanged, 18);
+    assert.equal(fake.records.get(key).status, "published");
+    assert.equal(fake.created.length, 18);
+});
+
+test("rejects a subject mapping that points to the wrong class subject", async () => {
+    const fake = createModels();
+    const targets = createTargets({
+        "6|Science": {
+            subjectId: assignmentIds["6|Mathematics"].subjectId,
+        },
+    });
+
+    await assert.rejects(
+        prepareLegacyGameImport({
+            catalog,
+            schoolId: targets.schoolId,
+            assignments: targets.assignments,
+            models: fake.models,
+        }),
+        /Subject target for 6\|Science must be Science/
+    );
+});
+
 test("blocks the whole planned import when an existing source record was edited", async () => {
     const fake = createModels();
     const targets = createTargets();
