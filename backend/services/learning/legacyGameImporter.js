@@ -291,6 +291,7 @@ async function applyLegacyGameImport(plan, GameActivityModel) {
     }
 
     const inserted = [];
+    const unchanged = [...plan.alreadyPresent];
     const failures = [];
 
     for (const item of plan.toInsert) {
@@ -311,6 +312,7 @@ async function applyLegacyGameImport(plan, GameActivityModel) {
                         : ["record-not-found-after-duplicate-key"];
 
                     if (existing && changedFields.length === 0) {
+                        unchanged.push(item.sourceKey);
                         continue;
                     }
                     failures.push({ sourceKey: item.sourceKey, message: "Duplicate source key conflicts with existing data" });
@@ -332,7 +334,7 @@ async function applyLegacyGameImport(plan, GameActivityModel) {
 
     return {
         inserted: inserted.length,
-        unchanged: plan.alreadyPresent.length,
+        unchanged: unchanged.length,
         failures,
         insertedSourceKeys: inserted,
     };
