@@ -22,6 +22,8 @@ import {
     Typography,
 } from "@mui/material";
 import AddCircleOutlineRoundedIcon from "@mui/icons-material/AddCircleOutlineRounded";
+import BlockRoundedIcon from "@mui/icons-material/BlockRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import ArchiveRoundedIcon from "@mui/icons-material/ArchiveRounded";
 import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
@@ -72,6 +74,11 @@ const TeacherGameZone = () => {
     const currentUser = useSelector((state) => state.user.currentUser);
     const teacherId = getEntityId(currentUser);
     const schoolId = getEntityId(currentUser?.school);
+    const assignedClassId = getEntityId(currentUser?.teachSclass);
+    const assignedSubjectId = getEntityId(currentUser?.teachSubject);
+    const assignedClassName = currentUser?.teachSclass?.sclassName || "Not assigned";
+    const assignedSubjectName = currentUser?.teachSubject?.subName || "Not assigned";
+    const hasCurrentAssignment = Boolean(teacherId && schoolId && assignedClassId && assignedSubjectId);
 
     const [activities, setActivities] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -80,11 +87,13 @@ const TeacherGameZone = () => {
     const [error, setError] = useState("");
     const [notice, setNotice] = useState("");
     const [previewActivity, setPreviewActivity] = useState(null);
+    const [editingActivity, setEditingActivity] = useState(null);
     const [form, setForm] = useState({
         title: "",
         description: "",
         topic: "",
         embedUrl: "",
+        originalUrl: "",
     });
 
     const loadActivities = useCallback(async () => {
@@ -132,10 +141,35 @@ const TeacherGameZone = () => {
         setNotice("");
     };
 
+    const resetForm = () => {
+        setForm({ title: "", description: "", topic: "", embedUrl: "", originalUrl: "" });
+        setEditingActivity(null);
+    };
+
+    const handleEdit = (activity) => {
+        if (!activity || activity.status !== "draft") return;
+        setEditingActivity(activity);
+        setForm({
+            title: activity.title || "",
+            description: activity.description || "",
+            topic: activity.topic || "",
+            embedUrl: activity.embedUrl || "",
+            originalUrl: activity.originalUrl || "",
+        });
+        setError("");
+        setNotice("");
+    };
+
+    const handleCancelEdit = () => {
+        resetForm();
+        setError("");
+        setNotice("Draft editing cancelled.");
+    };
+
     const handleCreate = async (event) => {
         event.preventDefault();
-        if (!teacherId || !schoolId) {
-            setError("Your teacher or school details are missing. Please sign in again.");
+        if (!hasCurrentAssignment) {
+            setError("Your current class and subject assignment is missing. Please contact your school administrator.");
             return;
         }
 
@@ -147,28 +181,42 @@ const TeacherGameZone = () => {
             return;
         }
 
+        const payload = {
+            teacherId,
+            title: form.title.trim(),
+            description: form.description.trim(),
+            topic: form.topic.trim(),
+            embedUrl: normalizedEmbedUrl,
+            originalUrl: form.originalUrl.trim(),
+        };
+
         setSubmitting(true);
         setError("");
         setNotice("");
 
         try {
-            await apiClient.post(`/GameActivityCreate`, {
-                teacherId,
-                title: form.title.trim(),
-                description: form.description.trim(),
-                topic: form.topic.trim(),
-                embedUrl: normalizedEmbedUrl,
-            }, {
-                headers: { "Content-Type": "application/json" },
-            });
+            if (editingActivity) {
+                await apiClient.put(
+                    "/GameActivityUpdate/" + encodeURIComponent(editingActivity._id),
+                    payload,
+                    { headers: { "Content-Type": "application/json" } }
+                );
+                setNotice("Draft updated successfully.");
+            } else {
+                await apiClient.post("/GameActivityCreate", payload, {
+                    headers: { "Content-Type": "application/json" },
+                });
+                setNotice("Activity saved as a draft. Preview it and publish when it is ready for students.");
+            }
 
-            setForm({ title: "", description: "", topic: "", embedUrl: "" });
-            setNotice("Activity saved as a draft. Publish it when it is ready for students.");
+            resetForm();
             await loadActivities();
         } catch (requestError) {
             setError(getErrorMessage(
                 requestError,
-                "Could not save the activity. Verify the details and try again."
+                editingActivity
+                    ? "Could not update this draft. Verify the details and try again."
+                    : "Could not save the activity. Verify the details and try again."
             ));
         } finally {
             setSubmitting(false);
@@ -178,33 +226,47 @@ const TeacherGameZone = () => {
     const handleTransition = async (activity, nextStatus) => {
         if (!activity?._id || !teacherId) return;
 
-        if (nextStatus === "archived" &&
-            !window.confirm("Archive this activity? It will no longer appear in the student Game Zone.")) {
+        const confirmations = {
+            draft: "Unpublish this activity? Students will no longer see it until you publish it again.",
+            archived: "Archive this activity? It will no longer appear in the student Game Zone.",
+        };
+        if (confirmations[nextStatus] && !window.confirm(confirmations[nextStatus])) {
             return;
         }
+
+        const routes = {
+            published: "GameActivityPublish",
+            draft: "GameActivityUnpublish",
+            archived: "GameActivityArchive",
+        };
+        const route = routes[nextStatus];
+        if (!route) return;
 
         setBusyActivityId(activity._id);
         setError("");
         setNotice("");
 
-        const route = nextStatus === "published" ? "GameActivityPublish" : "GameActivityArchive";
         try {
             await apiClient.put(
-                `/${route}/${encodeURIComponent(activity._id)}`,
+                "/" + route + "/" + encodeURIComponent(activity._id),
                 { teacherId },
                 { headers: { "Content-Type": "application/json" } }
             );
-            setNotice(nextStatus === "published"
-                ? `"${activity.title}" is now published for students.`
-                : `"${activity.title}" has been archived.`);
+            const messages = {
+                published: '"' + activity.title + '" is now published for students.',
+                draft: '"' + activity.title + '" has been unpublished and moved back to drafts.',
+                archived: '"' + activity.title + '" has been archived.',
+            };
+            setNotice(messages[nextStatus]);
+            if (previewActivity?._id === activity._id) setPreviewActivity(null);
             await loadActivities();
         } catch (requestError) {
-            setError(getErrorMessage(
-                requestError,
-                nextStatus === "published"
-                    ? "Could not publish this activity. Refresh the list and try again."
-                    : "Could not archive this activity. Refresh the list and try again."
-            ));
+            const fallbacks = {
+                published: "Could not publish this activity. Refresh the list and try again.",
+                draft: "Could not unpublish this activity. Refresh the list and try again.",
+                archived: "Could not archive this activity. Refresh the list and try again.",
+            };
+            setError(getErrorMessage(requestError, fallbacks[nextStatus]));
         } finally {
             setBusyActivityId("");
         }
@@ -246,10 +308,10 @@ const TeacherGameZone = () => {
                     </Box>
                     <Box>
                         <Typography variant="h4" sx={{ fontWeight: 800, color: "#FFFFFF" }}>
-                            Game Zone
+                            My Games
                         </Typography>
                         <Typography sx={{ color: "#94A3B8", mt: 0.5 }}>
-                            Create, preview and publish interactive Wordwall activities for your class.
+                            Manage your Wordwall activities for your currently assigned class and subject.
                         </Typography>
                     </Box>
                 </Box>
@@ -294,14 +356,58 @@ const TeacherGameZone = () => {
                     <Card component="section" elevation={0} sx={{ ...surfaceSx, height: "100%" }}>
                         <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
                             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
-                                <AddCircleOutlineRoundedIcon sx={{ color: "#60A5FA" }} />
+                                {editingActivity ? (
+                                    <EditRoundedIcon sx={{ color: "#60A5FA" }} />
+                                ) : (
+                                    <AddCircleOutlineRoundedIcon sx={{ color: "#60A5FA" }} />
+                                )}
                                 <Typography variant="h6" sx={{ color: "#FFFFFF", fontWeight: 700 }}>
-                                    Create activity
+                                    {editingActivity ? "Edit draft" : "Create activity"}
                                 </Typography>
                             </Stack>
                             <Typography sx={{ color: "#94A3B8", fontSize: ".9rem", mb: 2.5 }}>
-                                New activities are saved as drafts first. Review the embed and publish when ready.
+                                {editingActivity
+                                    ? "Only your own draft activities can be edited. Published activities must be unpublished first."
+                                    : "New activities are saved as drafts first. Preview the embed and publish when ready."}
                             </Typography>
+                            <Alert severity={hasCurrentAssignment ? "info" : "warning"} sx={{ mb: 2 }}>
+                                <Typography sx={{ fontWeight: 700, mb: 0.5 }}>
+                                    {hasCurrentAssignment ? "Your current assignment" : "Assignment required"}
+                                </Typography>
+                                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                                    <Chip size="small" label={"Class: " + assignedClassName} />
+                                    <Chip size="small" label={"Subject: " + assignedSubjectName} />
+                                </Stack>
+                                {!hasCurrentAssignment && (
+                                    <Typography sx={{ mt: 1, fontSize: ".82rem" }}>
+                                        Your current class and subject are required before creating or editing activities.
+                                    </Typography>
+                                )}
+                            </Alert>
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                                <Typography sx={{ fontWeight: 700, mb: 0.5 }}>
+                                    Get the official Wordwall embed code
+                                </Typography>
+                                <Typography component="div" sx={{ fontSize: ".82rem", lineHeight: 1.6 }}>
+                                    1. Open <b>My Activities</b> in Wordwall.
+                                    <br />
+                                    2. Click the three-dot menu beside the activity.
+                                    <br />
+                                    3. Choose <b>Embed</b>, select <b>IFrame</b>, then click <b>Copy</b>.
+                                    <br />
+                                    4. Paste the copied iframe snippet or its HTTPS embed URL below.
+                                </Typography>
+                                <Button
+                                    component="a"
+                                    href="https://wordwall.zendesk.com/hc/en-us/articles/360015617757-How-do-I-embed-a-Wordwall-resource-on-another-website"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    size="small"
+                                    sx={{ mt: 0.75, p: 0, textTransform: "none", justifyContent: "flex-start" }}
+                                >
+                                    Read Wordwall's official embed instructions
+                                </Button>
+                            </Alert>
                             <Box component="form" onSubmit={handleCreate}>
                                 <Stack spacing={2}>
                                     <TextField
@@ -344,14 +450,25 @@ const TeacherGameZone = () => {
                                         onChange={handleFieldChange}
                                         multiline
                                         minRows={2}
-                                        helperText="Paste the HTTPS embed URL or the iframe snippet copied from Wordwall. Only its validated src URL is saved."
+                                        helperText="Paste the HTTPS embed URL or official iframe snippet. Only its validated src URL is saved; pasted HTML is never rendered."
+                                        sx={fieldSx}
+                                    />
+                                    <TextField
+                                        fullWidth
+                                        name="originalUrl"
+                                        label="Original Wordwall activity URL (optional)"
+                                        placeholder="https://wordwall.net/resource/..."
+                                        value={form.originalUrl}
+                                        onChange={handleFieldChange}
+                                        inputProps={{ maxLength: 2048 }}
+                                        helperText="Keep the original activity/share URL for source reference."
                                         sx={fieldSx}
                                     />
                                     <Button
                                         type="submit"
                                         variant="contained"
                                         startIcon={submitting ? <CircularProgress size={18} color="inherit" /> : <AddCircleOutlineRoundedIcon />}
-                                        disabled={submitting || loading}
+                                        disabled={submitting || loading || !hasCurrentAssignment}
                                         sx={{
                                             mt: 1,
                                             py: 1.25,
@@ -362,8 +479,20 @@ const TeacherGameZone = () => {
                                             "&:hover": { bgcolor: "#1D4ED8" },
                                         }}
                                     >
-                                        {submitting ? "Saving..." : "Save as draft"}
+                                        {submitting
+                                            ? (editingActivity ? "Saving changes..." : "Saving...")
+                                            : (editingActivity ? "Save changes" : "Save as draft")}
                                     </Button>
+                                    {editingActivity && (
+                                        <Button
+                                            type="button"
+                                            onClick={handleCancelEdit}
+                                            disabled={submitting}
+                                            sx={{ color: "#94A3B8", textTransform: "none" }}
+                                        >
+                                            Cancel editing
+                                        </Button>
+                                    )}
                                 </Stack>
                             </Box>
                         </CardContent>
@@ -465,26 +594,48 @@ const TeacherGameZone = () => {
                                                     Preview
                                                 </Button>
                                                 {activity.status === "draft" && (
-                                                    <Button
-                                                        size="small"
-                                                        startIcon={busyActivityId === activity._id ? <CircularProgress size={14} /> : <CheckCircleOutlineRoundedIcon />}
-                                                        onClick={() => handleTransition(activity, "published")}
-                                                        disabled={Boolean(busyActivityId)}
-                                                        sx={{ color: "#34D399", textTransform: "none" }}
-                                                    >
-                                                        Publish
-                                                    </Button>
+                                                    <>
+                                                        <Button
+                                                            size="small"
+                                                            startIcon={<EditRoundedIcon />}
+                                                            onClick={() => handleEdit(activity)}
+                                                            disabled={Boolean(busyActivityId)}
+                                                            sx={{ color: "#CBD5E1", textTransform: "none" }}
+                                                        >
+                                                            Edit
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            startIcon={busyActivityId === activity._id ? <CircularProgress size={14} /> : <CheckCircleOutlineRoundedIcon />}
+                                                            onClick={() => handleTransition(activity, "published")}
+                                                            disabled={Boolean(busyActivityId)}
+                                                            sx={{ color: "#34D399", textTransform: "none" }}
+                                                        >
+                                                            Publish
+                                                        </Button>
+                                                    </>
                                                 )}
                                                 {activity.status === "published" && (
-                                                    <Button
-                                                        size="small"
-                                                        startIcon={busyActivityId === activity._id ? <CircularProgress size={14} /> : <ArchiveRoundedIcon />}
-                                                        onClick={() => handleTransition(activity, "archived")}
-                                                        disabled={Boolean(busyActivityId)}
-                                                        sx={{ color: "#FBBF24", textTransform: "none" }}
-                                                    >
-                                                        Archive
-                                                    </Button>
+                                                    <>
+                                                        <Button
+                                                            size="small"
+                                                            startIcon={busyActivityId === activity._id ? <CircularProgress size={14} /> : <BlockRoundedIcon />}
+                                                            onClick={() => handleTransition(activity, "draft")}
+                                                            disabled={Boolean(busyActivityId)}
+                                                            sx={{ color: "#CBD5E1", textTransform: "none" }}
+                                                        >
+                                                            Unpublish
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            startIcon={busyActivityId === activity._id ? <CircularProgress size={14} /> : <ArchiveRoundedIcon />}
+                                                            onClick={() => handleTransition(activity, "archived")}
+                                                            disabled={Boolean(busyActivityId)}
+                                                            sx={{ color: "#FBBF24", textTransform: "none" }}
+                                                        >
+                                                            Archive
+                                                        </Button>
+                                                    </>
                                                 )}
                                                 {activity.status === "archived" && (
                                                     <Chip size="small" label="Archived" variant="outlined" sx={{ color: "#94A3B8", borderColor: "#334155" }} />
