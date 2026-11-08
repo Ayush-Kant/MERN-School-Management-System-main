@@ -15,6 +15,7 @@ Last updated: 2026-11-08 (Asia/Kolkata)
 - Latest verified Phase 13 application-source checkpoint, excluding subsequent handoff-only documentation commits: `059060efe1965c3b0247241113f013445bcce306`.
 - Latest Phase 14 Student Games Zone application-source checkpoint: `e90f3ff53ab909dd6eaa2f719c96aae3b1056a87`.
 - Latest Phase 14 Student Games Zone test checkpoint: `8929062ba86f64d1ceb30500bc1753eccfca6501`.
+- Latest Phase 15 application/test checkpoint before the handoff update: `aff139761bbabb2db0f0203772239af7c1e03429`.
 
 ## Architecture decisions
 The MERN School Management System remains the host application. Preserve the legacy ChemAmaze-cbse repository as source/reference. Build two separate experiences: (1) school-scoped teacher-managed Wordwall Games Zone and (2) first-party AI Learning Studio with server-graded quizzes, learning attempts, mastery estimates, adaptive revision, curriculum-grounded explanations, and teacher-reviewed generated questions. Existing Admin/Teacher/Student and school/class/subject records remain authoritative.
@@ -223,9 +224,10 @@ Source review confirms:
 | 10 | Safe Wordwall URL validation and embed component | **Implementation and automated tests/build user-confirmed passed; real-browser Wordwall check still pending** |
 | 11 | Role-scoped Game APIs | **User-confirmed all backend/frontend tests and production build passed (2026-11-08); general browser success reported; granular scenario checklist not itemized** |
 | 12 | Admin Learning & Games management | **Completed — user confirmed tests, build, and acceptance checks were good (2026-11-08); exact output/counts not supplied** |
-| 13 | Teacher My Games management | **Implementation committed to feature branch; Phase 13 tests/build pending** |
-| 14 | Student Games Zone | **Implementation committed to feature branch; Phase 14 tests/build and Student browser checks pending** |
-| 15–30 | Remaining roadmap | Not started; follow harness exactly |
+| 13 | Teacher My Games management | **Completed — user confirmed Phase 13 was good on 2026-11-08; exact outputs/counts not supplied** |
+| 14 | Student Games Zone | **Implementation committed; Phase 14 tests/build and Student browser checks pending** |
+| 15 | Migrate current ChemAmaze games as seed data | **Implementation committed; backend tests and development-only dry-run/import pending** |
+| 16–30 | Remaining roadmap | Not started; follow harness exactly |
 
 Do not redo completed phases unless source inspection shows a regression. Follow the detailed scope and exit gates in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md.
 
@@ -406,13 +408,13 @@ These are existing Phase 11 tests; Phase 13 did not modify them or claim new bac
 
 GitHub returned no CI status checks for the latest Phase 13 commits. The GitHub connector can inspect and update source files but did not execute npm commands.
 
-### Phase 13 validation gate (still pending)
+### Phase 13 verification status — user-confirmed good
 
-Phase 13's test/build and Teacher browser/API checklist remain open. Because the user explicitly requested Phase 14 implementation before validating Phase 13, the combined commands and acceptance checklist are recorded under the Phase 14 immediate-next-action section below. Do not mark Phase 13 complete until the user supplies the current-branch test/build results and confirms the Teacher flow and ownership/scope checks.
+The user explicitly confirmed on 2026-11-08 that Phase 13 was good. Phase 13 is treated as user-confirmed complete for progression. Exact Jest output, test counts, build output and individual Teacher/API observations were not supplied in this confirmation, so none are recorded or independently claimed.
 
 ## Phase 14 — Student Games Zone (implementation)
 
-**Status:** Student catalogue improvements and focused frontend tests are committed to `feature/learning-game-zones`. Phase 14 Jest/build and real Student browser/API checks have not yet been run or confirmed. Phase 13 remains independently open pending the Teacher verification gate above.
+**Status:** Student catalogue improvements and focused frontend tests are committed to `feature/learning-game-zones`. Phase 14 Jest/build and real Student browser/API checks have not yet been run or confirmed. Phase 13 was subsequently confirmed good by the user on 2026-11-08.
 
 ### Source audit and reuse decisions
 - Read the Phase 14 harness, current Student Games Zone page/tests, Student dashboard route and sidebar, shared `WordwallEmbed`, URL validator, GameActivity schema/controller, route authorization, Student model, and existing GameActivity controller/authorization tests.
@@ -446,7 +448,7 @@ These existing Phase 11 tests were not changed in Phase 14.
 - Safe embedded play, activity details and external Wordwall fallback.
 - Search by title/topic and filtering by subject.
 - Clearing combined filters and the no-games empty state.
-- Recoverable API errors, refresh removal of no-longer-published activities, and missing school/class handling.
+- Recoverable API errors, refresh removal plus closure of an open play dialog for no-longer-published activities, and missing school/class handling.
 
 ### Phase 14 implementation commits
 - `89591d1fcefc1af03c9b63cd880a7fe8385a00df` — Student catalogue subject filter, activity detail context and refresh reconciliation.
@@ -487,12 +489,130 @@ Then verify the Phase 13 Teacher flow at `/Teacher/my-games`: current class/subj
 
 Verify the Phase 14 Student flow at `/Student/game-zone`: a Student sees only published activities for the persisted school/class; drafts and archived items are absent; subject selection and search combine correctly; Clear filters restores the catalogue; opening a game shows its topic/subject/class/description/teacher context; the Wordwall iframe and external fallback work; after Teacher unpublish or Admin archive, refresh removes the game and closes it if it was selected. Check mobile layout and attempt a foreign school/class/subject request to confirm the backend rejects it.
 
-Phase 13 and Phase 14 remain unverified until the combined backend suite, frontend suite, production build, and their respective local acceptance checks are confirmed. Fix only demonstrated failures; do not start Phase 15 before both phase gates pass and the user asks to continue.
+Phase 13 is user-confirmed good. Phase 14 remains unverified until the current branch's backend/frontend tests, production build, and Student browser/API acceptance checks are confirmed. Phase 15 is now implemented but its backend tests, development dry-run, and actual development import are pending. Do not start Phase 16 until Phase 14 acceptance and Phase 15 validation/import are complete and the user asks to continue.
 
+
+
+## Phase 15 — Migrate current ChemAmaze games as seed data (implementation)
+
+**Status:** The versioned catalogue, supplemental audit, validation/import services, development-only CLI, optional GameActivity provenance schema, focused tests and operator documentation are committed to `feature/learning-game-zones`. Backend tests, development dry-run and actual development-database import have not yet been run or confirmed. Phase 14 remains independently pending Student-side validation.
+
+### Canonical source audit and catalogue coverage
+- Inspected the two similarly named repositories rather than assuming they were equivalent.
+- Canonical source of record: `dikshaforsure/ChemAmaze-cbse`, `main`, commit `513f7c254597d291446d31b45864c3856c518354`, file `script.js`, blob `1e32228d9bd7ec583bb2e2b81f2688e7aab1b0e9`.
+- The canonical catalogue contains exactly 18 primary Wordwall games: Science and Mathematics, Classes 6, 7, 8, with three chapters for each subject/class group (9 per subject).
+- Each record preserves its subject, grade/class label, chapter, topic, source title, original Wordwall `/play/` share URL, and exact embed `src` URL. The importer never derives an embed URL from the share URL.
+- Compared the 18 primary entries in the related derivative `StemGames/ChemAmaze-cbseGames` (main commit `825bb63e1138b66fbdd3b992dd700d65e5928fcc`, `script.js` blob `56478d6d8479c63fffe29e7b57210e6202c4117e`) against the canonical set: all 18 match field-by-field.
+- The derivative contains six additional entries. All six are captured in `backend/seeds/chemamaze-supplemental-review.json`: one Google Drive crossword; two Wayground activities; and three Math placeholder strings. These are explicitly excluded from this Wordwall-only importer because they are non-Wordwall or unresolved. They are not silently dropped and can be reviewed separately if provider support is expanded.
+- Neither legacy repository was modified.
+
+### Implemented catalog, importer and safety rules
+- `backend/seeds/chemamaze-cbse-games.json`: versioned canonical manifest, full source repository/branch/commit/blob provenance and 18 deterministic source keys.
+- `backend/services/learning/legacyGameCatalog.js`: validates catalog version/count/group coverage, exact subject/grade/class/chapter mapping, source keys, unique share/embed URLs, pinned Git source metadata, original HTTPS Wordwall `/play/<id>/<id>/<id>` URLs, and every embed URL through the existing strict Wordwall validator.
+- `backend/services/learning/legacyGameImporter.js`: resolves the selected school, class, subject and Teacher from MongoDB; validates school/class/subject/teacher relationships through the existing `validateGameActivityRelationships`; requires six exact grade/subject assignment mappings; confirms both subjects for a grade target the same Class record; prepares a no-write plan; detects source-key collisions and existing-data drift; inserts sequentially; and reports per-record failures.
+- All imported records are created as `draft`. The import does not publish games or change existing school/class/subject/Teacher records.
+- Existing imported records are compared with the pinned source metadata and mapped scope. Identical rows are skipped. Existing edited/conflicting rows block the new inserts for that run; the importer never overwrites Teacher/Admin content or lifecycle status. A concurrent unique-key race is reconciled as unchanged only when the stored record exactly matches the pinned seed.
+- `backend/models/gameActivitySchema.js`: optional immutable `legacySource` metadata for imported records and a unique partial compound index on school + stable source key. Regular Teacher-created GameActivity documents do not require this metadata and remain outside the partial unique index.
+- `backend/scripts/import-chemamaze-games.js`: supports catalog-only validation, database dry-run and explicit apply.
+- Safety locks: importer requires `NODE_ENV=development` and the exact database name `school_management_dev`; write mode additionally requires `CHEMAMAZE_SEED_CONFIRM=IMPORT_CHEMAMAZE_TO_SCHOOL_MANAGEMENT_DEV`. Apply mode initializes the unique index before inserts; dry-run does not build indexes or write documents.
+- Target school/class/subject/Teacher IDs are provided in a local-only ignored file, not committed. The checked-in example uses placeholders.
+- Partial failures are reported and can be resumed. The import is sequential and idempotent; no transaction was added because MongoDB deployment topology has not been verified as a replica set.
+
+### Phase 15 changed files
+- `backend/seeds/chemamaze-cbse-games.json` — all 18 canonical Wordwall entries with source and link provenance.
+- `backend/seeds/chemamaze-supplemental-review.json` — all six derivative-only supplemental entries and explicit exclusion reasons.
+- `backend/seeds/chemamaze-targets.example.json` — template for six grade/subject assignment mappings.
+- `backend/services/learning/legacyGameCatalog.js` — deterministic manifest and link validation.
+- `backend/services/learning/legacyGameImporter.js` — database-backed assignment validation, plan/conflict detection and idempotent insert logic.
+- `backend/scripts/import-chemamaze-games.js` — validate-only, dry-run and explicitly confirmed development apply modes.
+- `backend/models/gameActivitySchema.js` — optional immutable provenance subdocument and partial unique per-school source key.
+- `backend/tests/legacyGameCatalog.test.js` — 7 catalog/source/link validation tests.
+- `backend/tests/legacyGameImporter.test.js` — 10 development guard, assignment mapping, draft planning, idempotency, conflict and concurrent insert tests.
+- `backend/tests/gameActivitySchema.test.js` — 3 added provenance/unique-index tests; existing schema tests retained.
+- `backend/package.json` — seed validation/dry-run/apply commands.
+- `backend/.gitignore` — ignores local school/Teacher target IDs.
+- `backend/GAME_ACTIVITY_INVARIANTS.md` — records optional source provenance, immutable metadata and source-key index rules.
+- `backend/LEGACY_GAME_IMPORT.md` — Windows setup, source coverage, target mapping and safe operational instructions.
+
+No new npm dependency, route, controller, role permission, frontend page, Admin/Teacher/Student runtime flow, AI quiz code, or legacy source repository content was changed.
+
+### Phase 15 implementation commits
+- `bda54b42bd1c1221aac51f05392d388039cc4f5a` — canonical 18-record seed manifest.
+- `fb848c06cbcdd4a997bd01fa1292711d2ffac7ad` — supplemental derivative entry inventory.
+- `cedde59e1b0045ef2bf85c6ea5d1b8dae91cc55c` — initial catalog validator.
+- `d28c8fdeef99b7fec69d6db1009ed2b9e1df560b` — correct canonical URL/source validation patterns.
+- `243726a461901dcef193fb6de445cac03ca45eee` — initial importer service.
+- `b3937a53df54471bdb270949b7058a3ea5dc661c` — correct development target ObjectId validation.
+- `f5685a17b43c37cabaf7cf4abeace6d27037f165` — immutable GameActivity legacy provenance and unique partial index.
+- `d478a6ea763ff47791380a00316fda21716021f5` — provenance/schema tests.
+- `a92003367f0afbd35f8fcce56df5a61b32039c46` — catalog validation tests.
+- `003dcea6aeec2f5e06fde0952c5004db93da4077` — importer safety/idempotency tests.
+- `6f3ce89c4f833b916ca5a76199152f91c1f52634` — development-only import CLI.
+- `f83ed03fd497fdfa07a07f50a7f3e0521a3d28d2` — example target mapping.
+- `9dcaef9d5a7bc597584fb4b11deaee35b4534c3d` — package seed commands.
+- `379ce92c39574e2b89b72d78c7d3dc41cc8e4f73` — ignore local target IDs.
+- `58888faa7a807d92a64481f75b5acbfedb1d16b8` — import operational guide.
+- `1a5e8ea9a2d0309ff27ef6ceadf4951108ced2c5` — correct Markdown/source label in the guide.
+- `a7e170e31decaebedf892f212ed753321fc8ff35` — count identical concurrent inserts as unchanged.
+- `7efd5f2d05448fd47f165a8900cb5f4eeea697f0` — keep dry-run free of index/document writes.
+- `aff139761bbabb2db0f0203772239af7c1e03429` — regression tests for status-preserving reruns, subject mapping and concurrent unique-key handling.
+- `3998e2c1be108c01ee67609959159440f6655c1f` — update GameActivity invariants.
+- `564fd9cc81d9c6a3564767292fdfd5ccfe4bb942` — clarify dry-run/apply index behavior in the import guide.
+
+### Phase 15 verification status
+- [x] Inspect canonical and derivative source repositories, pin commit/blob provenance, and compare all 18 primary records.
+- [x] Account for the six derivative-only supplemental entries and their explicit non-import reasons.
+- [x] Add schema, validator, importer, CLI, target template, operator guide and focused tests.
+- [x] Static source review confirms the importer derives school/class/subject/Teacher records from MongoDB and only creates draft GameActivity records.
+- [x] Dry-run does not build indexes or insert documents; apply mode is guarded by the exact development database name and an explicit confirmation token.
+- [ ] `npm run seed:chemamaze:validate` — not run in this environment.
+- [ ] Backend `npm test` — not run in this environment.
+- [ ] Development target mapping — user must populate local-only IDs from the dedicated development database.
+- [ ] `npm run seed:chemamaze:dry-run` — not run; no target school/database is accessible here.
+- [ ] `npm run seed:chemamaze:apply` — not run; no database was connected or modified.
+- [ ] Post-import verification — pending: expected 18 draft records, 18 unchanged on repeat, no duplicate source keys, and representative original/embed links checked in browser.
+- [ ] GitHub CI — no workflow run has been verified for the Phase 15 implementation commits.
+
+Do not describe the database migration as completed until the user provides a clean local dry-run/apply result. No production or real-school data was accessed or modified.
+
+### Immediate next action — validate Phase 14 and Phase 15 locally
+
+Pull the latest `feature/learning-game-zones` branch. From repository root in Windows PowerShell:
+
+```powershell
+git pull --ff-only origin feature/learning-game-zones
+
+cd backend
+npm run seed:chemamaze:validate
+npm test
+
+cd ..\\frontend
+npm test -- --watchAll=false
+npm run build
+```
+
+Then complete the Phase 14 Student browser/API checks at `/Student/game-zone`: published-only scope, subject/search filters, clear filters, metadata, Wordwall embed/fallback, removal and dialog closure after unpublish/archive, mobile layout, and foreign school/class/subject rejection.
+
+For Phase 15, use only a dedicated local development database named `school_management_dev`. From `backend`, copy `seeds/chemamaze-targets.example.json` to the ignored `seeds/chemamaze-targets.local.json`, replace the placeholders with real IDs from that development database, and ensure each Teacher is assigned to the mapped school/class/subject. Then set:
+
+```powershell
+$env:NODE_ENV = "development"
+$env:MONGO_URL = "mongodb://127.0.0.1:27017/school_management_dev"
+npm run seed:chemamaze:dry-run
+```
+
+Review the complete dry-run summary before authorizing any writes. Only when the database name and six mappings are confirmed, set the explicit confirmation and apply:
+
+```powershell
+$env:CHEMAMAZE_SEED_CONFIRM = "IMPORT_CHEMAMAZE_TO_SCHOOL_MANAGEMENT_DEV"
+npm run seed:chemamaze:apply
+```
+
+Expected first clean import is 18 inserted drafts, zero unchanged and zero failures. A repeat should report zero inserted and 18 unchanged. Verify the source-key count and sample links in the development Admin catalogue/Student Games Zone. Do not proceed to Phase 16 until Phase 14 acceptance and Phase 15 tests plus development import checks are confirmed by the user.
 
 ## How to work
 1. Read this file and the harness first; verify actual remote branch HEAD and current source.
-2. Work one phase at a time, only after the prior exit gate passes and the user asks to continue. Sequencing exception on 2026-11-08: the user explicitly requested Phase 14 implementation while Phase 13 validation remained pending; both phase gates are now to be validated together before Phase 15.
+2. Work one phase at a time, only after the prior exit gate passes and the user asks to continue. Sequencing exceptions on 2026-11-08: the user requested Phase 14 implementation before Phase 13 validation, later confirmed Phase 13 was good, and then requested Phase 15 implementation while Phase 14 validation remained pending. Validate Phase 14 and Phase 15 before Phase 16.
 3. Inspect exact files/tests before edits; make minimal changes and preserve unrelated code.
 4. Review the full diff; list every changed file and why it changed.
 5. Be honest about tests. The GitHub connector cannot run npm test on the user's Windows machine. Never claim a test passed without actual user output or verified CI.
@@ -503,7 +623,7 @@ Phase 13 and Phase 14 remain unverified until the combined backend suite, fronte
 ## Prompt for a new chat
 I am continuing work on my MERN School Management System + AI Learning & Games project. Read the attached PROJECT_HANDOFF.md fully before doing anything. Then inspect the current GitHub repository and feature/learning-game-zones branch to verify the actual latest commit and source state. Continue exactly from the pending action; do not restart completed phases or ask me to repeat information already recorded.
 
-Follow the 30-phase roadmap in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md one phase at a time. Continue from the pending combined validation of Phases 13 and 14: Phase 13 Teacher My Games and Phase 14 Student Games Zone implementations are committed, but neither phase's full current-branch test/build/browser gate is verified. Do not start Phase 15 until both gates are verified and I ask you to continue. Preserve unrelated code. Inspect the exact source and tests before editing, make only minimal scope-related changes, review the full diff, and provide Windows PowerShell commands. Never claim tests passed unless I provide actual output or a verified CI result.
+Follow the 30-phase roadmap in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md one phase at a time. Phase 13 Teacher My Games was user-confirmed good. Phase 14 Student Games Zone is committed but its tests/build/Student browser checks remain pending. Phase 15 ChemAmaze import tooling and manifests are committed but backend tests, dry-run and the development-only import remain pending. Continue from validating Phases 14 and 15; do not start Phase 16 until those gates pass and I ask you to continue. Preserve unrelated code. Inspect the exact source and tests before editing, make only minimal scope-related changes, review the full diff, and provide Windows PowerShell commands. Never claim tests passed unless I provide actual output or a verified CI result.
 
 Continuity requirement: Update PROJECT_HANDOFF.md after every substantive project response, including fixes, test diagnosis, decisions, commits, and phase transitions. Update both the repository copy on feature/learning-game-zones and the local/downloadable copy. Add a dated changelog entry, record changed files and commit SHAs, exact test evidence (or “not verified”), phase status, and the one immediate next action. At the end of every response, provide the updated handoff file or repository link. Start from the pending action recorded in the file and do not go beyond its test gate.
 
@@ -597,4 +717,19 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Phase 14 commits: `89591d1fcefc1af03c9b63cd880a7fe8385a00df`, `e90f3ff53ab909dd6eaa2f719c96aae3b1056a87`, `8929062ba86f64d1ceb30500bc1753eccfca6501`. The branch source/test head before this handoff-only update was `8929062ba86f64d1ceb30500bc1753eccfca6501`.
 - Static source and diff review completed. Backend/frontend Jest suites, frontend production build and local Student browser/API checks have not been run or confirmed. GitHub returned no workflow runs for the Phase 14 test commit.
 - Immediate next action: pull the branch including this handoff update; run backend tests, frontend tests and production build; then validate the Phase 13 Teacher and Phase 14 Student acceptance scenarios listed above. Keep Phase 13/14 status pending until evidence is supplied. Do not start Phase 15.
+
+### 2026-11-08 — Phase 13 confirmation and Phase 15 ChemAmaze import implementation (Phase 14 validation pending)
+- The user explicitly confirmed Phase 13 was good. Phase 13 is recorded as user-confirmed complete; no test totals or detailed output were supplied.
+- The user asked for Phase 15 implementation while Phase 14 validation is ongoing. This sequencing exception is recorded; Phase 14 remains pending and no Phase 16 work has started.
+- Read the Phase 15 harness, GameActivity schema/invariants, Wordwall validator, relationship validator, existing API/tests and backend environment/test configuration.
+- Inspected the canonical source `dikshaforsure/ChemAmaze-cbse` and derivative `StemGames/ChemAmaze-cbseGames`. Pinned canonical `script.js` to commit `513f7c254597d291446d31b45864c3856c518354` and blob `1e32228d9bd7ec583bb2e2b81f2688e7aab1b0e9`.
+- Parsed and compared all 18 primary Wordwall entries across the two repositories (Science/Mathematics, Classes 6–8, three chapters each); all 18 match. Recorded exact topic, original share URL, and embed src URL in the manifest. Six derivative-only additional entries are explicitly accounted for separately: a Google Drive crossword, two Wayground links, and three unresolved Math placeholders.
+- Added a versioned canonical seed manifest, supplemental review inventory, strict catalog/share/embed validator, database-backed idempotent importer, development-only validate/dry-run/apply CLI, local target mapping template, optional immutable GameActivity provenance, and school/source-key partial unique index.
+- The importer resolves every school/class/subject/Teacher target from MongoDB and reuses `validateGameActivityRelationships`; no mapping is accepted as authorization authority. Imported entries start as drafts. Existing content/lifecycle state is not overwritten; conflicting modified records stop new inserts. Concurrent exact unique-key insertions are counted as unchanged. Apply mode checks exact `NODE_ENV=development`, database `school_management_dev`, and an explicit confirmation token. Dry-run does not write records or create indexes; apply initializes the unique index before inserts.
+- Added 7 catalog tests, 10 importer tests, and 3 schema/provenance tests (20 new test cases in total). Added `backend/LEGACY_GAME_IMPORT.md` and updated `backend/GAME_ACTIVITY_INVARIANTS.md`.
+- Phase 15 changes are limited to the backend seed manifest/review data, import service/script, GameActivity provenance schema/index, associated backend tests, package scripts, gitignore, invariant doc and import guide. No frontend, application routes, role authorization, controller or legacy source repository was modified.
+- Important corrective review changes: fixed regex escaping in the catalog and ObjectId validators; ensured dry-run does not build database indexes; ensure identical concurrent insert races count as unchanged; added a regression for preserving an already-published state on a repeat import.
+- The exact implementation commits and file-level scope are recorded in the Phase 15 section above. Phase 15 source/test checkpoint before handoff update: `aff139761bbabb2db0f0203772239af7c1e03429`; later documentation-only commit `564fd9cc81d9c6a3564767292fdfd5ccfe4bb942`.
+- Backend Jest/test suite, catalog CLI validation, development dry-run, and actual development import have **not** been executed. No development database or local target IDs were accessed; no database records were written. Do not claim the migration is imported until the user runs and confirms it.
+- Immediate next action: run backend seed validator and backend suite, then Phase 14 frontend tests/build and Student browser acceptance. Next, configure the ignored target mapping from the dedicated development database, inspect the dry-run, and only then explicitly apply and verify 18 drafts plus idempotent rerun. Do not start Phase 16.
 
