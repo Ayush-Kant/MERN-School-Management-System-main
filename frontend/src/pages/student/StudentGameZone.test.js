@@ -72,6 +72,18 @@ function setInput(name, value) {
     input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+function setSelect(name, value) {
+    const select = container.querySelector(`select[name="${name}"]`);
+    if (!select) throw new Error(`Could not find select named ${name}`);
+
+    const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLSelectElement.prototype,
+        "value"
+    ).set;
+    setter.call(select, value);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 beforeEach(() => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     container = document.createElement("div");
@@ -130,6 +142,11 @@ test("opens the selected Wordwall game in an embedded dialog", async () => {
     const iframe = document.body.querySelector("iframe[title='Wordwall game: Fractions Challenge']");
     expect(iframe).not.toBeNull();
     expect(iframe.getAttribute("src")).toBe(EMBED_URL);
+    expect(document.body.textContent).toContain("Topic: Fractions");
+    expect(document.body.textContent).toContain("Subject: Mathematics");
+    expect(document.body.textContent).toContain("Practise equivalent fractions");
+    expect(document.body.textContent).toContain("Shared by Teacher One");
+    expect(document.body.textContent).toContain("Open on Wordwall");
 });
 
 test("filters published activities by title and topic", async () => {
@@ -156,6 +173,60 @@ test("filters published activities by title and topic", async () => {
     expect(document.body.textContent).not.toContain("Fractions Challenge");
 });
 
+test("filters published activities by subject", async () => {
+    apiClient.get.mockResolvedValue({
+        data: [
+            publishedActivity,
+            {
+                ...publishedActivity,
+                _id: "222222222222222222222222",
+                title: "Solar System Quiz",
+                topic: "Space",
+                subject: { _id: "eeeeeeeeeeeeeeeeeeeeeeee", subName: "Science" },
+            },
+        ],
+    });
+
+    await renderPage();
+
+    await act(async () => {
+        setSelect("subjectFilter", "eeeeeeeeeeeeeeeeeeeeeeee");
+    });
+
+    expect(document.body.textContent).toContain("Solar System Quiz");
+    expect(document.body.textContent).not.toContain("Fractions Challenge");
+});
+
+test("clears search and subject filters from the no-results state", async () => {
+    apiClient.get.mockResolvedValue({
+        data: [
+            publishedActivity,
+            {
+                ...publishedActivity,
+                _id: "222222222222222222222222",
+                title: "Solar System Quiz",
+                topic: "Space",
+                subject: { _id: "eeeeeeeeeeeeeeeeeeeeeeee", subName: "Science" },
+            },
+        ],
+    });
+
+    await renderPage();
+
+    await act(async () => {
+        setSelect("subjectFilter", "eeeeeeeeeeeeeeeeeeeeeeee");
+        setInput("search", "fractions");
+    });
+
+    expect(document.body.textContent).toContain("No games match your filters");
+    await act(async () => {
+        findButton("Clear filters").click();
+    });
+
+    expect(document.body.textContent).toContain("Fractions Challenge");
+    expect(document.body.textContent).toContain("Solar System Quiz");
+});
+
 test("shows a useful empty state when no games have been published", async () => {
     apiClient.get.mockResolvedValue({ data: [] });
 
@@ -172,8 +243,13 @@ test("shows a recoverable error when the API request fails", async () => {
     expect(document.body.textContent).toContain("Could not load games right now");
 });
 
-test("refresh retries the published-game request", async () => {
+test("refresh removes games that are no longer published", async () => {
+    apiClient.get
+        .mockResolvedValueOnce({ data: [publishedActivity] })
+        .mockResolvedValueOnce({ data: [] });
+
     await renderPage();
+    expect(document.body.textContent).toContain("Fractions Challenge");
 
     await act(async () => {
         findButton("Refresh").click();
@@ -182,4 +258,22 @@ test("refresh retries the published-game request", async () => {
     });
 
     expect(apiClient.get).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).not.toContain("Fractions Challenge");
+    expect(document.body.textContent).toContain("No games published yet");
+});
+
+test("does not request games when the student's school or class is missing", async () => {
+    useSelector.mockImplementation((selector) => selector({
+        user: {
+            currentUser: {
+                ...CURRENT_USER,
+                school: null,
+            },
+        },
+    }));
+
+    await renderPage();
+
+    expect(apiClient.get).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain("Your school or class details are missing");
 });
