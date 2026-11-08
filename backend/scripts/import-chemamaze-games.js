@@ -92,6 +92,10 @@ async function run() {
     const options = parseArguments(process.argv.slice(2));
     const validatedCatalog = validateLegacyGameCatalog(catalog);
 
+    // Prevent Mongoose from creating schema indexes as a side effect of
+    // connecting/querying during validate-only and dry-run modes.
+    mongoose.set("autoIndex", false);
+
     if (options.mode === "--validate-only") {
         printSummary({
             mode: "validate-only",
@@ -132,10 +136,10 @@ async function run() {
     const TeacherModel = require("../models/teacherSchema.js");
     const GameActivityModel = require("../models/gameActivitySchema.js");
 
-    // Apply mode builds the unique school/source-key index before the first
-    // insert. A dry-run deliberately does not mutate the database at all.
+    // Apply mode explicitly creates the schema indexes before the first
+    // insert. Dry-run does not create indexes or write documents.
     if (isApply) {
-        await GameActivityModel.init();
+        await GameActivityModel.createIndexes();
     }
 
     const plan = await prepareLegacyGameImport({
