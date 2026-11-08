@@ -74,7 +74,26 @@ Any future code path that deletes or changes a Class, Subject, Teacher, or schoo
 
 This phase does not add edit/unpublish/admin GameActivity APIs, does not change existing route URLs, and does not infer Wordwall score/answer telemetry.
 
-## 7. Tests
+## 7. Legacy source provenance and import identity (Phase 15)
+
+Normal Teacher-created GameActivity documents do not require legacy provenance. A ChemAmaze-imported record has an optional `legacySource` subdocument containing:
+
+- a deterministic source key for source repository + subject + grade + chapter;
+- source label and repository;
+- the pinned source commit revision and relative file path;
+- source grade and chapter.
+
+The nested metadata and parent `legacySource` path are immutable after creation. The import manifest's original share URL and embed URL are stored separately in the existing `originalUrl` and `embedUrl` fields. The embed URL uses the same strict HTTPS Wordwall validator as normal Teacher-created records. The import validator separately requires an exact HTTPS Wordwall `/play/<id>/<id>/<id>` share URL; it never tries to derive one URL from the other.
+
+A partial unique compound index on `school` and `legacySource.sourceKey` protects one copy of each source record per school. The partial filter applies only when a string legacy source key exists, so ordinary GameActivity records remain outside that unique keyspace.
+
+The importer is a development-only, explicit command. It requires `NODE_ENV=development`, the exact MongoDB database name `school_management_dev`, and a separate confirmation token for writes. A target mapping must explicitly name one existing school and the existing Class, Subject and Teacher records for all six grade/subject combinations. The importer resolves those documents from MongoDB and reuses `validateGameActivityRelationships`; client/local mapping values are selectors, not permission authority. Science and Mathematics for a grade must point to the same Class record.
+
+The import plan is read-only. It creates records as drafts and never auto-publishes them. Re-running an import skips identical source records and does not overwrite their lifecycle state. If source content or scope differs from an existing imported record, the plan reports a conflict and blocks new inserts until a human reviews the discrepancy. Inserts are sequential; partial failures are reported per source key and a subsequent run can resume missing entries. The unique index and duplicate-key reconciliation protect concurrent/repeated attempts. No production-database import command is provided.
+
+The canonical legacy source is `dikshaforsure/ChemAmaze-cbse`, pinned to commit `513f7c254597d291446d31b45864c3856c518354` and `script.js` blob `1e32228d9bd7ec583bb2e2b81f2688e7aab1b0e9`. It contains 18 primary Wordwall records (Science and Mathematics, Classes 6–8, three chapters each). A related StemGames derivative has the same 18 primary records plus six supplemental entries; the non-Wordwall resources and unresolved placeholders are recorded separately and excluded from this Wordwall-only import.
+
+## 8. Tests
 
 Run from `backend`:
 
