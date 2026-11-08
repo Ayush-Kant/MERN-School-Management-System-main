@@ -16,6 +16,7 @@ const {
 const {
     DEVELOPMENT_DATABASE_NAME,
     APPLY_CONFIRMATION,
+    isLocalMongoHost,
     validateDevelopmentImportTarget,
     prepareLegacyGameImport,
     applyLegacyGameImport,
@@ -52,7 +53,7 @@ function parseArguments(args) {
     };
 }
 
-function getDatabaseName(mongoUrl) {
+function getDatabaseTarget(mongoUrl) {
     if (typeof mongoUrl !== "string" || !mongoUrl.trim()) {
         throw new Error("MONGO_URL is required for a database dry-run/import");
     }
@@ -67,7 +68,11 @@ function getDatabaseName(mongoUrl) {
     const databaseName = decodeURIComponent(
         parsed.pathname.replace(/^\/+/, "").split("/")[0] || ""
     );
-    return databaseName;
+    return {
+        databaseName,
+        hostname: parsed.hostname,
+        local: isLocalMongoHost(parsed.hostname),
+    };
 }
 
 function getGroupCounts(records) {
@@ -108,11 +113,14 @@ async function run() {
         return;
     }
 
-    const databaseName = getDatabaseName(process.env.MONGO_URL);
+    const databaseTarget = getDatabaseTarget(process.env.MONGO_URL);
     const isApply = options.mode === "--apply";
+    const allowRemote = process.env.CHEMAMAZE_ALLOW_REMOTE_DEV_IMPORT === "true";
     validateDevelopmentImportTarget({
         nodeEnv: process.env.NODE_ENV,
-        databaseName,
+        databaseName: databaseTarget.databaseName,
+        hostname: databaseTarget.hostname,
+        allowRemote,
         apply: isApply,
         confirmation: process.env.CHEMAMAZE_SEED_CONFIRM,
     });
