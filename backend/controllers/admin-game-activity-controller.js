@@ -1,6 +1,6 @@
 const { sendApiError } = require("../utils/apiResponse.js");
 
-const OBJECT_ID_PATTERN = /^[a-f\\d]{24}$/i;
+const OBJECT_ID_PATTERN = /^[a-f\d]{24}$/i;
 const STATUSES = new Set(["draft", "published", "archived"]);
 const PROVIDERS = new Set(["wordwall"]);
 const ALLOWED_QUERY_FIELDS = new Set([
@@ -32,8 +32,9 @@ function getAdminSchoolId(req, res) {
     const actor = req && req.actor;
     if (!actor || actor.role !== "Admin" || !isValidObjectId(actor.userId) ||
         !isValidObjectId(actor.schoolId) || !sameId(actor.userId, actor.schoolId)) {
-        sendApiError(res, actor && actor.role && actor.role !== "Admin" ? 403 : 401,
-            actor && actor.role && actor.role !== "Admin"
+        const forbidden = Boolean(actor && actor.role && actor.role !== "Admin");
+        sendApiError(res, forbidden ? 403 : 401,
+            forbidden
                 ? "You are not allowed to access this resource"
                 : "Authentication required");
         return null;
@@ -43,14 +44,14 @@ function getAdminSchoolId(req, res) {
 
 function parsePositiveInteger(value, fallback, maximum) {
     if (value === undefined) return fallback;
-    if (typeof value !== "string" || !/^\\d+$/.test(value)) return null;
+    if (typeof value !== "string" || !/^\d+$/.test(value)) return null;
     const parsed = Number(value);
     if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > maximum) return null;
     return parsed;
 }
 
 function escapeRegExp(value) {
-    return value.replace(/[.*+?^\u0024{}()|[\]\\\\]/g, "\\\\$&");
+    return value.replace(/[.*+?^$()|[\]\\]/g, "\\$&");
 }
 
 function makeFindQuery(Model, filter, projection, sort) {
@@ -77,13 +78,13 @@ function createAdminGameActivityController({
         const query = (req && req.query) || {};
         const unknownFields = Object.keys(query).filter((field) => !ALLOWED_QUERY_FIELDS.has(field));
         if (unknownFields.length > 0) {
-            return validationError(res, `Unsupported filter: ${unknownFields[0]}`);
+            return validationError(res, "Unsupported filter: " + unknownFields[0]);
         }
 
         const { classId, subjectId, teacherId } = query;
         for (const [field, value] of Object.entries({ classId, subjectId, teacherId })) {
             if (value !== undefined && !isValidObjectId(value)) {
-                return validationError(res, `${field} must be a valid id`);
+                return validationError(res, field + " must be a valid id");
             }
         }
 
@@ -108,8 +109,8 @@ function createAdminGameActivityController({
         if (limit === null) return validationError(res, "limit must be an integer between 1 and 100");
 
         try {
-            // Optional filter IDs are validated against this Admin's tenant before
-            // they are used. A client-provided school ID is never accepted.
+            // Filter IDs are resolved against this Admin's tenant before use.
+            // A client-provided school ID is intentionally not an accepted field.
             let selectedClass = null;
             if (classId !== undefined) {
                 selectedClass = await SclassModel.findById(classId);
@@ -190,11 +191,7 @@ function createAdminGameActivityController({
                     published: publishedCount,
                     archived: archivedCount,
                 },
-                filters: {
-                    classes,
-                    subjects,
-                    teachers,
-                },
+                filters: { classes, subjects, teachers },
             });
         } catch (error) {
             return sendApiError(res, 500, "Unable to load the school's game catalogue");
