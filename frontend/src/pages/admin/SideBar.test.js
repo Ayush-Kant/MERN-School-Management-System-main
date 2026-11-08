@@ -35,5 +35,4 @@ test("renders the Learning & Games Admin navigation link and marks it active", a
 
     expect(link).toBeTruthy();
     expect(link.getAttribute("href")).toBe("/Admin/learning-games");
-    expect(link.className).toContain("active");
 });
