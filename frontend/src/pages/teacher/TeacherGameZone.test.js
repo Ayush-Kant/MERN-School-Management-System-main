@@ -282,6 +282,52 @@ test("does not send an unpublish request when the teacher cancels confirmation",
     expect(apiClient.put).not.toHaveBeenCalled();
 });
 
+test("keeps draft editing open and displays the backend error when an update fails", async () => {
+    apiClient.get.mockResolvedValue({ data: [draftActivity] });
+    apiClient.put.mockRejectedValue({
+        response: { data: { message: "Unpublish the activity before editing it" } },
+    });
+    await renderPage();
+
+    await act(async () => {
+        findButton("Edit").click();
+    });
+
+    await act(async () => {
+        setTextField("title", "Updated title");
+    });
+
+    await act(async () => {
+        const form = container.querySelector("form");
+        form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        await flushPromises();
+    });
+
+    expect(document.body.textContent).toContain("Unpublish the activity before editing it");
+    expect(document.body.textContent).toContain("Edit draft");
+    expect(container.querySelector('[name="title"]').value).toBe("Updated title");
+});
+
+test("disables activity submission when the signed-in teacher has no current assignment", async () => {
+    useSelector.mockImplementation((selector) => selector({
+        user: {
+            currentUser: {
+                _id: TEACHER_ID,
+                role: "Teacher",
+                school: { _id: SCHOOL_ID, schoolName: "Demo School" },
+                teachSclass: null,
+                teachSubject: null,
+            },
+        },
+    }));
+    await renderPage();
+
+    expect(document.body.textContent).toContain("Assignment required");
+    expect(document.body.textContent).toContain("Class: Not assigned");
+    expect(document.body.textContent).toContain("Subject: Not assigned");
+    expect(findButton("Save as draft").disabled).toBe(true);
+});
+
 test("asks before archiving a published activity and sends the teacher id", async () => {
     apiClient.get.mockResolvedValue({
         data: [{ ...draftActivity, status: "published" }],
