@@ -137,8 +137,9 @@ const TeacherSideBar = () => {
 
             <ListItemButton
                 component={Link}
-                to="/Teacher/game-zone"
+                to="/Teacher/my-games"
                 sx={menuItemStyle(
+                    location.pathname.startsWith("/Teacher/my-games") ||
                     location.pathname.startsWith("/Teacher/game-zone")
                 )}
             >
@@ -146,7 +147,7 @@ const TeacherSideBar = () => {
                     <SportsEsportsRoundedIcon />
                 </ListItemIcon>
 
-                <ListItemText primary="Game Zone" />
+                <ListItemText primary="My Games" />
             </ListItemButton>
 
             <ListItemButton
