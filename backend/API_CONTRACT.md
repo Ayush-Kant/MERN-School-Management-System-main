@@ -44,9 +44,81 @@ timestamps maintain `updatedAt`; publish, unpublish, and archive transitions
 also record their corresponding lifecycle timestamps. Students cannot request
 draft or archived records, and cannot supply teacher identity filters.
 
-Existing root-mounted GameActivity paths remain unchanged; the new operations
-are additive and do not introduce an Admin endpoint or a client-controlled
-scope override.
+Existing root-mounted Teacher/Student GameActivity paths remain unchanged.
+Admin catalogue management uses separate Admin-only endpoints; it does not widen
+the existing Teacher lifecycle permissions or accept a client-controlled tenant.
+
+## Admin Learning & Games catalogue
+
+The Admin catalogue derives its tenant exclusively from the authenticated,
+database-backed actor context. For an Admin, `req.actor.schoolId` must equal
+the signed-in Admin's `req.actor.userId`. No school identifier is accepted in
+the request path, query, or body.
+
+| Method and path | Role | Behavior |
+| --- | --- | --- |
+| `GET /AdminGameActivityList` | Admin | Returns the signed-in school's catalogue, pagination, status summary, and school-scoped filter options |
+| `PUT /AdminGameActivityUnpublish/:id` | Admin | Atomically transitions a published activity in the Admin's school to draft and records `unpublishedAt` |
+| `PUT /AdminGameActivityArchive/:id` | Admin | Atomically transitions a published activity in the Admin's school to archived and records `archivedAt` with `archiveReason: "manual"` |
+
+The list endpoint accepts these optional query parameters:
+
+| Parameter | Allowed values / behavior |
+| --- | --- |
+| `classId` | A class ID that belongs to the signed-in Admin's school |
+| `subjectId` | A subject ID that belongs to the school and, when supplied, the selected class |
+| `teacherId` | A teacher ID that belongs to the signed-in Admin's school |
+| `status` | `all`, `draft`, `published`, or `archived` |
+| `provider` | `all` or `wordwall` |
+| `search` | Optional literal text search over title, description, and topic; maximum 100 characters |
+| `page` | Positive, one-based page number; default `1` |
+| `limit` | Page size from 1 through 100; default `25` |
+
+Unknown query parameters are rejected, including any attempted school/tenant
+override. Supplied class, subject, and teacher IDs are resolved and checked
+against the authenticated Admin's school before they are used as filters.
+Search input is escaped before being used in a regular expression.
+
+The successful list response has this shape:
+
+```json
+{
+  "activities": [],
+  "pagination": {
+    "page": 1,
+    "limit": 25,
+    "total": 0,
+    "totalPages": 0
+  },
+  "summary": {
+    "total": 0,
+    "draft": 0,
+    "published": 0,
+    "archived": 0
+  },
+  "filters": {
+    "classes": [],
+    "subjects": [],
+    "teachers": []
+  }
+}
+```
+
+Each activity includes the stored source and lifecycle metadata. The class,
+subject, and creator references are populated with only the fields needed by
+the Admin catalogue (class name, subject name/code, and teacher name).
+
+Admin unpublish/archive operations accept only a valid activity ID. Their
+database writes constrain both the activity ID and the Admin's school and
+require the current state to be `published`. Draft and archived activities
+cannot be changed by these Admin actions. A missing/out-of-school activity
+returns 404; a same-school activity in a non-published state returns 409.
+These Admin operations do not permit editing, deletion, or publishing drafts.
+
+The Admin routes use the same ordered middleware contract as other protected
+routes: authenticate session, require the Admin role, then load persisted actor
+context. The existing Teacher-only create/update/publish/unpublish/archive
+endpoints remain Teacher-only.
 
 ## Error body
 
