@@ -66,7 +66,7 @@ function safeExternalUrl(value, isEmbed = false) {
     if (typeof value !== "string" || !value.trim()) return "";
     try {
         const parsed = new URL(value);
-        if (parsed.protocol !== "https:" || parsed.username || parsed.password) return "";
+        if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.port || parsed.hash) return "";
         if (isEmbed && (
             !["wordwall.net", "www.wordwall.net"].includes(parsed.hostname) ||
             !/^\/embed\/[^/]+\/?$/.test(parsed.pathname)
