@@ -96,6 +96,26 @@ afterEach(async () => {
     jest.clearAllMocks();
 });
 
+test("shows a loading state while the catalogue request is pending", async () => {
+    let resolveRequest;
+    apiClient.get.mockReturnValue(new Promise((resolve) => {
+        resolveRequest = resolve;
+    }));
+
+    await act(async () => {
+        root.render(<AdminLearningGames />);
+    });
+
+    expect(document.body.textContent).toContain("Loading game catalogue");
+
+    await act(async () => {
+        resolveRequest(catalogueResponse());
+        await flushPromises();
+    });
+
+    expect(document.body.textContent).toContain("Fractions Challenge");
+});
+
 test("loads the Admin catalogue and renders source, creator, class, subject, and lifecycle metadata", async () => {
     await renderPage();
 
