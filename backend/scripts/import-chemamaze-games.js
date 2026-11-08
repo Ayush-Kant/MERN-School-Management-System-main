@@ -132,9 +132,11 @@ async function run() {
     const TeacherModel = require("../models/teacherSchema.js");
     const GameActivityModel = require("../models/gameActivitySchema.js");
 
-    // Build the unique school/source-key index before planning so a concurrent
-    // second import cannot create duplicate records for the same school.
-    await GameActivityModel.init();
+    // Apply mode builds the unique school/source-key index before the first
+    // insert. A dry-run deliberately does not mutate the database at all.
+    if (isApply) {
+        await GameActivityModel.init();
+    }
 
     const plan = await prepareLegacyGameImport({
         catalog: validatedCatalog,
