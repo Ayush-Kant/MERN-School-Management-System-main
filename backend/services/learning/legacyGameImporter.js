@@ -24,13 +24,31 @@ function requireClassName(value, label) {
     return value.trim();
 }
 
-function validateDevelopmentImportTarget({ nodeEnv, databaseName, apply = false, confirmation } = {}) {
+function isLocalMongoHost(hostname) {
+    return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(
+        typeof hostname === "string" ? hostname.toLowerCase() : ""
+    );
+}
+
+function validateDevelopmentImportTarget({
+    nodeEnv,
+    databaseName,
+    hostname,
+    allowRemote = false,
+    apply = false,
+    confirmation,
+} = {}) {
     if (nodeEnv !== "development") {
         throw new Error("Legacy game import is allowed only when NODE_ENV=development");
     }
     if (databaseName !== DEVELOPMENT_DATABASE_NAME) {
         throw new Error(
             `Legacy game import requires MongoDB database ${DEVELOPMENT_DATABASE_NAME}; received ${databaseName || "no database name"}`
+        );
+    }
+    if (!isLocalMongoHost(hostname) && allowRemote !== true) {
+        throw new Error(
+            "Remote MongoDB targets are blocked by default; set CHEMAMAZE_ALLOW_REMOTE_DEV_IMPORT=true only for a verified isolated development database"
         );
     }
     if (apply && confirmation !== APPLY_CONFIRMATION) {
@@ -343,6 +361,7 @@ async function applyLegacyGameImport(plan, GameActivityModel) {
 module.exports = {
     DEVELOPMENT_DATABASE_NAME,
     APPLY_CONFIRMATION,
+    isLocalMongoHost,
     validateDevelopmentImportTarget,
     normalizeAssignments,
     buildSeedDocument,
