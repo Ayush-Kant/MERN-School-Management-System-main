@@ -243,13 +243,18 @@ test("shows a recoverable error when the API request fails", async () => {
     expect(document.body.textContent).toContain("Could not load games right now");
 });
 
-test("refresh removes games that are no longer published", async () => {
+test("refresh removes an unpublished game and closes its open play dialog", async () => {
     apiClient.get
         .mockResolvedValueOnce({ data: [publishedActivity] })
         .mockResolvedValueOnce({ data: [] });
 
     await renderPage();
     expect(document.body.textContent).toContain("Fractions Challenge");
+
+    await act(async () => {
+        findButton("Play game").click();
+    });
+    expect(document.body.querySelector("iframe")).not.toBeNull();
 
     await act(async () => {
         findButton("Refresh").click();
@@ -259,6 +264,8 @@ test("refresh removes games that are no longer published", async () => {
 
     expect(apiClient.get).toHaveBeenCalledTimes(2);
     expect(document.body.textContent).not.toContain("Fractions Challenge");
+    expect(document.body.querySelector("iframe")).toBeNull();
+    expect(document.body.textContent).not.toContain("Close game");
     expect(document.body.textContent).toContain("No games published yet");
 });
 
