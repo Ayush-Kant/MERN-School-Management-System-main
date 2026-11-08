@@ -13,6 +13,8 @@ Last updated: 2026-11-08 (Asia/Kolkata)
 - Latest Phase 10 code checkpoint: `b79bd513215b4fedce9d5e3ca00d58473cfa8239`.
 - Latest Phase 11 application-code checkpoint before the test-only Jest correction: `3328d8946a6561e10d10303280d147b19d124bab`.
 - Latest verified Phase 13 application-source checkpoint, excluding subsequent handoff-only documentation commits: `059060efe1965c3b0247241113f013445bcce306`.
+- Latest Phase 14 Student Games Zone application-source checkpoint: `e90f3ff53ab909dd6eaa2f719c96aae3b1056a87`.
+- Latest Phase 14 Student Games Zone test checkpoint: `a35b4a07a32f5ba413b37cce8875ba9cff339169`.
 
 ## Architecture decisions
 The MERN School Management System remains the host application. Preserve the legacy ChemAmaze-cbse repository as source/reference. Build two separate experiences: (1) school-scoped teacher-managed Wordwall Games Zone and (2) first-party AI Learning Studio with server-graded quizzes, learning attempts, mastery estimates, adaptive revision, curriculum-grounded explanations, and teacher-reviewed generated questions. Existing Admin/Teacher/Student and school/class/subject records remain authoritative.
@@ -222,7 +224,8 @@ Source review confirms:
 | 11 | Role-scoped Game APIs | **User-confirmed all backend/frontend tests and production build passed (2026-11-08); general browser success reported; granular scenario checklist not itemized** |
 | 12 | Admin Learning & Games management | **Completed — user confirmed tests, build, and acceptance checks were good (2026-11-08); exact output/counts not supplied** |
 | 13 | Teacher My Games management | **Implementation committed to feature branch; Phase 13 tests/build pending** |
-| 14–30 | Remaining roadmap | Not started; follow harness exactly |
+| 14 | Student Games Zone | **Implementation committed to feature branch; Phase 14 tests/build and Student browser checks pending** |
+| 15–30 | Remaining roadmap | Not started; follow harness exactly |
 
 Do not redo completed phases unless source inspection shows a regression. Follow the detailed scope and exit gates in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md.
 
@@ -420,12 +423,90 @@ npm run build
 
 Then sign in as a Teacher and verify `/Teacher/my-games`: confirm the persisted current class/subject is displayed; create a draft; preview it; edit that draft; publish it; unpublish it; edit the resulting draft; republish; then archive. Confirm published and archived activities cannot be edited, archived records cannot be republished, and unpublishing removes an activity from the Student catalogue. Test an incorrect/foreign Teacher ID and attempts to change school/class/subject/creator/status in update requests; the backend must reject them. Confirm the legacy `/Teacher/game-zone` URL redirects correctly and Student/Admin pages are unaffected.
 
-Phase 13 remains open until the backend suite, frontend suite, build, and local Teacher/API checks pass. Fix only failures supported by the output. Stop for review before Phase 14.
+Phase 13 remains open until the backend suite, frontend suite, build, and local Teacher/API checks pass. The user explicitly requested Phase 14 implementation before validating Phase 13; this sequencing exception is recorded below. Do not proceed to Phase 15 until both Phase 13 and Phase 14 exit checks are validated.
+
+## Phase 14 — Student Games Zone (implementation)
+
+**Status:** Student catalogue improvements and focused frontend tests are committed to `feature/learning-game-zones`. Phase 14 Jest/build and real Student browser/API checks have not yet been run or confirmed. Phase 13 remains independently open pending the Teacher verification gate above.
+
+### Source audit and reuse decisions
+- Read the Phase 14 harness, current Student Games Zone page/tests, Student dashboard route and sidebar, shared `WordwallEmbed`, URL validator, GameActivity schema/controller, route authorization, Student model, and existing GameActivity controller/authorization tests.
+- The Student navigation item and `/Student/game-zone` route already existed; the existing page already had responsive cards, published-only client filtering, title/topic search, loading/error/empty states, refresh, and Wordwall playback. These were preserved rather than recreated.
+- The existing `GET /GameActivityList/:id` endpoint already resolves the Student from the authenticated actor, checks the requested school/class against the persisted Student record, rejects draft/archived status requests and teacher identity overrides, and returns only published records for that class. An optional subject filter is validated against the Student's school/class.
+- Existing controller test `lists only published activities for student-facing requests and applies scope filters` and the route authorization test for `/GameActivityList/:id` cover the backend Student list scope/role contract. The route permits only authenticated Teachers/Students. No backend runtime changes were necessary.
+- The school and class IDs sent by the frontend remain request selectors only; the backend's persisted Student record and authenticated actor remain authoritative.
+
+### Implemented Student experience
+- Added a subject selector populated only from the currently returned, published class activities. The selector composes with the existing title/topic/description/subject/class search.
+- Added a clear-filters action and distinct empty messages for an empty published catalogue, a subject with no games, and a search/filter combination with no matches.
+- Expanded the play dialog to show topic, subject, class, description, and teacher attribution alongside the game. Playback still uses the existing fixed `WordwallEmbed` component, which validates the URL and provides the external Wordwall fallback; no teacher-supplied HTML is rendered.
+- After a successful refresh, the currently selected game is reconciled with the latest published response. If it has been unpublished, archived, or otherwise removed from the eligible list, the dialog closes and the activity disappears from the catalogue.
+- Kept the existing Student dashboard route, sidebar item, API endpoint, credential-aware API client, server authorization and school/class scope unchanged.
+
+### Phase 14 changed files
+- `frontend/src/pages/student/StudentGameZone.js` — subject filter, composed filters/clear action, richer play-dialog metadata, and selected-game reconciliation after refresh.
+- `frontend/src/pages/student/StudentGameZone.test.js` — coverage for subject filtering, clearing filters, play-dialog details and fallback, removal after refresh, and missing school/class assignment.
+
+No backend runtime/controller/routes, Student schema, dashboard/sidebar, Wordwall component/validator, dependencies, Admin/Teacher pages, AI quiz, or unrelated school-management files changed in Phase 14.
+
+### Existing backend coverage reused
+- `backend/tests/gameActivityController.test.js` includes the Student-facing published-only list test with school/class/subject scope filter assertions.
+- `backend/tests/learningRouteAuthorization.test.js` verifies that `GET /GameActivityList/:id` is accessible only to authenticated Teachers and Students.
+These existing Phase 11 tests were not changed in Phase 14.
+
+### Phase 14 frontend tests
+`StudentGameZone.test.js` now contains 10 tests covering:
+- School/class request selectors and returned subject metadata.
+- Client-side exclusion of drafts, archived records, and invalid Wordwall embed URLs.
+- Safe embedded play, activity details and external Wordwall fallback.
+- Search by title/topic and filtering by subject.
+- Clearing combined filters and the no-games empty state.
+- Recoverable API errors, refresh removal of no-longer-published activities, and missing school/class handling.
+
+### Phase 14 implementation commits
+- `89591d1fcefc1af03c9b63cd880a7fe8385a00df` — Student catalogue subject filter, activity detail context and refresh reconciliation.
+- `e90f3ff53ab909dd6eaa2f719c96aae3b1056a87` — use the MUI native-select API correctly for the subject selector.
+- `a35b4a07a32f5ba413b37cce8875ba9cff339169` — Student Game Zone subject-filter, details, refresh and assignment tests.
+
+### Phase 14 diff and verification status
+- [x] Re-read the harness and inspect the exact Student page, tests, dashboard/sidebar, API controller, model, safe embed component, and route authorization.
+- [x] Reuse the existing DB-backed Student school/class scope and published-only list endpoint; no redundant backend changes.
+- [x] Add subject selection, combined filters, clear action, activity details and stale-selection handling after refresh.
+- [x] Add focused Student page test cases (10 total).
+- [x] Compare the Phase 13 branch head `e3add1cd003d6faf10ca721643135d9d380f3bbd` with Phase 14 source/test head `a35b4a07a32f5ba413b37cce8875ba9cff339169`: exactly the two Student page/test paths listed above changed.
+- [ ] Backend `npm test` — not run in this environment.
+- [ ] Frontend `npm test -- --watchAll=false` — not run in this environment.
+- [ ] Frontend `npm run build` — not run in this environment.
+- [ ] Student browser/API acceptance — pending published/draft/archived visibility, subject/search filtering, embedded play, external fallback, refresh after unpublish/archive, mobile layout and scope checks.
+- [ ] GitHub CI — no workflow runs were returned for the Phase 14 test commit.
+
+The GitHub connector can inspect/update repository source but did not execute npm commands. Do not claim Phase 14 tests/build or real-browser compatibility passed without user output or verified CI.
+
+### Immediate next action — validate Phases 13 and 14 locally
+
+Pull the latest `feature/learning-game-zones` branch, then run from the repository root in Windows PowerShell:
+
+```powershell
+git pull --ff-only origin feature/learning-game-zones
+
+cd backend
+npm test
+
+cd ..\\frontend
+npm test -- --watchAll=false
+npm run build
+```
+
+Then verify the Phase 13 Teacher flow at `/Teacher/my-games`: current class/subject, create draft, preview, edit draft, publish, unpublish, edit again, republish and archive; verify ownership/current-assignment protections and the legacy route redirect.
+
+Verify the Phase 14 Student flow at `/Student/game-zone`: a Student sees only published activities for the persisted school/class; drafts and archived items are absent; subject selection and search combine correctly; Clear filters restores the catalogue; opening a game shows its topic/subject/class/description/teacher context; the Wordwall iframe and external fallback work; after Teacher unpublish or Admin archive, refresh removes the game and closes it if it was selected. Check mobile layout and attempt a foreign school/class/subject request to confirm the backend rejects it.
+
+Phase 13 and Phase 14 remain unverified until the combined backend suite, frontend suite, production build, and their respective local acceptance checks are confirmed. Fix only demonstrated failures; do not start Phase 15 before both phase gates pass and the user asks to continue.
 
 
 ## How to work
 1. Read this file and the harness first; verify actual remote branch HEAD and current source.
-2. Work one phase at a time, only after the prior exit gate passes and the user asks to continue. Exception recorded 2026-11-06: the user confirmed Phase 10 automated tests/build and explicitly asked to proceed; Phase 11 implementation has begun, while the real Wordwall browser check remains an outstanding manual verification to complete alongside Phase 11 browser checks.
+2. Work one phase at a time, only after the prior exit gate passes and the user asks to continue. Sequencing exception on 2026-11-08: the user explicitly requested Phase 14 implementation while Phase 13 validation remained pending; both phase gates are now to be validated together before Phase 15.
 3. Inspect exact files/tests before edits; make minimal changes and preserve unrelated code.
 4. Review the full diff; list every changed file and why it changed.
 5. Be honest about tests. The GitHub connector cannot run npm test on the user's Windows machine. Never claim a test passed without actual user output or verified CI.
@@ -436,7 +517,7 @@ Phase 13 remains open until the backend suite, frontend suite, build, and local 
 ## Prompt for a new chat
 I am continuing work on my MERN School Management System + AI Learning & Games project. Read the attached PROJECT_HANDOFF.md fully before doing anything. Then inspect the current GitHub repository and feature/learning-game-zones branch to verify the actual latest commit and source state. Continue exactly from the pending action; do not restart completed phases or ask me to repeat information already recorded.
 
-Follow the 30-phase roadmap in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md one phase at a time. Do not start a later phase until the current phase's exit gate is verified and I ask you to continue. Preserve unrelated code. Inspect the exact source and tests before editing, make only minimal scope-related changes, review the full diff, and provide Windows PowerShell commands. Never claim tests passed unless I provide actual output or a verified CI result.
+Follow the 30-phase roadmap in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md one phase at a time. Continue from the pending combined validation of Phases 13 and 14: Phase 13 Teacher My Games and Phase 14 Student Games Zone implementations are committed, but neither phase's full current-branch test/build/browser gate is verified. Do not start Phase 15 until both gates are verified and I ask you to continue. Preserve unrelated code. Inspect the exact source and tests before editing, make only minimal scope-related changes, review the full diff, and provide Windows PowerShell commands. Never claim tests passed unless I provide actual output or a verified CI result.
 
 Continuity requirement: Update PROJECT_HANDOFF.md after every substantive project response, including fixes, test diagnosis, decisions, commits, and phase transitions. Update both the repository copy on feature/learning-game-zones and the local/downloadable copy. Add a dated changelog entry, record changed files and commit SHAs, exact test evidence (or “not verified”), phase status, and the one immediate next action. At the end of every response, provide the updated handoff file or repository link. Start from the pending action recorded in the file and do not go beyond its test gate.
 
@@ -519,3 +600,15 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Latest Phase 13 application-source checkpoint: `059060efe1965c3b0247241113f013445bcce306`.
 - Static source/diff review completed. Phase 13 backend/frontend Jest runs, frontend production build and local Teacher browser/API checks have **not yet been run or verified**. GitHub returned no CI status checks for this checkpoint.
 - Immediate next action: run the backend test suite, frontend Jest suite and production build, then verify Teacher create/edit/preview/publish/unpublish/republish/archive plus cross-teacher/scope protections. Do not begin Phase 14 until the Phase 13 exit gate passes and the user asks to continue.
+
+### 2026-11-08 — Phase 14 Student Games Zone implementation (Phase 13 validation still pending)
+- The user explicitly requested Phase 14 implementation before validating Phase 13. This overrides the prior stop-before-Phase-14 sequencing instruction for this interaction only; Phase 13 remains open and is not marked passed.
+- Verified the remote feature branch head was `e3add1cd003d6faf10ca721643135d9d380f3bbd`. Re-read the handoff/harness and inspected StudentGameZone, its tests, Student dashboard/sidebar, Student model/subjects page, GameActivity controller/schema/routes, safe Wordwall component/validator and relevant existing controller/route tests.
+- Confirmed the Student route/sidebar and core catalogue were already present. The existing API derives Student identity from the authenticated session, checks requested school/class against the persisted Student record, and returns only published records for the current class. Reused this foundation without backend runtime changes.
+- Updated `frontend/src/pages/student/StudentGameZone.js`: added a subject filter composed with search; clear-filters and specific empty messages; richer topic/subject/class/description/teacher context in the play dialog; and refresh reconciliation so a selected activity closes when it is no longer returned as published.
+- Updated `frontend/src/pages/student/StudentGameZone.test.js`: 10 total focused cases now cover scope request selectors, published-only/valid embeds, search and subject filters, clearing filters, activity details/fallback, empty/error states, refresh removal, and missing assignment.
+- Compared Phase 13 branch head `e3add1cd003d6faf10ca721643135d9d380f3bbd` to Phase 14 source/test head `a35b4a07a32f5ba413b37cce8875ba9cff339169`; exactly the 2 listed Student frontend files changed. No backend, route, sidebar/dashboard, schema, dependency, Admin/Teacher, AI quiz or unrelated app file changed.
+- Phase 14 commits: `89591d1fcefc1af03c9b63cd880a7fe8385a00df`, `e90f3ff53ab909dd6eaa2f719c96aae3b1056a87`, `a35b4a07a32f5ba413b37cce8875ba9cff339169`. The branch source/test head before this handoff-only update was `a35b4a07a32f5ba413b37cce8875ba9cff339169`.
+- Static source and diff review completed. Backend/frontend Jest suites, frontend production build and local Student browser/API checks have not been run or confirmed. GitHub returned no workflow runs for the Phase 14 test commit.
+- Immediate next action: pull the branch including this handoff update; run backend tests, frontend tests and production build; then validate the Phase 13 Teacher and Phase 14 Student acceptance scenarios listed above. Keep Phase 13/14 status pending until evidence is supplied. Do not start Phase 15.
+
