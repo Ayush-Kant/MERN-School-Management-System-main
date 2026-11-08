@@ -37,6 +37,7 @@ const draftActivity = {
     description: "Practise the basics",
     topic: "Fractions",
     embedUrl: EMBED_URL,
+    originalUrl: "https://wordwall.net/resource/123456",
     status: "draft",
     class: { sclassName: "Class 8" },
     subject: { subName: "Science" },
@@ -111,16 +112,21 @@ test("accepts only official HTTPS Wordwall embed URLs", () => {
     expect(isOfficialWordwallEmbedUrl("javascript:alert(1)")).toBe(false);
 });
 
-test("loads the teacher's own activities using the existing backend API", async () => {
+test("loads the teacher's own activities and displays the current assigned class and subject", async () => {
     apiClient.get.mockResolvedValue({ data: [draftActivity] });
     await renderPage();
 
     expect(apiClient.get).toHaveBeenCalledWith(
         `/GameActivityList/${SCHOOL_ID}?teacherId=${TEACHER_ID}`
     );
+    expect(document.body.textContent).toContain("My Games");
     expect(document.body.textContent).toContain("Fractions Challenge");
     expect(document.body.textContent).toContain("Your activities");
+    expect(document.body.textContent).toContain("Class: Class 8");
+    expect(document.body.textContent).toContain("Subject: Science");
     expect(document.body.textContent).toContain("draft");
+    expect(document.body.textContent).toContain("Get the official Wordwall embed code");
+    expect(document.body.textContent).toContain("My Activities");
 });
 
 test("creates a draft from form details and refreshes the activity list", async () => {
@@ -130,6 +136,7 @@ test("creates a draft from form details and refreshes the activity list", async 
         setTextField("title", "Fractions Challenge");
         setTextField("topic", "Fractions");
         setTextField("embedUrl", EMBED_URL);
+        setTextField("originalUrl", "https://wordwall.net/resource/123456");
     });
 
     await act(async () => {
@@ -147,6 +154,7 @@ test("creates a draft from form details and refreshes the activity list", async 
             description: "",
             topic: "Fractions",
             embedUrl: EMBED_URL,
+            originalUrl: "https://wordwall.net/resource/123456",
         },
         { headers: { "Content-Type": "application/json" } }
     );
@@ -181,6 +189,97 @@ test("publishes a draft through the existing transition endpoint", async () => {
         { teacherId: TEACHER_ID },
         { headers: { "Content-Type": "application/json" } }
     );
+});
+
+
+test("edits only a draft through the existing teacher-scoped update endpoint", async () => {
+    apiClient.get.mockResolvedValue({ data: [draftActivity] });
+    await renderPage();
+
+    await act(async () => {
+        findButton("Edit").click();
+    });
+
+    expect(document.body.textContent).toContain("Edit draft");
+    expect(container.querySelector('[name="title"]').value).toBe("Fractions Challenge");
+
+    await act(async () => {
+        setTextField("title", "Updated Fractions Challenge");
+        setTextField("topic", "Equivalent fractions");
+        setTextField("originalUrl", "https://wordwall.net/resource/987654");
+    });
+
+    await act(async () => {
+        const form = container.querySelector("form");
+        form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        await flushPromises();
+        await flushPromises();
+    });
+
+    expect(apiClient.put).toHaveBeenCalledWith(
+        "/GameActivityUpdate/" + ACTIVITY_ID,
+        {
+            teacherId: TEACHER_ID,
+            title: "Updated Fractions Challenge",
+            description: "Practise the basics",
+            topic: "Equivalent fractions",
+            embedUrl: EMBED_URL,
+            originalUrl: "https://wordwall.net/resource/987654",
+        },
+        { headers: { "Content-Type": "application/json" } }
+    );
+    expect(document.body.textContent).toContain("Draft updated successfully");
+});
+
+test("does not offer draft editing for published or archived activities", async () => {
+    apiClient.get.mockResolvedValue({
+        data: [
+            { ...draftActivity, status: "published" },
+            { ...draftActivity, _id: "222222222222222222222222", status: "archived" },
+        ],
+    });
+    await renderPage();
+
+    expect(findButton("Edit")).toBeUndefined();
+    expect(document.body.textContent).toContain("Unpublish");
+    expect(document.body.textContent).toContain("Archive");
+});
+
+test("asks for confirmation and unpublishes a published activity back to draft", async () => {
+    apiClient.get.mockResolvedValue({
+        data: [{ ...draftActivity, status: "published" }],
+    });
+    await renderPage();
+
+    await act(async () => {
+        findButton("Unpublish").click();
+        await flushPromises();
+        await flushPromises();
+    });
+
+    expect(window.confirm).toHaveBeenCalledWith(
+        "Unpublish this activity? Students will no longer see it until you publish it again."
+    );
+    expect(apiClient.put).toHaveBeenCalledWith(
+        "/GameActivityUnpublish/" + ACTIVITY_ID,
+        { teacherId: TEACHER_ID },
+        { headers: { "Content-Type": "application/json" } }
+    );
+    expect(document.body.textContent).toContain("has been unpublished and moved back to drafts");
+});
+
+test("does not send an unpublish request when the teacher cancels confirmation", async () => {
+    apiClient.get.mockResolvedValue({
+        data: [{ ...draftActivity, status: "published" }],
+    });
+    window.confirm.mockReturnValue(false);
+    await renderPage();
+
+    await act(async () => {
+        findButton("Unpublish").click();
+    });
+
+    expect(apiClient.put).not.toHaveBeenCalled();
 });
 
 test("asks before archiving a published activity and sends the teacher id", async () => {
