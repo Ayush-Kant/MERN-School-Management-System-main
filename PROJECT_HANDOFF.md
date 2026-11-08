@@ -179,6 +179,7 @@ Tests:
 - `841d2766da5c7919c4932fa244da0ef9308eedf1` — actor and school-scope middleware error tests.
 
 Frontend credential transport:
+- `3d31c2823a3756df85e510cd305a8e4bf5231815` — test-only Jest isolation correction for `apiClient.test.js`; committed after the pre-fix 24/25 run, rerun pending.
 - `c3c957f994febb54046f5cb8729fd92f4a883154` — shared credential-aware API client.
 - `ef834e677903aaf7cb683fa6cb51a9727ce07772` — Teacher Game Zone credential transport.
 - `912bff451fc6aa9ce5b79573c34c5a2bbbd43968` — Student Game Zone credential transport.
@@ -195,11 +196,11 @@ Source review confirms:
 - Teacher and Student Game Zone requests now go through the credential-aware shared client.
 - Existing Game Zone component tests were migrated to mock the shared client rather than bare Axios.
 
-**Current verification evidence (2026-11-08):** Backend test suite: user reports pass (exact count not supplied). Frontend runtime: user reports successful; the development server printed “webpack compiled successfully”. Browser verification: user reports successful, but the specific scenarios were not itemized. Frontend Jest suite: 4/5 suites and 24/25 tests passed; only `apiClient.test.js` failed due to the import-time Axios mock call not being present when asserted. The minimal test-only correction is proposed but not yet applied or run. A distinct `npm run build` result was not included in the latest output. Keep granular cross-origin cookie/lifecycle tests and the explicit real Wordwall load/fullscreen/fallback checks open until their results are stated.
+**Current verification evidence (2026-11-08):** Backend test suite: user reports pass (exact count not supplied). Frontend runtime: user reports successful; the development server printed “webpack compiled successfully”. Browser verification: user reports successful, but the specific scenarios were not itemized. Frontend Jest suite: 4/5 suites and 24/25 tests passed; only `apiClient.test.js` failed due to the import-time Axios mock call not being present when asserted. A minimal test-only correction was committed as `3d31c2823a3756df85e510cd305a8e4bf5231815`; the corrected suite has not yet been rerun. A distinct `npm run build` result was not included in the latest output. Keep granular cross-origin cookie/lifecycle tests and the explicit real Wordwall load/fullscreen/fallback checks open until their results are stated.
 
 ### Phase 11 exit checks
 - [x] Backend test suite passes — user-reported on 2026-11-08; exact count not supplied.
-- [ ] Frontend test suite passes — latest run: 4/5 suites, 24/25 tests; `apiClient.test.js` remains failing under diagnosis.
+- [ ] Frontend test suite passes — the pre-fix run was 4/5 suites and 24/25 tests; a test-only correction is now committed as `3d31c2823a3756df85e510cd305a8e4bf5231815`; rerun pending.
 - [ ] Frontend production build passes — no distinct production-build result supplied in the latest output.
 - [ ] Teacher can create a draft in only the currently assigned school/class/subject.
 - [ ] Teacher can update only their own draft; attempts to mutate status, school, class, subject, creator, or provider are rejected.
@@ -223,7 +224,7 @@ Source review confirms:
 | 08 | Learning module boundaries and route integration design | Completed; AI_LEARNING_MODULE_DESIGN.md committed as 726f86080a1e8e8a85d95cb0d9cc13dad88f5cf4 |
 | 09 | GameActivity schema and invariants | **Completed — user confirmed post-fix backend test suite passed (2026-11-06); exact count not supplied** |
 | 10 | Safe Wordwall URL validation and embed component | **Implementation and automated tests/build user-confirmed passed; real-browser Wordwall check still pending** |
-| 11 | Role-scoped Game APIs | **Backend tests user-confirmed pass; frontend runtime/browser reported successful; frontend Jest 24/25 pass with one test-harness failure under diagnosis; production build result not shown** |
+| 11 | Role-scoped Game APIs | **Backend suite and general frontend/browser runtime user-reported successful; frontend Jest mock correction committed, corrected rerun pending; production build and granular API/browser checks still need verification** |
 | 12–30 | Remaining roadmap | Not started; follow harness exactly |
 
 Do not redo completed phases unless source inspection shows a regression. Follow the detailed scope and exit gates in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md.
@@ -321,9 +322,9 @@ Restart the backend. A request to `/AuthSession` with no session cookie should t
 
 This is a local environment diagnosis, not an application-code defect demonstrated by the log. No runtime source changes were made for this report. Phase 11 tests/build remain pending user output.
 
-## Immediate next action — Phase 11 frontend test correction
+## Immediate next action — complete Phase 11 verification before Phase 12
 
-The latest run confirms the backend suite and browser/runtime checks were successful per the user, but the frontend Jest suite has one remaining test-harness failure. Apply the isolated-module correction documented in the 2026-11-08 interaction log, rerun the full frontend suite with watch mode disabled, and capture the production build result.
+The test-only correction is already committed in `3d31c2823a3756df85e510cd305a8e4bf5231815`. Pull the latest branch, rerun the full frontend Jest suite with watch mode disabled, and capture the production build result. Confirm the specific lifecycle, cross-role/cross-school, credential-transport, and Wordwall browser cases. Phase 12 has been source-audited and scoped, but its application changes remain blocked until this Phase 11 exit gate is verified.
 
 From repository root in Windows PowerShell:
 ```powershell
