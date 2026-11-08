@@ -4,6 +4,7 @@ const catalog = require("../seeds/chemamaze-cbse-games.json");
 const {
     DEVELOPMENT_DATABASE_NAME,
     APPLY_CONFIRMATION,
+    isLocalMongoHost,
     validateDevelopmentImportTarget,
     prepareLegacyGameImport,
     applyLegacyGameImport,
@@ -146,11 +147,37 @@ test("development import is blocked outside the dedicated development database",
     );
 });
 
+test("remote MongoDB hosts are blocked unless remote development is explicitly enabled", () => {
+    assert.equal(isLocalMongoHost("localhost"), true);
+    assert.equal(isLocalMongoHost("127.0.0.1"), true);
+    assert.equal(isLocalMongoHost("::1"), true);
+    assert.equal(isLocalMongoHost("cluster.example.mongodb.net"), false);
+
+    assert.throws(
+        () => validateDevelopmentImportTarget({
+            nodeEnv: "development",
+            databaseName: DEVELOPMENT_DATABASE_NAME,
+            hostname: "cluster.example.mongodb.net",
+        }),
+        /Remote MongoDB targets are blocked/
+    );
+
+    assert.doesNotThrow(
+        () => validateDevelopmentImportTarget({
+            nodeEnv: "development",
+            databaseName: DEVELOPMENT_DATABASE_NAME,
+            hostname: "cluster.example.mongodb.net",
+            allowRemote: true,
+        })
+    );
+});
+
 test("apply mode requires the explicit development import confirmation", () => {
     assert.throws(
         () => validateDevelopmentImportTarget({
             nodeEnv: "development",
             databaseName: DEVELOPMENT_DATABASE_NAME,
+            hostname: "localhost",
             apply: true,
             confirmation: "yes",
         }),
@@ -161,6 +188,7 @@ test("apply mode requires the explicit development import confirmation", () => {
         () => validateDevelopmentImportTarget({
             nodeEnv: "development",
             databaseName: DEVELOPMENT_DATABASE_NAME,
+            hostname: "localhost",
             apply: true,
             confirmation: APPLY_CONFIRMATION,
         })
