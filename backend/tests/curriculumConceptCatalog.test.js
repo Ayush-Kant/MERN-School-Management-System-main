@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const catalog = require("../seeds/curriculum-concept-catalog.json");
 
-const CONCEPT_ID_PATTERN = /^SCI7-MAT-ABN-\\d{3}$/;
+const CONCEPT_ID_PATTERN = new RegExp("^SCI7-MAT-ABN-[0-9]{3}$");
 
 function conceptMap() {
     return new Map(catalog.concepts.map((concept) => [concept.conceptId, concept]));
@@ -111,7 +111,7 @@ test("GNCT Delhi source is precisely scoped as a local 2026-27 alignment referen
     assert.equal(source.location.printedPage, 5);
     assert.equal(source.location.chapterEntry, "Chapter 2");
     assert.equal(source.location.activityReferenceRange, "2.1–2.7");
-    assert.match(source.url, /^https:\/\/edustud\\.nic\\.in\//);
+    assert.equal(new URL(source.url).hostname, "edustud.nic.in");
     assert.match(catalog.scope.alignmentQualification, /local alignment source/i);
     assert.match(catalog.scope.alignmentQualification, /not be represented as a universal CBSE/i);
 });
