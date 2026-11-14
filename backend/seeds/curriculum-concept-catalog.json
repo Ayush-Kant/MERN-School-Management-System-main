@@ -1,0 +1,358 @@
+{
+  "schemaVersion": 1,
+  "taxonomy": {
+    "taxonomyId": "NCERT-CURIOSITY-G7-SCI-CH02-ABN",
+    "version": "1.0.0",
+    "title": "Acidic, Basic and Neutral Substances",
+    "lifecycleStatus": "draft_for_teacher_review",
+    "approval": {
+      "status": "pending_educator_review",
+      "approvedBy": null,
+      "approvedAt": null,
+      "reviewRequiredBeforeQuestionAuthoring": true
+    }
+  },
+  "scope": {
+    "grade": 7,
+    "subject": "Science",
+    "subjectDomain": "Materials / introductory chemistry",
+    "textbook": {
+      "title": "Curiosity — Textbook of Science for Grade 7",
+      "chapterNumber": 2,
+      "chapterTitle": "Exploring Substances: Acidic, Basic, and Neutral",
+      "chapterKey": "NCERT-CURIOSITY-G7-SCI-CH02",
+      "language": "English",
+      "curriculumSession": "2026-27"
+    },
+    "alignmentQualification": "The NCERT chapter title and the GNCT of Delhi Directorate of Education Class 7 Science annual syllabus (2026-27) are used as references. The DoE syllabus is a local alignment source and must not be represented as a universal CBSE board prescription for every school.",
+    "relatedLegacyGameSourceKey": "chemamaze-cbse:science:class-7:chapter-2",
+    "relatedLegacyGameUse": "Optional external practice reference only. Wordwall launch/activity data is not a quiz attempt, correctness signal, mastery evidence, or curriculum source."
+  },
+  "sources": [
+    {
+      "sourceId": "doe-delhi-class7-science-2026-27",
+      "sourceType": "official-government-syllabus",
+      "owner": "Directorate of Education, Government of NCT of Delhi",
+      "title": "Annual Syllabus (2026-27), Class 7, Subject: Science, Book: Curiosity",
+      "url": "https://edustud.nic.in/edu/Syllabus_2026_27/7/7_SCIENCE_SYLLABUS_2026_27_EM.pdf",
+      "location": {
+        "printedPage": 5,
+        "chapterEntry": "Chapter 2",
+        "activityReferenceRange": "2.1–2.7"
+      },
+      "alignmentRole": "Primary outcome-and-activity alignment reference for this initial GNCT Delhi slice.",
+      "contentUse": {
+        "mode": "metadata_and_original_paraphrase_only",
+        "verbatimTextStored": false,
+        "documentHostedInApplication": false,
+        "reuseLicense": "No explicit reuse license was established during this review.",
+        "restrictions": "Retain source attribution and identifiers; do not redistribute or copy the PDF into the application. Obtain rights review before reproducing source material."
+      }
+    },
+    {
+      "sourceId": "ncert-curiosity-grade7-science-chapter2",
+      "sourceType": "copyright-protected-textbook-reference",
+      "owner": "National Council of Educational Research and Training (NCERT)",
+      "title": "Curiosity — Textbook of Science for Grade 7, Chapter 2: Exploring Substances: Acidic, Basic, and Neutral",
+      "officialTextbookPortal": "https://ncert.nic.in/textbook.php",
+      "chapterReferenceUrl": "https://ncert.nic.in/textbook/pdf/gecu102.pdf",
+      "contentUse": {
+        "reviewStatus": "restricted_pending_written_permission",
+        "mode": "internal_provenance_metadata_only",
+        "directLinkMayBeDisplayedInProduct": false,
+        "textbookPdfMayBeHosted": false,
+        "textFiguresTablesActivitiesQuestionsAnswersMayBeCopied": false,
+        "summariesTranslationsAdaptationsOrEmbeddingsMayBeCreated": false,
+        "note": "NCERT's textbook copyright notice says its textbooks are copyrighted, prohibits republication and use of the online books as part of digital content packages or software, and says links may be provided with written permission. No NCERT text, page image, diagram, exercise, answer key, or derived passage is stored in this repository."
+      }
+    },
+    {
+      "sourceId": "ncert-textbook-copyright-notice",
+      "sourceType": "rights-policy",
+      "owner": "National Council of Educational Research and Training (NCERT)",
+      "title": "NCERT Textbooks PDF portal — copyright and terms of use",
+      "url": "https://ncert.nic.in/textbook.php",
+      "contentUse": {
+        "reviewStatus": "reviewed",
+        "decision": "No NCERT textbook content will be embedded, ingested, reproduced, adapted, summarized, translated, indexed, or served by this software without written permission.",
+        "directLinkMayBeDisplayedInProduct": false
+      }
+    }
+  ],
+  "alignment": {
+    "syllabusSourceId": "doe-delhi-class7-science-2026-27",
+    "textbookReferenceId": "ncert-curiosity-grade7-science-chapter2",
+    "curriculumIdentifiers": [
+      {
+        "id": "DOE-DELHI-2026-27-CLASS7-SCIENCE-CH2",
+        "role": "chapter-and-outcome-alignment",
+        "printedPage": 5
+      },
+      {
+        "id": "DOE-DELHI-2026-27-ACTIVITY-2.1",
+        "role": "litmus-based classification activity"
+      },
+      {
+        "id": "DOE-DELHI-2026-27-ACTIVITY-2.2",
+        "role": "everyday-property discussion; no tasting or direct contact in this product"
+      },
+      {
+        "id": "DOE-DELHI-2026-27-ACTIVITY-2.3",
+        "role": "red-rose indicator preparation"
+      },
+      {
+        "id": "DOE-DELHI-2026-27-ACTIVITY-2.4",
+        "role": "red-rose indicator observation"
+      },
+      {
+        "id": "DOE-DELHI-2026-27-ACTIVITY-2.5",
+        "role": "turmeric indicator preparation"
+      },
+      {
+        "id": "DOE-DELHI-2026-27-ACTIVITY-2.6",
+        "role": "olfactory-indicator observation"
+      },
+      {
+        "id": "DOE-DELHI-2026-27-ACTIVITY-2.7",
+        "role": "neutralisation demonstration"
+      }
+    ],
+    "learningOutcomeMap": [
+      {
+        "outcomeId": "LO-CLASSIFY",
+        "description": "Classify materials as acidic, basic, or neutral using observable evidence.",
+        "conceptIds": [
+          "SCI7-MAT-ABN-001",
+          "SCI7-MAT-ABN-002",
+          "SCI7-MAT-ABN-003",
+          "SCI7-MAT-ABN-004",
+          "SCI7-MAT-ABN-005"
+        ]
+      },
+      {
+        "outcomeId": "LO-INDICATORS",
+        "description": "Use indicator observations to investigate the nature of selected samples.",
+        "conceptIds": [
+          "SCI7-MAT-ABN-002",
+          "SCI7-MAT-ABN-003",
+          "SCI7-MAT-ABN-004",
+          "SCI7-MAT-ABN-005"
+        ]
+      },
+      {
+        "outcomeId": "LO-NEUTRALISATION",
+        "description": "Investigate an acid–base neutralisation demonstration and connect the idea to carefully selected everyday contexts.",
+        "conceptIds": [
+          "SCI7-MAT-ABN-006",
+          "SCI7-MAT-ABN-007"
+        ]
+      }
+    ]
+  },
+  "concepts": [
+    {
+      "conceptId": "SCI7-MAT-ABN-001",
+      "conceptVersion": 1,
+      "displayName": "Acidic, basic and neutral categories",
+      "description": "Distinguish the three categories of aqueous samples using teacher-approved observable evidence.",
+      "conceptType": "classification",
+      "prerequisiteConceptIds": [],
+      "curriculumActivityRefs": [
+        "DOE-DELHI-2026-27-ACTIVITY-2.1"
+      ],
+      "sourceIds": [
+        "doe-delhi-class7-science-2026-27",
+        "ncert-curiosity-grade7-science-chapter2"
+      ],
+      "safetyBoundary": "Do not ask learners to taste or directly touch unknown substances. Use prepared samples and teacher-approved indicator procedures."
+    },
+    {
+      "conceptId": "SCI7-MAT-ABN-002",
+      "conceptVersion": 1,
+      "displayName": "Indicators as evidence",
+      "description": "Explain how an indicator observation can provide evidence about the nature of a sample.",
+      "conceptType": "evidence_interpretation",
+      "prerequisiteConceptIds": [
+        "SCI7-MAT-ABN-001"
+      ],
+      "curriculumActivityRefs": [
+        "DOE-DELHI-2026-27-ACTIVITY-2.1",
+        "DOE-DELHI-2026-27-ACTIVITY-2.3",
+        "DOE-DELHI-2026-27-ACTIVITY-2.5",
+        "DOE-DELHI-2026-27-ACTIVITY-2.6"
+      ],
+      "sourceIds": [
+        "doe-delhi-class7-science-2026-27",
+        "ncert-curiosity-grade7-science-chapter2"
+      ]
+    },
+    {
+      "conceptId": "SCI7-MAT-ABN-003",
+      "conceptVersion": 1,
+      "displayName": "Litmus observations",
+      "description": "Interpret red- and blue-litmus observations from a controlled sample test.",
+      "conceptType": "indicator_method",
+      "prerequisiteConceptIds": [
+        "SCI7-MAT-ABN-002"
+      ],
+      "curriculumActivityRefs": [
+        "DOE-DELHI-2026-27-ACTIVITY-2.1"
+      ],
+      "sourceIds": [
+        "doe-delhi-class7-science-2026-27",
+        "ncert-curiosity-grade7-science-chapter2"
+      ]
+    },
+    {
+      "conceptId": "SCI7-MAT-ABN-004",
+      "conceptVersion": 1,
+      "displayName": "Colour-based natural indicators",
+      "description": "Compare indicator evidence from teacher-prepared plant-based colour indicators.",
+      "conceptType": "indicator_method",
+      "prerequisiteConceptIds": [
+        "SCI7-MAT-ABN-002"
+      ],
+      "curriculumActivityRefs": [
+        "DOE-DELHI-2026-27-ACTIVITY-2.3",
+        "DOE-DELHI-2026-27-ACTIVITY-2.4",
+        "DOE-DELHI-2026-27-ACTIVITY-2.5"
+      ],
+      "sourceIds": [
+        "doe-delhi-class7-science-2026-27",
+        "ncert-curiosity-grade7-science-chapter2"
+      ]
+    },
+    {
+      "conceptId": "SCI7-MAT-ABN-005",
+      "conceptVersion": 1,
+      "displayName": "Olfactory indicator observations",
+      "description": "Recognise that a teacher-supervised indicator investigation may use an observed change in odour as evidence.",
+      "conceptType": "indicator_method",
+      "prerequisiteConceptIds": [
+        "SCI7-MAT-ABN-002"
+      ],
+      "curriculumActivityRefs": [
+        "DOE-DELHI-2026-27-ACTIVITY-2.6"
+      ],
+      "sourceIds": [
+        "doe-delhi-class7-science-2026-27",
+        "ncert-curiosity-grade7-science-chapter2"
+      ],
+      "safetyBoundary": "No direct smelling of concentrated or unknown chemicals. Any classroom demonstration must follow the teacher's approved safety procedure."
+    },
+    {
+      "conceptId": "SCI7-MAT-ABN-006",
+      "conceptVersion": 1,
+      "displayName": "Neutralisation investigation",
+      "description": "Describe the evidence and purpose of a controlled demonstration involving an acidic and a basic sample.",
+      "conceptType": "reaction_and_observation",
+      "prerequisiteConceptIds": [
+        "SCI7-MAT-ABN-001",
+        "SCI7-MAT-ABN-002"
+      ],
+      "curriculumActivityRefs": [
+        "DOE-DELHI-2026-27-ACTIVITY-2.7"
+      ],
+      "sourceIds": [
+        "doe-delhi-class7-science-2026-27",
+        "ncert-curiosity-grade7-science-chapter2"
+      ],
+      "safetyBoundary": "Demonstration only with teacher-selected dilute materials and protective procedures; no learner mixing of household chemicals."
+    },
+    {
+      "conceptId": "SCI7-MAT-ABN-007",
+      "conceptVersion": 1,
+      "displayName": "Acid–base ideas in everyday contexts",
+      "description": "Relate the chapter's acid–base ideas to a real-life situation that has been checked by an educator.",
+      "conceptType": "application",
+      "prerequisiteConceptIds": [
+        "SCI7-MAT-ABN-006"
+      ],
+      "curriculumActivityRefs": [],
+      "sourceIds": [
+        "doe-delhi-class7-science-2026-27",
+        "ncert-curiosity-grade7-science-chapter2"
+      ],
+      "reviewRequirement": "Each example must be independently fact-checked and teacher-approved before it appears in questions or student explanations."
+    }
+  ],
+  "exclusions": {
+    "conceptsNotIncluded": [
+      "pH scale calculations or logarithms",
+      "strong-versus-weak acid/base comparisons",
+      "chemical equations or reaction stoichiometry beyond the approved chapter scope",
+      "named synthetic-indicator examples not individually source-checked and teacher-approved",
+      "unverified household chemical classifications",
+      "medical or health advice involving acids, bases, antacids or skin/eye exposure"
+    ],
+    "contentNotCreatedInPhase16": [
+      "quiz questions or answer options",
+      "distractors or misconception labels",
+      "answer keys or explanations copied/adapted from the textbook",
+      "AI-generated explanations or question drafts",
+      "retrieval chunks, embeddings or chatbot prompts"
+    ]
+  },
+  "featureScope": {
+    "initialSliceOnly": true,
+    "gradesEnabled": [
+      7
+    ],
+    "subjectEnabled": "Science",
+    "chapterEnabled": "NCERT-CURIOSITY-G7-SCI-CH02",
+    "locale": "en",
+    "firstPartyLearningEvidenceOnly": true,
+    "wordwallAsAssessmentEvidence": false,
+    "enabledInPhase16": [],
+    "plannedLater": [
+      {
+        "phase": 17,
+        "feature": "Teacher-reviewed first-party question bank using stable concept IDs"
+      },
+      {
+        "phase": 18,
+        "feature": "Native student quiz flow with server-side grading"
+      },
+      {
+        "phase": 19,
+        "feature": "Minimal, authenticated first-party learning-attempt events"
+      },
+      {
+        "phase": 21,
+        "feature": "Interpretable BKT estimate only after validated attempt data and baseline review"
+      },
+      {
+        "phase": 25,
+        "feature": "Curriculum ingestion/retrieval only for sources with verified rights and source-version provenance"
+      },
+      {
+        "phase": 26,
+        "feature": "Grounded assistant only over approved material; no NCERT textbook ingestion without written permission"
+      },
+      {
+        "phase": 27,
+        "feature": "AI question candidates only from approved evidence, stored as drafts"
+      },
+      {
+        "phase": 28,
+        "feature": "Educator review and publication workflow"
+      }
+    ],
+    "hardDisabledUntilLaterPhases": {
+      "studentQuizUI": true,
+      "automatedQuestionGeneration": true,
+      "openEndedAIAssistant": true,
+      "textbookRAG": true,
+      "learnerMasteryScores": true,
+      "recommendations": true,
+      "wordwallScoreOrCorrectnessInference": true
+    }
+  },
+  "reviewChecklist": {
+    "curriculumMapping": "mapped_to_current_GNCT_Delhi_DoE_2026_27_syllabus_and_NCERT_Curiosity_chapter_reference",
+    "sourceRights": "reviewed_restrictive_no_textbook_content_ingestion_or_adaptation",
+    "stableConceptIds": "defined_and_versioned",
+    "taxonomyApproval": "pending_educator_review",
+    "distractorReview": "not_applicable_no_distractors_created_in_phase_16"
+  }
+}
