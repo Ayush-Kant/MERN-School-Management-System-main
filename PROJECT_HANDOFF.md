@@ -227,7 +227,8 @@ Source review confirms:
 | 13 | Teacher My Games management | **Completed — user confirmed Phase 13 was good on 2026-11-08; exact outputs/counts not supplied** |
 | 14 | Student Games Zone | **Implementation committed; Phase 14 tests/build and Student browser checks pending** |
 | 15 | Migrate current ChemAmaze games as seed data | **Implementation committed; backend tests and development-only dry-run/import pending** |
-| 16–30 | Remaining roadmap | Not started; follow harness exactly |
+| 16 | Curriculum/concept map and AI feature scope | **Implementation committed; 7 concept IDs and source/rights mapping defined; 8 tests added but not run; educator approval pending** |
+| 17–30 | Remaining roadmap | Not started; follow harness exactly |
 
 Do not redo completed phases unless source inspection shows a regression. Follow the detailed scope and exit gates in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md.
 
@@ -489,7 +490,7 @@ Then verify the Phase 13 Teacher flow at `/Teacher/my-games`: current class/subj
 
 Verify the Phase 14 Student flow at `/Student/game-zone`: a Student sees only published activities for the persisted school/class; drafts and archived items are absent; subject selection and search combine correctly; Clear filters restores the catalogue; opening a game shows its topic/subject/class/description/teacher context; the Wordwall iframe and external fallback work; after Teacher unpublish or Admin archive, refresh removes the game and closes it if it was selected. Check mobile layout and attempt a foreign school/class/subject request to confirm the backend rejects it.
 
-Phase 13 is user-confirmed good. Phase 14 remains unverified until the current branch's backend/frontend tests, production build, and Student browser/API acceptance checks are confirmed. Phase 15 is now implemented but its backend tests, development dry-run, and actual development import are pending. Do not start Phase 16 until Phase 14 acceptance and Phase 15 validation/import are complete and the user asks to continue.
+Phase 13 is user-confirmed good. Phase 14 remains unverified until the current branch's backend/frontend tests, production build, and Student browser/API acceptance checks are confirmed. Phase 15 is implemented but its backend tests, development dry-run, and actual development import are pending. Phase 16 taxonomy metadata and scope are implemented; its focused tests are not run and educator approval is pending. Do not start Phase 17 until Phases 14–15 are validated and the Phase 16 taxonomy receives educator review.
 
 
 
@@ -616,9 +617,72 @@ npm run seed:chemamaze:apply
 
 Expected first clean import is 18 inserted drafts, zero unchanged and zero failures. A repeat should report zero inserted and 18 unchanged. Verify the source-key count and sample links in the development Admin catalogue/Student Games Zone. Do not proceed to Phase 16 until Phase 14 acceptance and Phase 15 tests plus development import checks are confirmed by the user.
 
+
+
+## Phase 16 — Curriculum/concept map and AI feature scope (implementation)
+
+**Status:** A single-chapter Class 7 Science concept catalogue, curriculum alignment metadata, source-rights decision, safety boundaries and AI feature-scope document are committed. Eight focused tests are added but have not been executed. Educator approval remains pending. Phase 14 and Phase 15 validation gates remain independently pending.
+
+### Initial chapter selection and source audit
+- Selected the ChemAmaze Class 7 Science Chapter 2 topic, *Exploring Substances: Acidic, Basic, and Neutral*, as the first chemistry-focused slice. No all-grade/all-chapter taxonomy is enabled.
+- Checked the current Directorate of Education, GNCT of Delhi, Class 7 Science Annual Syllabus 2026–27. It identifies *Curiosity* as the book, this topic as Chapter 2, and provides learning-outcome and activity references 2.1–2.7 on printed page 5.
+- Qualification is explicit: the GNCT Delhi syllabus is a local official alignment source. It is not represented as a universal CBSE/state syllabus for every school.
+- The NCERT textbook portal's copyright notice was reviewed. NCERT textbook material is not cleared for ingestion, reproduction, adaptation, embedding, or use as packaged software content. Direct in-app textbook links are blocked pending written permission. Only internal provenance metadata is retained; no PDF, page image, figure, table, textbook passage, activity text, exercise, question, answer key, or derived explanation is stored.
+- The GNCT Delhi syllabus PDF is also kept as a metadata/citation reference only; an explicit reuse licence was not established, so the PDF is not copied or bundled. The taxonomy uses original short concept descriptors instead of copying full learning-outcome text.
+
+### Implemented concept map and stable IDs
+The manifest is `backend/seeds/curriculum-concept-catalog.json`, taxonomy ID `NCERT-CURIOSITY-G7-SCI-CH02-ABN`, version `1.0.0`, currently `draft_for_teacher_review`. It defines seven unique application-owned concept IDs:
+- `SCI7-MAT-ABN-001` — Acidic, basic and neutral categories.
+- `SCI7-MAT-ABN-002` — Indicators as evidence.
+- `SCI7-MAT-ABN-003` — Litmus observations.
+- `SCI7-MAT-ABN-004` — Colour-based natural indicators.
+- `SCI7-MAT-ABN-005` — Olfactory indicator observations.
+- `SCI7-MAT-ABN-006` — Neutralisation investigation.
+- `SCI7-MAT-ABN-007` — Acid–base ideas in everyday contexts.
+
+Each concept is scoped by the manifest to Grade 7 Science and Chapter 2, linked to source records and the relevant syllabus activity identifiers where applicable, and includes a small prerequisite graph. The graph is acyclic. The legacy ChemAmaze Chapter 2 source key is retained as an optional external practice reference only; Wordwall launch or iframe behaviour is never treated as evidence of a student's knowledge or correctness.
+
+### AI scope and safety decisions
+- Phase 16 adds metadata only. No AI call, question bank, quiz UI, concept API, Mongoose model, route, mastery score, recommendation, or retrieval index is enabled.
+- Phase 17 may create original teacher-reviewed questions referencing these stable IDs after educator approval.
+- Student first-party quiz, attempt events, BKT, retrieval, grounded assistant, AI question drafts and teacher publishing remain gated to their later roadmap phases.
+- No pH calculations, strong/weak comparisons, unsupported equations, unverified household classifications, or out-of-chapter extensions are introduced.
+- Learners are not asked to taste, directly touch or independently mix unknown household substances. Indicator work is framed as teacher-approved observation using prepared samples; neutralisation remains a controlled, teacher-supervised demonstration.
+- No distractors or misconception labels were invented.
+
+### Phase 16 changed files
+- `backend/seeds/curriculum-concept-catalog.json` — versioned seven-concept catalogue, prerequisites, source/activity mapping, rights restrictions and feature gates.
+- `backend/tests/curriculumConceptCatalog.test.js` — 8 focused tests covering the one-chapter scope, ID uniqueness/version, prerequisite DAG, source/activity/outcome references, local syllabus qualification, NCERT rights restrictions, absence of question/distractor content and disabled feature flags.
+- `AI_LEARNING_CURRICULUM_SCOPE.md` — curriculum/source audit, concept table, rights review, safety boundaries, AI scope and educator approval checklist.
+
+No existing quiz schema/controller, route, API, role permission, frontend page, GameActivity record, attempt schema, Wordwall runtime flow, npm dependency, or legacy source repository was changed. Existing `learningQuizSchema.js` still stores a free-text `concept` label; Phase 17 must add the concept-ID/version validation contract deliberately.
+
+### Phase 16 implementation commits
+- `f354bf7b3670597216e371bb78e9e430541d89d1` — versioned Class 7 concept manifest.
+- `c696820b2ea48271be708ae79ce09bf4cd51b4f8` — curriculum, rights and feature-scope decision document.
+- `8db93e93317fbb1e656765b9741deb1e50a3188c` — initial eight-test concept catalogue suite.
+- `b70f132b965f4075f5f4ee4104cf8233e5253d60` — fix ID regex and source-host assertions in the focused test file.
+
+### Phase 16 verification and approval status
+- [x] Inspect the existing Learning Quiz schema/controller and design boundaries; do not mix concept design with Phase 17 question-bank changes.
+- [x] Select exactly one Class 7 Science chemistry chapter from the ChemAmaze catalogue and map it to the GNCT Delhi 2026–27 syllabus.
+- [x] Define seven stable application-owned concept IDs and an acyclic prerequisite graph.
+- [x] Record NCERT textbook restrictions and prohibit app-hosted textbook content, derivative summaries, embeddings and direct in-app textbook links pending written permission.
+- [x] Keep the GNCT Delhi syllabus as a local, citation-only alignment source with no PDF bundled in the app.
+- [x] Record AI feature exclusions and student experiment safety limits.
+- [x] Static consistency audit: 7 IDs unique and scoped; prerequisites, source IDs, activity references and learning-outcome references resolve; no prerequisite cycle. This is not an execution of the Node test file.
+- [ ] Backend `npm test` including the new concept catalogue tests — not run in this environment.
+- [ ] Educator review/approval of the seven concept boundaries, local curriculum mapping, and lab safety wording — pending.
+- [ ] No student-facing concept/question content is enabled until the educator approves the taxonomy and Phase 17 adds the stable concept-ID contract.
+
+Do not mark Phase 16 fully approved until an educator reviews it. Do not start Phase 17 until Phase 14 and Phase 15 validation gates are also confirmed by the user.
+
+### Immediate next action
+Pull the latest branch and run the complete backend/frontend tests and frontend build for the user's pending Phase 14–15 verification. Run the new concept-catalog test with the backend suite. In parallel with that validation, have a Science educator review the taxonomy in `AI_LEARNING_CURRICULUM_SCOPE.md`. Only after all three gates are confirmed should Phase 17 begin.
+
 ## How to work
 1. Read this file and the harness first; verify actual remote branch HEAD and current source.
-2. Work one phase at a time, only after the prior exit gate passes and the user asks to continue. Sequencing exceptions on 2026-11-08: the user requested Phase 14 implementation before Phase 13 validation, later confirmed Phase 13 was good, and then requested Phase 15 implementation while Phase 14 validation remained pending. Validate Phase 14 and Phase 15 before Phase 16.
+2. Work one phase at a time, only after the prior exit gate passes and the user asks to continue. Sequencing exceptions: on 2026-11-08, the user requested Phase 14 before Phase 13 validation, then confirmed Phase 13 and requested Phase 15 while Phase 14 validation was pending; on 2026-11-14, the user requested Phase 16 while Phases 14–15 validation was pending. Phase 16 implementation is recorded, but educator approval and tests remain open. Validate Phases 14–15 and obtain Phase 16 educator approval before Phase 17.
 3. Inspect exact files/tests before edits; make minimal changes and preserve unrelated code.
 4. Review the full diff; list every changed file and why it changed.
 5. Be honest about tests. The GitHub connector cannot run npm test on the user's Windows machine. Never claim a test passed without actual user output or verified CI.
@@ -629,7 +693,7 @@ Expected first clean import is 18 inserted drafts, zero unchanged and zero failu
 ## Prompt for a new chat
 I am continuing work on my MERN School Management System + AI Learning & Games project. Read the attached PROJECT_HANDOFF.md fully before doing anything. Then inspect the current GitHub repository and feature/learning-game-zones branch to verify the actual latest commit and source state. Continue exactly from the pending action; do not restart completed phases or ask me to repeat information already recorded.
 
-Follow the 30-phase roadmap in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md one phase at a time. Phase 13 Teacher My Games was user-confirmed good. Phase 14 Student Games Zone is committed but its tests/build/Student browser checks remain pending. Phase 15 ChemAmaze import tooling and manifests are committed but backend tests, dry-run and the development-only import remain pending. Continue from validating Phases 14 and 15; do not start Phase 16 until those gates pass and I ask you to continue. Preserve unrelated code. Inspect the exact source and tests before editing, make only minimal scope-related changes, review the full diff, and provide Windows PowerShell commands. Never claim tests passed unless I provide actual output or a verified CI result.
+Follow the 30-phase roadmap in AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md one phase at a time. Phase 13 Teacher My Games was user-confirmed good. Phase 14 Student Games Zone is committed but its tests/build/Student browser checks remain pending. Phase 15 ChemAmaze import tooling and manifests are committed but backend tests, dry-run and the development-only import remain pending. Phase 16's single-chapter taxonomy and source-rights scope are committed, but its tests and educator approval remain pending. Continue from validating Phases 14–15 and obtaining Phase 16 educator approval; do not start Phase 17 until those gates pass and I ask you to continue. Preserve unrelated code. Inspect the exact source and tests before editing, make only minimal scope-related changes, review the full diff, and provide Windows PowerShell commands. Never claim tests passed unless I provide actual output or a verified CI result.
 
 Continuity requirement: Update PROJECT_HANDOFF.md after every substantive project response, including fixes, test diagnosis, decisions, commits, and phase transitions. Update both the repository copy on feature/learning-game-zones and the local/downloadable copy. Add a dated changelog entry, record changed files and commit SHAs, exact test evidence (or “not verified”), phase status, and the one immediate next action. At the end of every response, provide the updated handoff file or repository link. Start from the pending action recorded in the file and do not go beyond its test gate.
 
@@ -738,4 +802,17 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - The exact implementation commits and file-level scope are recorded in the Phase 15 section above. Phase 15 source/test checkpoint before handoff update: `f2217ccda01244823f00aec9c74ceef46aaa0098`; the latest import-guide clarification is `8829e264f7620e4a4ffc7820970f1513dcbe8139`.
 - Backend Jest/test suite, catalog CLI validation, development dry-run, and actual development import have **not** been executed. No development database or local target IDs were accessed; no database records were written. Do not claim the migration is imported until the user runs and confirms it.
 - Immediate next action: run backend seed validator and backend suite, then Phase 14 frontend tests/build and Student browser acceptance. Next, configure the ignored target mapping from the dedicated development database, inspect the dry-run, and only then explicitly apply and verify 18 drafts plus idempotent rerun. Do not start Phase 16.
+
+### 2026-11-14 — Phase 16 curriculum concept map and AI scope (Phases 14–15 validation pending)
+- The user explicitly requested Phase 16 implementation while they validate Phases 14 and 15. This sequencing exception is recorded. Phase 14 and Phase 15 remain pending; no Phase 17 runtime/question-bank work has begun.
+- Re-read the Phase 16 harness objective, AI Learning Module design, current Learning Quiz schema/controller/routes/tests, and current Phase 15 concept-independent source catalogue.
+- Selected one initial chemistry-focused slice: Class 7 Science, *Curiosity*, Chapter 2, *Exploring Substances: Acidic, Basic, and Neutral*. The current GNCT Delhi Directorate of Education 2026–27 Class 7 Science annual syllabus identifies the textbook, chapter, learning outcomes and activities 2.1–2.7 (printed page 5). The mapping is explicitly qualified as local GNCT Delhi alignment, not a universal CBSE/state claim.
+- Reviewed NCERT's current textbook copyright notice. The catalogue records NCERT chapter provenance internally, but no textbook content, image, table, activity text, exercise, question, answer key, derived summary, translation, adaptation or retrieval chunk is copied. Direct textbook links are blocked from the product pending written permission. The GNCT Delhi syllabus PDF is citation/metadata-only because an explicit reuse licence was not established.
+- Added a versioned taxonomy manifest with seven stable concept IDs, grade/subject/chapter/source mappings, activity references, prerequisites and safety limits. The prerequisite graph is static-audited as acyclic. The existing free-text quiz concept field is not changed; Phase 17 must add a deliberate concept-ID contract.
+- Added the Phase 16 AI scope document. Phase 16 enables no runtime AI feature; first-party questions, student quiz, attempt events, BKT, retrieval, assistant, generated question drafts and educator publishing remain gated to their later phases. No Wordwall score/correctness is inferred.
+- Added 8 focused concept catalogue test cases. Static source/data consistency checks were performed after correcting an over-escaped regex. The actual Node test suite has **not** been run here.
+- Phase 16 academic approval is not claimed. The taxonomy remains `draft_for_teacher_review`; a Science educator must confirm concept boundaries, target-school curriculum mapping and lab safety wording before Phase 17 question authoring.
+- Phase 16 changed only: `backend/seeds/curriculum-concept-catalog.json`, `backend/tests/curriculumConceptCatalog.test.js`, and `AI_LEARNING_CURRICULUM_SCOPE.md`, plus this handoff update. No existing app runtime, quiz schema/controller, route, frontend, role permission, GameActivity record or legacy repository changed.
+- Phase 16 implementation commits: `f354bf7b3670597216e371bb78e9e430541d89d1` (catalogue), `c696820b2ea48271be708ae79ce09bf4cd51b4f8` (scope/rights document), `8db93e93317fbb1e656765b9741deb1e50a3188c` (8 tests), and `b70f132b965f4075f5f4ee4104cf8233e5253d60` (test regex/source assertion fix).
+- Immediate next action: pull the latest branch; run backend tests (including the new concept catalogue suite), frontend tests and build; finish Student acceptance plus the Phase 15 development-only dry-run/import checks; obtain educator review of the concept map. Do not start Phase 17 until all these gates pass.
 
