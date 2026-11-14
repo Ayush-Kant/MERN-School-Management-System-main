@@ -615,7 +615,7 @@ $env:CHEMAMAZE_SEED_CONFIRM = "IMPORT_CHEMAMAZE_TO_SCHOOL_MANAGEMENT_DEV"
 npm run seed:chemamaze:apply
 ```
 
-Expected first clean import is 18 inserted drafts, zero unchanged and zero failures. A repeat should report zero inserted and 18 unchanged. Verify the source-key count and sample links in the development Admin catalogue/Student Games Zone. Do not proceed to Phase 16 until Phase 14 acceptance and Phase 15 tests plus development import checks are confirmed by the user.
+Expected first clean import is 18 inserted drafts, zero unchanged and zero failures. A repeat should report zero inserted and 18 unchanged. Verify the source-key count and sample links in the development Admin catalogue/Student Games Zone. Phase 16 taxonomy implementation is now committed; do not start Phase 17 until Phase 14 acceptance, Phase 15 tests/import checks, and Phase 16 educator approval are confirmed.
 
 
 
@@ -801,7 +801,7 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Important corrective review changes: fixed regex escaping in the catalog and ObjectId validators; ensured dry-run does not build database indexes; ensure identical concurrent insert races count as unchanged; added a regression for preserving an already-published state on a repeat import.
 - The exact implementation commits and file-level scope are recorded in the Phase 15 section above. Phase 15 source/test checkpoint before handoff update: `f2217ccda01244823f00aec9c74ceef46aaa0098`; the latest import-guide clarification is `8829e264f7620e4a4ffc7820970f1513dcbe8139`.
 - Backend Jest/test suite, catalog CLI validation, development dry-run, and actual development import have **not** been executed. No development database or local target IDs were accessed; no database records were written. Do not claim the migration is imported until the user runs and confirms it.
-- Immediate next action: run backend seed validator and backend suite, then Phase 14 frontend tests/build and Student browser acceptance. Next, configure the ignored target mapping from the dedicated development database, inspect the dry-run, and only then explicitly apply and verify 18 drafts plus idempotent rerun. Do not start Phase 16.
+- Immediate next action: run backend seed validator and backend suite, then Phase 14 frontend tests/build and Student browser acceptance. Next, configure the ignored target mapping from the dedicated development database, inspect the dry-run, and only then explicitly apply and verify 18 drafts plus idempotent rerun. Phase 16 implementation is now recorded below; do not start Phase 17 until Phase 14–15 validation and Phase 16 educator approval are complete.
 
 ### 2026-11-14 — Phase 16 curriculum concept map and AI scope (Phases 14–15 validation pending)
 - The user explicitly requested Phase 16 implementation while they validate Phases 14 and 15. This sequencing exception is recorded. Phase 14 and Phase 15 remain pending; no Phase 17 runtime/question-bank work has begun.
