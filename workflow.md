@@ -57,6 +57,8 @@ The implementation plan is in **AI_LEARNING_GAMES_IMPLEMENTATION_HARNESS.md**. T
 
 The school-management application remains the host system. ChemAmaze is a legacy source catalogue, not a second user/account platform.
 
+**Mermaid authoring convention:** flowchart nodes use explicit identifiers with bracketed labels (for example, `A["Node label"]`). Edge labels use `A -->|label| B`; a quoted phrase is not a node and must never appear as `A --> "label" --> B`. Sequence, state and ER diagrams use their respective Mermaid grammars.
+
 ~~~mermaid
 flowchart TB
     subgraph Browser["Browser — React 18"]
@@ -66,7 +68,8 @@ flowchart TB
       Feature["Admin / Teacher / Student Games pages"]
       QuizUI["Future Student quiz and Teacher authoring UI"]
       Pages --> Router
-      Pages <--> State
+      Pages --> State
+      State --> Pages
       Router --> Feature
       Router -. planned .-> QuizUI
     end
@@ -95,12 +98,13 @@ flowchart TB
     Curriculum["Future rights-cleared curriculum"]
     ML["Future BKT / retrieval / AI adapters"]
 
-    Browser -->|"HTTPS JSON and HttpOnly cookie"| CORS
-    Model <--> DB
+    Router --> CORS
+    Model --> DB
+    DB --> Model
     Feature -->|"Validated embed URL"| Wordwall
     Legacy --> Importer --> DB
-    Curriculum -. planned .-> ML
-    ML -. planned .-> Service
+    Curriculum -.-> ML
+    ML -.-> Service
 ~~~
 
 ### Technology responsibilities
