@@ -2,7 +2,7 @@ const { sameReference } = require("./gameActivityIntegrity");
 
 const DEMO_SCHOOL = Object.freeze({
     name: "ChemAmaze Demo Administrator",
-    email: "admin@chemamaze.demo",
+    email: "admin@demo.com",
     schoolName: "ChemAmaze Demo School",
 });
 
@@ -64,7 +64,7 @@ function resolveDemoSeedTarget(mongoUrl, nodeEnv = "development") {
     let databaseName;
     try {
         databaseName = decodeURIComponent(
-            parsed.pathname.replace(/^\\/+/, "").split("/")[0] || ""
+            (parsed.pathname.startsWith("/") ? parsed.pathname.slice(1) : parsed.pathname).split("/")[0] || ""
         );
     } catch {
         databaseName = "";
