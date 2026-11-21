@@ -51,6 +51,16 @@ The command uses this dedicated local database by default:
 
 It deliberately does not use the application's normal `MONGO_URL`, so it will not seed the database configured for your regular backend server. If you use a different local MongoDB port, set `CHEMAMAZE_DEMO_MONGO_URL` to a local URL with the exact database name `school_management_dev`. Remote hosts are refused.
 
+To use the seeded demo accounts in the web app, run the backend server against that same database. In the backend terminal, set this before starting the server:
+
+~~~powershell
+$env:MONGO_URL = "mongodb://127.0.0.1:27017/school_management_dev"
+npm start
+~~~
+
+This changes only the current PowerShell session. It does not rewrite your `.env` file. The seeder uses its own `CHEMAMAZE_DEMO_MONGO_URL`/safe default; the application server uses `MONGO_URL`, so both must point to the same local database while testing the demo.
+
+
 The seed creates/reuses the following fictional demo records:
 
 | Record type | Amount |
