@@ -849,3 +849,12 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Backend test-file commit: `18f27344724cd946d2768cad0c47c68406bb647c`.
 - Verification status: source-level review confirms the fixture now satisfies deterministic-key validation and reaches the duplicate source-key branch before duplicate URL checks. The backend npm suite has not been executed in this connector session; the local rerun remains required.
 - Next step: correct the two StudentGameZone test cases without changing the StudentGameZone runtime component, then rerun the complete backend suite locally.
+
+
+### 2026-11-21 — Student Game Zone combined-filter fixture correction
+- Re-examined the failing assertion against `StudentGameZone.js` and the complete test data. The component filters over title, description, topic, subject and class as designed.
+- Root cause: the no-results test's `Solar System Quiz` record spread `publishedActivity` but inherited its description, `Practise equivalent fractions`. The search term `fractions` therefore correctly matched that Science record even after the Science subject filter was selected.
+- Corrected only the fixture inside the `clears search and subject filters from the no-results state` test in `frontend/src/pages/student/StudentGameZone.test.js`: the Solar System record now has the non-matching description `Explore planets beyond Earth`. Other search/filter tests and the runtime component are unchanged.
+- Frontend fixture commit: `2183a41750ea8d501253953d91d99ba551069617`.
+- Verification status: inspected filter predicates and fixture values; with the corrected description, the Science record no longer matches `fractions`, while the Mathematics record is excluded by the selected Science filter. Jest has not yet been run in this connector session; local execution remains required.
+- Next step: update the refresh/dialog test to wait for Material UI's exit transition rather than asserting that transition content disappears synchronously.
