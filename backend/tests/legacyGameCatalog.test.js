@@ -60,7 +60,7 @@ test("rejects an unsafe embed URL before it can be imported", () => {
 
 test("rejects a duplicate source key and an incomplete catalog", () => {
     const duplicateCatalog = structuredClone(catalog);
-    duplicateCatalog.records[1].sourceKey = duplicateCatalog.records[0].sourceKey;
+    duplicateCatalog.records[1] = structuredClone(duplicateCatalog.records[0]);
 
     assert.throws(
         () => validateLegacyGameCatalog(duplicateCatalog),
