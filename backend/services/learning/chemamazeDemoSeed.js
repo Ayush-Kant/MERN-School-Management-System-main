@@ -151,7 +151,7 @@ async function ensureTeacher(
             !sameId(teacher.teachSubject, subject._id) ||
             (teacher.role && teacher.role !== "Teacher")
         ) {
-            throw new Error(`Conflicting demo Teacher assignment found for ${grade}| ${subjectName}`);
+            throw new Error(`Conflicting demo Teacher assignment found for ${grade}|${subjectName}`);
         }
         counts.reused.teachers += 1;
     } else {
