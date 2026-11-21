@@ -1,6 +1,6 @@
 # Project Handoff — MERN School Management + AI Learning & Games
 
-Last updated: 2026-11-21 (Asia/Kolkata)
+Last updated: 2026-11-22 (Asia/Kolkata)
 
 ## Repository
 - Repository: Ayush-Kant/MERN-School-Management-System-main
@@ -226,7 +226,7 @@ Source review confirms:
 | 12 | Admin Learning & Games management | **Completed — user confirmed tests, build, and acceptance checks were good (2026-11-08); exact output/counts not supplied** |
 | 13 | Teacher My Games management | **Completed — user confirmed Phase 13 was good on 2026-11-08; exact outputs/counts not supplied** |
 | 14 | Student Games Zone | **Implementation committed; Phase 14 tests/build and Student browser checks pending** |
-| 15 | Migrate current ChemAmaze games as seed data | **Implementation committed; backend tests and development-only dry-run/import pending** |
+| 15 | Migrate current ChemAmaze games as seed data | **Simplified same-MONGO_URL local demo seed committed; fresh backend test run and actual MongoDB seed/import pending** |
 | 16 | Curriculum/concept map and AI feature scope | **Implementation committed; 7 concept IDs and source/rights mapping defined; 8 tests added but not run; educator approval pending** |
 | 17–30 | Remaining roadmap | Not started; follow harness exactly |
 
@@ -901,3 +901,13 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Final source review at this checkpoint confirms `backend/package.json` contains a valid JSON `seed` script entry; the CLI defaults to loopback MongoDB database `school_management_dev`, uses no `MONGO_URL` fallback, rejects remote/non-development targets, and uses the existing canonical 18-row manifest/import service; the demo service produces the six required class/subject/Teacher mappings plus three Student demo identities; the imported games remain drafts.
 - The demo Admin/Teacher/Student passwords are fixed, bcrypt-hashed local-only credentials and are printed/documented for local testing. Never use this seeded database or credentials outside local development. The application server must be pointed at the same `school_management_dev` database to log in to these accounts.
 - Validation remains explicitly pending for the new four demo-seed unit tests, a fresh full backend suite after their addition, the actual local `npm run seed` first/repeat runs, the frontend rerun/build, and Phase 14 browser acceptance. No MongoDB operation was run by the connector; no database records are claimed as created. Phase 16 educator approval remains pending and Phase 17 remains gated.
+
+
+### 2026-11-22 — Simplify Phase 15 seed to the application's existing MongoDB
+- Reworked `npm run seed` to read the same `MONGO_URL` from `backend/.env` that `npm start` uses. The previous separate `school_management_dev` default and `CHEMAMAZE_DEMO_MONGO_URL` setting are removed from the one-command demo path. The app and seed now use one database configuration.
+- The seed remains additive/idempotent: it creates or reuses only the fictional ChemAmaze demo school, Classes 6–8, Science/Mathematics Subjects, six assigned Teachers, three Students, and the 18 canonical GameActivity drafts. It does not delete existing records, reset passwords on reused accounts, overwrite existing game content, or auto-publish activities.
+- Simplified fresh demo credentials: Admin `admin@demo.com`; Teachers `sci6@demo.com`, `math6@demo.com`, `sci7@demo.com`, `math7@demo.com`, `sci8@demo.com`, `math8@demo.com`; Students log in as `Student 6` / roll `601`, `Student 7` / roll `701`, and `Student 8` / roll `801`. Shared initial password is `password`; it is bcrypt-hashed before storage. This is strictly for local development.
+- Safety checks remain: the seed requires a named local MongoDB database, rejects remote hosts, system/test/production-like database names, and explicit `NODE_ENV` values other than `development`. It verifies the connected DB name matches the configured `MONGO_URL`.
+- Updated `backend/LEGACY_GAME_IMPORT.md` and `workflow.md` to document the single-URL workflow and actual role-specific login fields.
+- Latest user-provided local evidence on 22 November: backend suite reported 235 passed, 0 failed. The following `npm run seed` stopped with `ECONNREFUSED 127.0.0.1:27017`; MongoDB was not accepting a local connection, so no seed completion or database writes are confirmed. These 235 tests predate two newly added target-guard tests; the fresh backend suite remains pending after pulling this change.
+- No MongoDB connection, seed execution, or local test execution was performed by the GitHub connector. Next local action: ensure the local MongoDB service is running, then run `npm test`, `npm run seed:chemamaze:validate`, and `npm run seed` from `backend/`. Confirm the first seed summary and a second idempotent run before closing Phase 15. Phase 14 browser acceptance and Phase 16 educator approval remain pending; Phase 17 remains gated.
