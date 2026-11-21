@@ -1,6 +1,6 @@
 # Project Handoff — MERN School Management + AI Learning & Games
 
-Last updated: 2026-11-08 (Asia/Kolkata)
+Last updated: 2026-11-21 (Asia/Kolkata)
 
 ## Repository
 - Repository: Ayush-Kant/MERN-School-Management-System-main
@@ -840,3 +840,12 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Added 17 new roadmap/dependency diagrams, including a phase dependency map and phase-specific workflows for taxonomy review, question authoring/versioning, native quiz delivery, event quality, baselines, BKT, mastery processing, recommendations, misconception rules, rights-cleared ingestion, grounded assistant, generated candidates, Teacher publication review, pilot readiness and deployment. The document now contains 32 Mermaid blocks in total.
 - Audited all 32 fenced Mermaid blocks for supported diagram headers, balanced Markdown fences and malformed quoted pseudo-node/edge syntax. The original reported malformed pattern is absent. No full GitHub browser renderer/interactive Mermaid parser was available during this edit, so this is a static syntax/source audit rather than a claim of a separate live-render test.
 - Latest workflow commit: \`6948f0490a13b034ed575ebb43761dca8d0c48dc\`. The document is approximately 147,500 characters and 2,400 lines. Application code was not changed, and no application tests or database operations were run for this documentation-only repair.
+
+
+### 2026-11-21 — Backend duplicate source-key test fixture correction
+- Reviewed the user-provided backend test output (230 passed, 1 failed) and the current catalog validator/test source.
+- Root cause: the duplicate-key test changed only `records[1].sourceKey`. The catalog validator first checks that each key is deterministic from that record's own subject, grade and chapter, so the test failed before reaching duplicate-key detection.
+- Corrected only `backend/tests/legacyGameCatalog.test.js`: the second record is now a deep clone of the first complete valid record. This preserves its deterministic fields and makes the duplicate `sourceKey` check the first intended uniqueness failure. The catalog validator and seed data were not changed.
+- Backend test-file commit: `18f27344724cd946d2768cad0c47c68406bb647c`.
+- Verification status: source-level review confirms the fixture now satisfies deterministic-key validation and reaches the duplicate source-key branch before duplicate URL checks. The backend npm suite has not been executed in this connector session; the local rerun remains required.
+- Next step: correct the two StudentGameZone test cases without changing the StudentGameZone runtime component, then rerun the complete backend suite locally.
