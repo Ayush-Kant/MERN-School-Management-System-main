@@ -91,13 +91,14 @@ flowchart TB
     DB[("MongoDB")]
     Wordwall["External Wordwall"]
     Legacy["Pinned ChemAmaze manifest"]
+    Importer["Development-only importer"]
     Curriculum["Future rights-cleared curriculum"]
     ML["Future BKT / retrieval / AI adapters"]
 
-    Browser -- "HTTPS / JSON + HttpOnly cookie" --> CORS
+    Browser -->|"HTTPS JSON and HttpOnly cookie"| CORS
     Model <--> DB
-    Feature -- "validated embed URL" --> Wordwall
-    Legacy --> "development-only importer" --> DB
+    Feature -->|"Validated embed URL"| Wordwall
+    Legacy --> Importer --> DB
     Curriculum -. planned .-> ML
     ML -. planned .-> Service
 ~~~
@@ -877,252 +878,917 @@ Educator academic approval is pending. A Science educator must review concept bo
 
 ---
 
-## 11. Future roadmap: Phases 17–30 in implementation order
+## 11. Phase 16–30 detailed implementation blueprint
 
-Everything in this section is **planned** unless explicitly called out as an existing foundation. New file paths should be decided after inspecting current conventions at the relevant phase; do not create unused placeholder modules early.
+This section is a forward-looking technical design for the remaining Learning Studio work. It explains expected data contracts, service responsibilities, UI/API journeys, validation rules, failure behavior, testing strategy and completion evidence for each phase. It is a blueprint, not a claim that these future components already exist.
 
-### Phase 17 — First-party question bank and quiz schema
+### 11.1 Dependency map and implementation order
 
-**Objective:** connect teacher-reviewed question content to the approved concept taxonomy with stable identifiers and safe answer-key handling.
+The phases are sequential because later work consumes trustworthy outputs from earlier phases. Question content must not reference an unapproved taxonomy. Mastery cannot be calculated until attempts carry stable question/concept versions. Recommendations need mastery and a reviewed question pool. A grounded assistant and generated questions need source permission and retrieval quality evidence.
 
-Planned workflow:
-1. Obtain educator approval of the Phase 16 taxonomy/version.
-2. Define the supported first question types and difficulty meaning.
-3. Add stable conceptId and taxonomy version to questions.
-4. Define question/question-version persistence and content lifecycle.
-5. Store prompt/options separately from the server-only answer key.
-6. Preserve source/provenance, author, reviewer and review status.
-7. Make published question versions immutable or preserve full edit history.
-8. Add schema checks for option IDs, answer membership, concept references, duplicate question IDs/prompts and source attribution.
-9. Create a small original teacher-reviewed seed set; do not copy rights-restricted textbook questions.
-10. Update quiz submission deliberately so a historical attempt continues to refer to the question version it actually saw.
+~~~mermaid
+flowchart TD
+  P16["Phase 16 - approved concepts and source boundaries"]
+  P17["Phase 17 - versioned question bank"]
+  P18["Phase 18 - Teacher and Student quiz workflow"]
+  P19["Phase 19 - trustworthy attempt events"]
+  P20["Phase 20 - data quality and evaluation baselines"]
+  P21["Phase 21 - pure BKT implementation"]
+  P22["Phase 22 - mastery persistence and integration"]
+  P23["Phase 23 - explainable recommendations"]
+  P24["Phase 24 - misconception diagnostics"]
+  P25["Phase 25 - approved source ingestion and retrieval"]
+  P26["Phase 26 - grounded learning assistant"]
+  P27["Phase 27 - generated question candidates"]
+  P28["Phase 28 - Teacher review and publication"]
+  P29["Phase 29 - insights and pilot readiness"]
+  P30["Phase 30 - deployment and portfolio evidence"]
+  P16 --> P17 --> P18 --> P19 --> P20 --> P21 --> P22 --> P23
+  P20 --> P24
+  P16 --> P25
+  P25 --> P26
+  P25 --> P27 --> P28
+  P17 --> P28
+  P23 --> P29
+  P24 --> P29
+  P26 --> P29
+  P28 --> P29
+  P29 --> P30
+~~~
 
-Invariants:
-- student fetch payloads never disclose answer keys;
-- every conceptId resolves in a named taxonomy version;
-- pending/rejected/generated candidates cannot be served as published content;
-- old attempt history cannot silently change when question content is edited.
+**Sequencing rule:** Phase 21 may implement and test BKT offline after Phase 20 establishes a valid event/evaluation protocol, but production mastery APIs wait for Phase 22. Phase 25 may proceed as a rights-controlled source pipeline after Phase 16, but the Student assistant and generated content remain disabled until retrieval has its own quality gate. Phase 28 is the publication gate for generated questions; Phase 27 must never auto-publish.
 
-Exit evidence: schema and seed tests, invalid concept-reference tests, immutable version behavior and explicit proof of answer-key omission in Student fetch.
+### 11.2 Phase 16 — curriculum concept map, scope and educator approval
 
-### Phase 18 — First-party quiz UI and API integration
+**Current implementation:** committed; educator approval pending.
 
-**Objective:** expose the existing backend quiz foundation to Teachers and Students through native React screens.
+The catalogue is a versioned JSON manifest for one initial slice: Class 7 Science, Curiosity, Chapter 2, Exploring Substances: Acidic, Basic, and Neutral. It contains seven application-owned concept IDs, original concise learning-intent descriptions, prerequisites, grade/subject/chapter scope, source references, syllabus activity identifiers and explicit feature gates. Its lifecycle is draft_for_teacher_review and its approval status is pending. It does not contain copied textbook material, generated questions, answer keys or student-facing AI output. The existing quiz schema still stores a free-text concept field; the taxonomy is not yet enforced by runtime quiz code.
 
-Teacher workflow:
-1. Open Learning Studio/quiz authoring.
-2. Load assigned school/class/subject from persisted Teacher profile.
-3. Choose an approved topic/concept.
-4. Create a quiz draft and add questions from the reviewed question bank or author them.
-5. Preview the Student-safe projection.
-6. Publish only after server validation and review requirements.
+**Work and reasoning**
+1. Select one manageable chapter using an identified local curriculum anchor; do not assume one state or board sequence applies to every school.
+2. Define each concept as one assessable learning intent. Give it a stable ID that remains unchanged if a display title is edited.
+3. Define prerequisite edges and verify that all references exist and the graph is acyclic.
+4. Attach grade, subject, chapter, curriculum version, source ID and relevant syllabus activity/outcome reference metadata.
+5. Record content rights separately from academic validity. Publicly readable source material is not automatically licensed for copying, repackaging or AI ingestion.
+6. Review learner age suitability, practical safety and explicit out-of-scope topics.
+7. Keep student-facing questions and AI capabilities disabled until an educator has approved the exact taxonomy version.
 
-Student workflow:
-1. Open Learning Studio.
-2. Fetch only published quizzes for their school/class/subject.
-3. Start a fixed quiz version.
-4. Answer in the native UI.
-5. Submit question/option IDs with an idempotency key.
-6. Receive server-derived feedback.
-7. Handle retry, empty list, network error and keyboard/mobile interaction.
+**Educator review record**
+The reviewer should confirm concept boundaries, the target school's curriculum mapping, prerequisite order, activity references, safety wording and learner level. The record should identify the taxonomy version, reviewer role/identity, date, decision and comments. Any change that affects concept meaning requires a new version and review. Historical question attempts must keep the version they used.
 
-Reuse the existing create/list/publish/submit controllers; do not duplicate correctness logic in React and do not use Wordwall iframe state as an answer. Exit evidence is a complete Teacher-create/publish to Student-attempt workflow with server-verified grading.
+**Existing files:** backend/seeds/curriculum-concept-catalog.json, AI_LEARNING_CURRICULUM_SCOPE.md and backend/tests/curriculumConceptCatalog.test.js. A formal review collection is not required merely to simulate approval; a documented educator sign-off may be sufficient for this first small slice.
 
-### Phase 19 — Attempt events and data quality
+~~~mermaid
+flowchart TD
+  A["Choose target grade subject and chapter"]
+  B["Identify local curriculum alignment source"]
+  C["Record source owner version and use restrictions"]
+  D["Write original concept descriptors and stable IDs"]
+  E["Define prerequisites and concept links"]
+  F["Validate unique IDs and acyclic graph"]
+  G["Review safety and learner suitability"]
+  H["Educator reviews exact taxonomy version"]
+  I{"Approved?"}
+  J["Record reviewer decision and version"]
+  K["Revise manifest and return to review"]
+  L["Allow Phase 17 question authoring"]
+  M["Keep Student content and AI disabled"]
+  A --> B --> C --> D --> E --> F --> G --> H --> I
+  I -->|yes| J --> L
+  I -->|changes requested| K --> D
+  I -->|not approved| M
+~~~
 
-**Objective:** make attempt evidence reproducible and suitable for downstream analytics.
+**Tests and evidence**
+- every concept ID is unique and matches the approved ID format;
+- every prerequisite references a known concept and the graph has no cycle;
+- source/activity references resolve;
+- restricted source content is not copied;
+- no unsupported concepts, invented distractors or syllabus claims are added;
+- runtime feature gates remain disabled before approval;
+- educator sign-off names the exact taxonomy version.
 
-Existing foundation: LearningAttempt schema/controller already store quiz version, answer selections, server correctness, timestamps, idempotency and score.
+**Exit gate:** educator approval is recorded for the target school/version, source-use restrictions are explicit and concept IDs/prerequisites are stable. At the reviewed revision this gate is not satisfied, so Phase 17 must not create student-facing questions yet.
 
-Planned improvements:
-- add conceptId and taxonomy version to attempt responses;
-- decide whether a quiz submission or each question response is the canonical event;
-- define learner identifier minimization, retention and deletion rules;
-- deduplicate retries and define conflicting payload behavior;
-- address attemptNumber concurrency;
-- build replay and data-quality checks;
-- define treatment of omitted answers, abandoned quizzes and repeat attempts;
-- exclude Student names and unnecessary PII from analytics logs.
+### 11.3 Phase 17 — first-party question bank and quiz schema
 
-Exit evidence: event replay, idempotency tests, data-quality report and cross-learner scope tests.
+**Status:** planned; depends on Phase 16 approval.
 
-### Phase 20 — Baseline analytics and evaluation protocol
+**Purpose:** create reviewed first-party question content mapped to an approved taxonomy. The existing Learning Quiz model is a starting point, but it embeds questions in a quiz, stores concept as free text and does not implement a full immutable question-version/review lifecycle.
 
-**Objective:** define measurable outcomes and establish simple baselines before ML.
+**Recommended content model**
+- A logical Question has a stable question ID, ownership/scope policy, subject/grade, lifecycle pointer and timestamps.
+- A QuestionVersion is the exact immutable content served to a learner: question ID, version, taxonomy ID/version, conceptId, prompt, type, difficulty, options, correctOptionId, explanation, author, provenance, reviewer and lifecycle status.
+- Each option has a unique option ID within the version, display text and optionally an educator-reviewed misconception mapping.
+- Review metadata includes reviewer, decision time, comments, source evidence and the reviewed content version.
+- Provenance distinguishes independently authored content from content derived from an explicitly permitted source.
 
-Workflow:
-1. Define a prediction target and observation window.
-2. Report descriptive quiz/attempt patterns by approved concept.
-3. Create a synthetic event simulator for engineering tests; label synthetic data explicitly.
-4. Define learner/time-based train/validation/test splits to prevent leakage.
-5. Establish simple baselines such as global correctness rate, majority class, fixed ordering or simple revision heuristics as appropriate.
-6. Select metrics and sample-size thresholds before fitting a model.
-7. Record confidence intervals and known limitations.
+Start with MCQs because the current learningQuizSchema.js already supports that format. Difficulty labels must have educator-reviewed definitions; they should not be presented as psychometrically calibrated values without validation. Do not add arbitrary HTML, uploads or automatic free-text grading merely for future flexibility.
 
-Exit evidence: repeatable report, data dictionary, evaluation split plan and baseline metrics. Synthetic data must never be presented as measured Student outcomes.
+**Versioning and migration**
+Choose deliberately between quizzes referencing immutable QuestionVersion IDs and quizzes storing immutable snapshots of selected question versions. Either strategy must ensure that editing a question cannot change what a previous Student saw. Historical quizzes and LearningAttempt records must remain readable. If an old free-text concept cannot be mapped confidently, mark it unmapped; never guess a concept ID.
 
-### Phase 21 — Bayesian Knowledge Tracing (BKT)
+**Authoring and validation sequence**
+1. Load only an approved taxonomy version.
+2. Teacher selects a concept and writes an original prompt.
+3. Teacher supplies answer options and intended correct option.
+4. Server validates prompt/option lengths, option count, unique option IDs, correct-option membership, explanation length and concept/version existence.
+5. Save the item as draft or pending review.
+6. Authorized educator reviews correctness, age level, distractor quality and provenance.
+7. Approval creates an immutable version; later edits create a new draft version.
+8. Student reads return only eligible published versions, with answer key and pre-submit explanation omitted.
 
-**Objective:** implement an interpretable concept-level mastery estimate from first-party correct/incorrect responses.
+**Candidate code boundaries** (proposals, not existing files): a learning question/version model, question validation service, question-bank service, learning-question controller, focused schema/controller tests and an original reviewed seed manifest. Final paths must follow the current CommonJS/Mongoose conventions when this phase is implemented.
 
-The planned BKT parameters:
-- P(L0): prior probability that a learner already knows a skill;
-- P(T): probability of learning the skill after an opportunity;
-- P(G): probability of guessing correctly while not knowing;
-- P(S): probability of answering incorrectly despite knowing.
+**Security invariants**
+- Student projections never include correctOptionId or pre-submit explanation.
+- conceptId resolves against the exact taxonomy version.
+- Teacher authoring is restricted to the persisted Teacher school/class/subject.
+- Reviewer is resolved from the authenticated actor and must be authorized for that content.
+- Published versions are immutable; edits create a new version.
+- Every item has provenance and lifecycle status.
+- AI-generated/unreviewed items are not served.
 
-For mastery probability L:
+~~~mermaid
+flowchart TD
+  A["Load approved taxonomy version"]
+  B["Teacher selects concept and writes original MCQ"]
+  C["Server validates prompt options and answer"]
+  D["Resolve conceptId in taxonomy version"]
+  E{"All fields and references valid?"}
+  F["Save draft question version"]
+  G["Return safe validation errors"]
+  H["Reviewer checks content and provenance"]
+  I{"Review decision"}
+  J["Publish immutable version"]
+  K["Create revised draft from review notes"]
+  L["Record rejection and reason"]
+  M["Student fetch omits answer key"]
+  A --> B --> C --> D --> E
+  E -->|yes| F --> H
+  E -->|no| G
+  H --> I
+  I -->|approve| J --> M
+  I -->|changes requested| K --> B
+  I -->|reject| L
+~~~
+
+**Tests:** valid/invalid MCQ; missing/unknown concept; taxonomy mismatch; duplicate IDs; answer not in options; Student projection has no key; unauthorized Teacher/reviewer; published version immutability; new version preserves historical content; seed provenance.
+
+**Exit gate:** a small original reviewed question set exists, every question maps to a stable concept/version, versions are immutable and Student fetch cannot leak answer keys.
+
+### 11.4 Phase 18 — native first-party quiz UI and API integration
+
+**Status:** planned; reuses the current quiz backend foundation and Phase 17 question bank.
+
+**Teacher journey**
+1. Teacher opens Learning Studio from the Teacher dashboard.
+2. UI loads current persisted school/class/subject context; no arbitrary tenant selector is trusted.
+3. Teacher chooses an approved topic/concept and reviewed question versions.
+4. Teacher composes a quiz draft, gives it a title/instructions and checks the question order/count.
+5. Backend validates each referenced question version and current Teacher assignment.
+6. Teacher previews the exact Student-safe quiz representation.
+7. Teacher publishes through a conditional backend state transition.
+8. Published quiz content is fixed to the selected question versions.
+
+**Student journey**
+1. Student opens Learning Studio from StudentDashboard.
+2. Frontend fetches quizzes eligible for the authenticated Student's school/class/subject.
+3. Backend returns only published quizzes and a Student-safe question projection.
+4. Student starts a fixed quiz version; the UI tracks selected option IDs and unanswered questions locally.
+5. On submit, the frontend generates one idempotency key for that logical submission and disables repeated submit while pending.
+6. Backend derives Student identity from the session, checks question/option membership and grades using the stored answer key.
+7. Backend persists LearningAttempt and returns score/feedback after grading.
+8. UI displays result/explanation and safe retry/navigation actions.
+
+**Existing code to reuse:** backend/controllers/learning-quiz-controller.js, backend/models/learningQuizSchema.js, backend/models/learningAttemptSchema.js, backend/tests/learningQuizController.test.js, frontend/src/App.js and frontend/src/utils/apiClient.js.
+
+**Proposed UI boundaries:** Teacher Learning Studio/quiz-authoring screens, Student quiz list/take/result screens, reusable question renderer/progress/result components, dashboard route/sidebar additions and component tests. Final paths should be selected after re-reading current UI conventions. Use the existing app design system; do not create a second login or client-side answer-key store.
+
+~~~mermaid
+sequenceDiagram
+  participant T as Teacher browser
+  participant S as Student browser
+  participant API as Express quiz API
+  participant DB as MongoDB
+  T->>API: Create draft with question version IDs
+  API->>API: Verify Teacher scope and question eligibility
+  API->>DB: Save draft quiz snapshot
+  T->>API: Publish quiz
+  API->>DB: Conditional draft to published transition
+  S->>API: Fetch published quizzes for own class
+  API->>DB: Query Student-safe projection
+  DB-->>API: Quiz without answer keys
+  API-->>S: Renderable quiz payload
+  S->>API: Submit option IDs and idempotency key
+  API->>API: Validate membership and grade on server
+  API->>DB: Persist LearningAttempt
+  DB-->>API: Stored attempt
+  API-->>S: Score and post-submit feedback
+~~~
+
+**Failure/retry behavior**
+- quiz fetch failure shows retry and does not fabricate an empty-success state;
+- a lost submit response is retried with the same idempotency key;
+- changed, deleted or unpublished content returns a stable unavailable/conflict response;
+- pre-submit errors never expose the correct option;
+- a successfully stored attempt remains recorded even if the browser closes before rendering the result;
+- partial answers follow the documented unanswered/incorrect rule.
+
+**Tests and exit gate:** complete Teacher-create/publish to Student-attempt path; server grading; only published in-scope quiz visibility; no answer-key leak; invalid IDs; replay; API failure; empty state; mobile and keyboard access.
+
+### 11.5 Phase 19 — learning-attempt events and data quality
+
+**Status:** planned; strengthens the existing LearningAttempt foundation.
+
+**Purpose:** make learning evidence reproducible, privacy-minimized and suitable for later analytics. The current LearningAttempt stores quiz version, selected options, correctness, timestamp, idempotency key and responses, but future mastery needs stable question-version and concept IDs.
+
+**Canonical response-event fields**
+- event ID or deterministic idempotency identity;
+- internal/pseudonymous learner reference tied to the authenticated Student;
+- quiz ID/version and question ID/version;
+- concept ID and taxonomy version;
+- selected option ID or null;
+- server-derived correctness;
+- answer timestamp and attempt identity/number;
+- optional bounded duration only where there is an approved need and an exact definition.
+
+Do not store Student name, roll number, chat text, precise location, device fingerprint or unrelated profile fields in model features. A protected database reference can connect an event to a Student record without copying profile attributes into every event.
+
+**Processing workflow**
+1. Authenticate the Student and resolve the persisted Student record.
+2. Validate quiz, question version, concept and taxonomy references.
+3. Validate the full answer payload before persistence.
+4. Same idempotency key and same logical payload returns the original attempt.
+5. Same idempotency key with a different payload returns a conflict.
+6. Persist attempt and response facts atomically where possible; if separate event documents are introduced, define transaction/outbox semantics.
+7. Replace the current countDocuments + 1 attemptNumber assumption with an atomic sequence or another uniqueness strategy if exact numbering is required.
+8. Define submitted, abandoned, expired, replayed and rejected states.
+9. Add a replay/data-quality command that compares attempt summaries to response records and detects duplicates, missing references or inconsistent score totals.
+
+**Storage decision:** retain LearningAttempt as the attempt aggregate and add a separate response-event collection only if querying/replay needs justify it. Otherwise use a canonical response array with a documented replay contract. Do not create two independent truth sources that can disagree.
+
+~~~mermaid
+flowchart TD
+  A["Student submits quiz"]
+  B["Authenticate Student and validate quiz version"]
+  C["Validate question option and concept references"]
+  D["Check idempotency key and payload fingerprint"]
+  E{"Existing submission?"}
+  F["Return original attempt as replay"]
+  G["Reject conflicting reuse of key"]
+  H["Persist attempt and response evidence"]
+  I["Assign stable attempt identity and ordering"]
+  J["Run event quality checks"]
+  K{"Evidence consistent?"}
+  L["Mark eligible for analytics"]
+  M["Quarantine or flag for repair"]
+  N["Expose only minimized analytics fields"]
+  A --> B --> C --> D --> E
+  E -->|same payload| F
+  E -->|different payload| G
+  E -->|new submission| H --> I --> J --> K
+  K -->|yes| L --> N
+  K -->|no| M
+~~~
+
+**Data-quality rules:** every response belongs to one attempt; every version/concept reference resolves; taxonomy version matches served question; correctness agrees with answer-key version; one idempotency key cannot create multiple logical attempts; score equals correct response count; total matches the quiz snapshot; timestamps and optional durations meet defined bounds.
+
+**Tests and exit gate:** same-key replay; conflicting payload; concurrent attempts; deterministic replay; invalid concept/version; quality report; no unnecessary PII; learner-specific read authorization.
+
+### 11.6 Phase 20 — baseline analytics and evaluation protocol
+
+**Status:** planned; no model should be called useful before this phase.
+
+**Purpose:** measure event quality and define a fair benchmark before BKT or recommendation logic. This is an analytics/evaluation phase, not a student-facing AI score feature.
+
+**Workflow**
+1. Freeze a data dictionary for quizzes, question versions, concepts and response events.
+2. Define the target precisely, such as predicting the next first-party response correctness for a learner-concept pair, including the prediction cutoff.
+3. Define minimum evidence thresholds: learners, attempts per concept, cohort coverage and missing-data tolerance. Report insufficient samples rather than hide them.
+4. Build a synthetic event simulator for edge-case testing. Keep synthetic events in a separate namespace/dataset and never mix them into real-student outcome claims.
+5. Produce descriptive statistics: response volume, first-attempt/repeat accuracy, unanswered rate, concept coverage and time distribution.
+6. Define leakage-safe evaluation splits. For personalized predictions, group by learner and/or use chronological cutoffs so future attempts cannot influence earlier predictions.
+7. Establish simple baselines: global or concept correctness rate with smoothing, majority baseline, fixed-order revision, random eligible item and simple low-accuracy heuristic.
+8. Choose metrics before model fitting: Brier score/log loss and calibration for probabilities; other metrics only where class balance and sample size justify them.
+9. Record sample counts, cohort, missingness, provenance, confidence intervals and known limitations.
+
+**Deliverables:** repeatable scripts/notebooks and a report containing dataset version/checksum, filters, split method, features, baselines, metrics, confidence intervals and limitations. Synthetic-only results must never be described as Student performance or educational impact.
+
+~~~mermaid
+flowchart TD
+  A["Validate first-party attempt events"]
+  B["Create data dictionary and cohort definition"]
+  C["Separate synthetic fixtures from real school data"]
+  D["Choose target and prediction cutoff"]
+  E["Create leakage-safe learner and time split"]
+  F["Build descriptive statistics"]
+  G["Evaluate simple baselines"]
+  H["Report metrics sample size and uncertainty"]
+  I{"Quality and sample threshold met?"}
+  J["Approve offline model experiments"]
+  K["Collect more evidence or repair data"]
+  L["Keep production model disabled"]
+  A --> B --> C --> D --> E --> F --> G --> H --> I
+  I -->|yes| J
+  I -->|no| K --> L
+~~~
+
+**Exit gate:** repeatable baseline report, leakage-safe split protocol, explicit real/synthetic separation and metrics defined before model fitting.
+
+### 11.7 Phase 21 — Bayesian Knowledge Tracing implementation
+
+**Status:** planned offline model; no production endpoint in this phase.
+
+**Purpose:** implement an interpretable concept-level estimate from first-party correct/incorrect response sequences. It is not an exam mark, psychological diagnosis or permanent label.
+
+**Parameters**
+- P(L0): prior probability that a learner already knows the concept;
+- P(T): probability of learning after an opportunity;
+- P(G): probability of a correct answer while not knowing;
+- P(S): probability of an incorrect answer despite knowing.
+
+For current mastery probability L:
 
 After a correct response:
 
-P(L | correct) = [L × (1 − P(S))] / [L × (1 − P(S)) + (1 − L) × P(G)]
+P(L given correct) = [L * (1 - P(S))] / [L * (1 - P(S)) + (1 - L) * P(G)]
 
 After an incorrect response:
 
-P(L | incorrect) = [L × P(S)] / [L × P(S) + (1 − L) × (1 − P(G))]
+P(L given incorrect) = [L * P(S)] / [L * P(S) + (1 - L) * (1 - P(G))]
 
 Learning transition:
 
-P(L_next) = P(L | observation) + [1 − P(L | observation)] × P(T)
+P(L next) = P(L given observation) + [1 - P(L given observation)] * P(T)
 
-Implementation plan:
-1. create a pure, independent Python update function;
-2. test correct/incorrect cases with hand-calculated examples;
-3. test edge probabilities and ensure values remain between 0 and 1;
-4. version parameters/model assumptions;
-5. evaluate calibration and next-response prediction against baselines;
-6. keep it offline until the assumptions and event quality are reviewed.
+**Algorithm**
+1. Validate parameters are finite and within allowed ranges.
+2. Initialize state from P(L0).
+3. Sort accepted events by deterministic server order and reject duplicate event IDs.
+4. For each eligible observation, calculate the correct/incorrect posterior.
+5. Apply the learning transition once.
+6. Clamp only justified floating-point noise; reject invalid probability inputs rather than silently repairing them.
+7. Return probability, observation count and model/parameter version.
+8. With no observations, return the prior and clearly mark that it is not evidence-based mastery.
+9. Compare next-response calibration and prediction against Phase 20 baselines.
 
-BKT is an estimate, not an exam grade, clinical diagnosis or definitive label of a learner.
+Classic BKT simplifies learning behavior. It may not model question difficulty, guessing strategy, fatigue, prior outside exposure, dependent concepts or question quality. Parameters must be documented and calibrated only with sufficient representative data.
 
-### Phase 22 — Mastery persistence and service integration
+**Implementation boundary:** the harness calls for a pure Python module. Choose an isolated package/folder after reviewing build/deploy conventions. The formula module must not access MongoDB, make network calls or depend on HTTP.
 
-**Objective:** persist reproducible concept mastery with model metadata.
+~~~mermaid
+flowchart TD
+  A["Receive one concept response sequence"]
+  B["Validate parameters and event identities"]
+  C["Initialize mastery from prior probability"]
+  D["Read next eligible response in order"]
+  E{"Correct response?"}
+  F["Apply correct posterior using guess and slip"]
+  G["Apply incorrect posterior using guess and slip"]
+  H["Apply learning transition"]
+  I{"More eligible responses?"}
+  J["Return probability count and model version"]
+  K["Reject invalid event or parameter"]
+  A --> B
+  B -->|valid| C --> D --> E
+  B -->|invalid| K
+  E -->|yes| F --> H --> I
+  E -->|no| G --> H
+  I -->|yes| D
+  I -->|no| J
+~~~
 
-Expected record fields include learner reference, concept ID, taxonomy version, mastery probability, model/parameter version, observation count and last update time. Store only identifiers necessary for the feature.
+**Tests:** hand-calculated correct/incorrect examples; no-observation prior; edge probabilities 0/1; parameter validation; repeated event IDs; deterministic ordering; output bounds; one transition per event; identical inputs yield identical output.
 
-Processing:
-1. receive a validated first-party event;
-2. read current concept state;
-3. apply the versioned BKT update;
-4. persist updated state and provenance;
-5. support rebuild/replay from original events;
-6. isolate model-service failure from quiz submission using timeout/fallback;
-7. restrict mastery reads to the learner and explicitly authorized staff.
+**Exit gate:** formula-level tests and hand calculations pass, assumptions are documented and offline evaluation is compared against baselines. No production API is exposed in Phase 21.
 
-Exit evidence: deterministic event replay, model metadata, fallback behavior and cross-learner access-denial tests.
+### 11.8 Phase 22 — mastery persistence and service integration
 
-### Phase 23 — Explainable adaptive recommendation policy
+**Status:** planned; follows offline BKT validation.
 
-**Objective:** select the next appropriate published first-party practice item.
+**Purpose:** persist reproducible state without making quiz submission depend on an ML service being available.
 
-Candidate logic may consider:
-- published status;
-- school/class/subject scope;
-- learner's current mastery estimate;
-- prerequisite graph;
-- revision priority and spacing;
-- question difficulty;
-- recent attempts and repeat suppression.
+**Mastery record**
+- learner reference or minimized internal key;
+- conceptId and taxonomy version;
+- mastery probability;
+- observation count and latest processed event identity/order;
+- BKT model and parameter version;
+- updated timestamp;
+- optional current/stale/recompute-required status.
 
-Record the selected item, policy/model version and a human-readable explanation. Compare against fixed order, random and simple low-mastery heuristics. Do not claim learning improvement without measured outcomes.
+Use a uniqueness strategy for active learner + concept + taxonomy version state. Retain older model versions only when audit/reproduction needs justify them.
 
-### Phase 24 — Misconception diagnostics
+**Processing**
+1. Quiz submission durably saves the first-party attempt.
+2. An outbox/pending event or equivalent recoverable work item is created.
+3. A worker claims pending events in deterministic order.
+4. Worker loads the learner's concept state and checks if this event was already processed.
+5. Apply pure BKT locally or call a private internal Python service if measured operational needs justify it.
+6. Upsert mastery and processed-event checkpoint idempotently.
+7. Mark event processed or schedule bounded retry on temporary failure.
+8. Support deterministic replay/rebuild by event cutoff and model version.
+9. Restrict Student reads to self; Teacher reads to assigned-class/subject scope and privacy-approved aggregates; Admin reads only privacy-reviewed school aggregates.
 
-**Objective:** begin with educator-reviewed rules and only explore classification if the data justifies it.
+**Failure isolation:** the submit endpoint returns success once the attempt is durable. A Python timeout, worker crash or invalid model output leaves mastery pending/stale and retryable. It must not delete or duplicate the attempt. Use timeout, bounded backoff, error classification and a dead-letter/manual-repair state. Never expose an internal ML endpoint to the browser.
 
-Workflow:
-1. create an educator-reviewed misconception taxonomy;
-2. map specific distractors/answer sequences to tentative hypotheses;
-3. validate rules on a reviewed sample;
-4. measure precision, recall, F1 and class-wise errors;
-5. evaluate label reliability and sample sizes;
-6. only add a classifier if allowed representative educator-labelled examples exist and it beats a baseline.
+~~~mermaid
+sequenceDiagram
+  participant S as Student API
+  participant DB as MongoDB
+  participant W as Mastery worker
+  participant ML as Private BKT module
+  S->>DB: Save LearningAttempt and pending event
+  DB-->>S: Durable attempt accepted
+  S-->>S: Return quiz result without waiting for BKT
+  W->>DB: Claim next unprocessed event
+  W->>DB: Load concept state and processed-event checkpoint
+  W->>ML: Apply versioned BKT update
+  alt Model result valid
+    ML-->>W: New probability and model version
+    W->>DB: Upsert mastery and processed checkpoint
+    W->>DB: Mark event processed
+  else Timeout or invalid output
+    ML-->>W: Error or timeout
+    W->>DB: Keep event pending for bounded retry
+  end
+~~~
 
-Student-facing wording must describe a possible misconception, not label the learner or state a diagnosis. If evidence is insufficient, keep the rules or document a no-go decision.
+**Consistency rules:** one event updates one state once per model version; concurrent workers use safe claiming or compare-and-set; ordering is deterministic; parameter changes require explicit rebuild/side-by-side versioning; late events cannot overwrite a state advanced past them; learner deletion follows retention policy.
 
-### Phase 25 — Approved curriculum ingestion and retrieval evaluation
+**Tests and exit gate:** replay is idempotent; retry works; quiz submit succeeds with BKT down; multiple workers cannot double-process; model metadata persists; cross-learner reads are denied; Teacher/Admin scopes are privacy-safe.
 
-**Objective:** build a rights-controlled, traceable source corpus.
+### 11.9 Phase 23 — explainable adaptive recommendation policy
 
-Pipeline:
-1. source registry records owner/title/version/license/permission/use restrictions;
-2. validate permission before download or processing;
-3. parse only approved formats;
-4. extract text with page/section anchors and checksums;
-5. chunk content while preserving context;
-6. attach grade/subject/chapter/concept metadata;
-7. retain source/version ID for each chunk;
-8. introduce embeddings and a retrieval adapter only when justified;
-9. create manually judged retrieval queries;
-10. evaluate Recall@k or an appropriate metric, latency and cost.
+**Status:** planned; deterministic first, not reinforcement learning.
 
-NCERT textbook content remains excluded unless written permission is obtained and recorded. Public accessibility does not equal permission for ingestion, repackaging or software distribution.
+**Purpose:** choose the next appropriate first-party practice item using reviewed content, prerequisites, attempts and mastery estimates.
 
-### Phase 26 — Grounded learning assistant
+**Eligibility**
+- question version is published and approved;
+- item is eligible for the Student's school/class/subject;
+- concept and taxonomy version are approved;
+- item is not retired/blocked;
+- Wordwall launches are not treated as assessment evidence.
 
-**Objective:** explain a concept using retrieved approved source evidence.
+**Policy**
+1. Resolve Student academic scope.
+2. Load eligible published question versions and prerequisite graph.
+3. Load mastery and recent first-party attempts.
+4. Suppress recently repeated items when policy requires.
+5. Prioritize a weak prerequisite if a dependent concept is not ready.
+6. Score candidates with a versioned deterministic policy.
+7. Select a bounded question/revision set with deterministic tie-breaking.
+8. Persist RecommendationEvent with candidates/selected IDs, policy version and explanation.
+9. If evidence/candidates are insufficient, use a published fixed-order or teacher-assigned fallback and explain why.
 
-Request flow:
-1. authenticate Student and resolve their scope;
-2. rate-limit and bound request length;
-3. identify grade/subject/concept scope;
-4. retrieve approved versioned passages;
-5. pass only relevant evidence to the model;
-6. generate a short age-appropriate explanation;
-7. validate structured response and citations;
-8. show references and fallback if model/retrieval is unavailable;
-9. retain minimal operational logs.
+Signals may include mastery probability, prerequisite readiness, last practice time, exposure, recent correctness, educator-approved difficulty and revision priority. Do not use attendance, demographics or exam marks as a proxy for concept evidence.
 
-Guardrails: LLM output is not the source of truth; citations must point to available evidence; unsupported chemistry claims and unsafe experiment advice are not allowed; uncertainty must be visible; there must be a non-LLM fallback.
+~~~mermaid
+flowchart TD
+  A["Student requests next practice"]
+  B["Resolve Student school class and subject"]
+  C["Load approved concepts and prerequisites"]
+  D["Load published eligible question versions"]
+  E["Load mastery and recent first-party attempts"]
+  F["Filter retired unrelated or recently repeated items"]
+  G["Check prerequisite readiness and revision priority"]
+  H["Score candidates with deterministic policy"]
+  I{"Sufficient evidence and candidates?"}
+  J["Choose highest-ranked eligible item set"]
+  K["Use published fixed-order fallback"]
+  L["Persist policy version and explanation"]
+  M["Return Student-safe question references"]
+  A --> B --> C --> D --> E --> F --> G --> H --> I
+  I -->|yes| J --> L --> M
+  I -->|no| K --> L
+~~~
 
-### Phase 27 — AI-generated question candidates
+**Evaluation/tests:** deterministic repeatability; no unpublished/wrong-school/wrong-subject items; prerequisite ordering; empty candidate fallback; tie-break stability; repeat suppression; stored human-readable rationale; comparison to fixed-order, random eligible and low-mastery heuristic baselines.
 
-**Objective:** generate structured drafts, never auto-published Student content.
+**Exit gate:** policy behavior is explainable, safe and deterministic, and performance is compared against baselines before calling it better.
 
-Candidate metadata should include provider/model version, prompt-template version, taxonomy/concept IDs, source evidence IDs, structured question/options/key/explanation, validation findings, similarity check and generated timestamp.
+### 11.10 Phase 24 — misconception diagnostics
 
-Validation must catch malformed shape, answer-option mismatch, unsupported claims, wrong grade/topic, duplicate similarity and source-scope drift. Provider failures must not create partial or student-visible records. Model-generated answer keys need review.
+**Status:** planned; educator-reviewed rules first.
 
-### Phase 28 — Teacher content review and publishing
+**Purpose:** detect tentative patterns in selected distractors. One wrong answer alone is not a diagnosis.
 
-**Objective:** make Educators the authority for AI-generated questions.
+**Workflow**
+1. Educators define a small misconception taxonomy for the first topic.
+2. Each distractor is reviewed and mapped only when it reflects a plausible misunderstanding.
+3. Mapping attaches to exact questionVersion and optionId, not question text alone.
+4. Collect first-party response evidence only.
+5. Apply transparent rules with minimum evidence and recency/decay thresholds.
+6. Produce a tentative hypothesis with sample count and supporting pattern.
+7. Prefer Teacher-facing aggregate signals; Student-facing hints must be supportive and non-labeling.
+8. Evaluate precision, recall and F1 on a held-out reviewed set.
+9. Consider a classifier only if permitted, representative, reliable Teacher-labelled examples exist and it beats a suitable baseline.
 
-Review UI should display the draft question, options, proposed correct answer, explanation, concept mapping, grade, evidence passages, warnings, model/prompt version and status. Teacher can edit, reject or approve. Publishing must create an immutable version/audit trail. Only authorized reviewers for the relevant school/class/subject may publish. Unreviewed/rejected items must not appear in Student APIs.
+**Data boundary:** version a mapping with conceptId, questionVersionId, optionId, hypothesisId, educator rationale and approval. If wording changes, do not silently carry the mapping forward. Any classifier stays offline until label quality/error patterns are reviewed.
 
-### Phase 29 — Teacher insights, evaluation and pilot readiness
+~~~mermaid
+flowchart TD
+  A["Educator defines misconception hypotheses"]
+  B["Review distractor mapping for exact question versions"]
+  C["Collect first-party response evidence"]
+  D["Apply transparent rule and evidence threshold"]
+  E{"Enough supporting observations?"}
+  F["Create tentative hypothesis and supporting pattern"]
+  G["Return insufficient evidence without a label"]
+  H["Teacher reviews aggregate pattern and examples"]
+  I{"Enough reliable labels for classifier study?"}
+  J["Evaluate classifier against rule and majority baselines"]
+  K["Keep reviewed rules and document no-go"]
+  L["Expose cautious Teacher-facing insight"]
+  A --> B --> C --> D --> E
+  E -->|yes| F --> H --> I
+  E -->|no| G
+  I -->|yes| J --> L
+  I -->|no| K --> L
+~~~
 
-**Objective:** present safe aggregate learning evidence and establish a readiness gate.
+**Safety:** never label a learner weak/careless/incapable or diagnosed; distinguish one error from repeated pattern; suppress low-count patterns; allow educator correction; show uncertainty/provenance; no grading or consequential decision from this signal.
 
-Teacher insights may include concept-level difficulty and aggregate misconception patterns. Apply minimum-group privacy safeguards so a small group cannot expose an individual learner's response history.
+**Exit gate:** rules have reviewed mappings and measured precision/recall/F1 and class-wise errors. If labels are insufficient, explicitly keep rules and record a no-go decision for ML.
 
-Evaluate independently:
-- BKT calibration and next-response prediction;
-- recommendation performance versus baselines;
-- retrieval quality and source coverage;
-- generated-question validity/factuality/review acceptance;
-- quiz correctness and operational reliability.
+### 11.11 Phase 25 — approved curriculum ingestion and retrieval evaluation
 
-Before a real Student pilot, retest access isolation, session expiry, cookie/CORS/CSRF posture, answer-key leakage, rate limiting, content rights, source provenance, privacy, audit trails, retention/deletion, logs, backups and recovery. No unsupported educational improvement claims.
+**Status:** planned; permission is a hard prerequisite.
 
-### Phase 30 — Deployment, documentation and portfolio evidence
+**Purpose:** build a traceable corpus of material the product is allowed to process. This is a source-rights pipeline before it is an AI feature.
 
-**Objective:** make the system reproducible and explainable to another developer or interviewer.
+**Source registry**
+Record owner/publisher, title, edition/version/date, URL or controlled file reference, curriculum alignment, licence/permission evidence, permitted operations (display, indexing, embedding, model input, quotation), restrictions, reviewer and approval status. Unclear rights means reject or hold for manual review.
 
-Expected outputs:
-- Windows setup and deployment guides;
-- environment and migration/seed instructions;
-- role/scope matrix and API contracts;
-- architecture/domain/data-flow diagrams;
-- data dictionary and model assumptions;
-- tests and actual test outputs;
-- privacy/security/source-rights policies;
-- retrieval and ML evaluation reports;
-- troubleshooting, backup and recovery procedures;
-- a demo walkthrough backed by real feature behavior;
-- an accurate portfolio explanation separating original school-management code, imported ChemAmaze catalogue metadata and new AI/ML additions.
+NCERT textbook material remains excluded unless written permission is obtained and recorded. The GNCT Delhi syllabus PDF remains citation/metadata-only until reuse rights are established. Do not ingest a public file merely because it is reachable.
 
----
+**Ingestion pipeline**
+1. Register source and rights evidence.
+2. Approve intended use before download or parsing.
+3. Fetch from approved source or ingest authorized file.
+4. Verify file type, size, checksum, version and safe file handling.
+5. Parse supported format and preserve page/heading/section/table context.
+6. Normalize without removing citations or educational boundaries.
+7. Chunk with page/section anchors and content checksums.
+8. Attach grade, subject, chapter, concept IDs, source version and rights metadata.
+9. Generate embeddings only after approval behind a provider-neutral adapter.
+10. Store chunks/vector references with re-index and deletion capability.
+11. Evaluate on a manually judged query set and report Recall@k or an appropriate ranking metric, latency and cost.
+12. Exclude low-quality, permission-unclear or out-of-scope chunks.
+
+Do not select a vector database or embedding provider before measuring corpus size, filtering needs, rights and hosting cost. Keep retrieval behind an adapter.
+
+~~~mermaid
+flowchart TD
+  A["Register candidate source and owner"]
+  B["Review licence and intended operations"]
+  C{"Permission covers intended use?"}
+  D["Reject or hold source from ingestion"]
+  E["Fetch approved source version"]
+  F["Verify file type size checksum and version"]
+  G["Parse with page and section anchors"]
+  H["Chunk and attach curriculum metadata"]
+  I["Generate embeddings through adapter"]
+  J["Store source-linked chunks and vectors"]
+  K["Run manually judged retrieval queries"]
+  L{"Quality and provenance pass?"}
+  M["Approve retrieval corpus version"]
+  N["Exclude weak chunks and document coverage gap"]
+  A --> B --> C
+  C -->|no| D
+  C -->|yes| E --> F --> G --> H --> I --> J --> K --> L
+  L -->|yes| M
+  L -->|no| N
+~~~
+
+**Quality and security:** each chunk resolves to source/version/page; re-ingestion creates a new version; permission revocation propagates to indexes/cache; retrieval filters by approved grade/subject/concept; no learner personal data goes into source embeddings.
+
+**Exit gate:** every source has recorded permission, every chunk traces to its source/version, a human-judged retrieval report exists, and corpus coverage/cost/latency are documented.
+
+### 11.12 Phase 26 — grounded Student learning assistant
+
+**Status:** planned; depends on evaluated, permitted retrieval.
+
+**Purpose:** explain a concept using approved retrieved evidence. The model generates wording; it is not the curriculum source of truth.
+
+**Request flow**
+1. Student submits a bounded question in Learning Studio.
+2. API authenticates Student and derives grade/subject/class from persisted records.
+3. Apply rate, request-size and per-user limits before expensive work.
+4. Determine allowed curriculum scope.
+5. Retrieve relevant chunks from an approved source version.
+6. If evidence is empty/weak, use curated fallback or ask the Student to select a supported concept.
+7. Send only the question, grade constraints, retrieved evidence IDs/content and strict output schema to the model.
+8. Validate response structure, citations, length, topic and safety.
+9. Verify each citation belongs to the retrieved allowed chunk set.
+10. Return explanation and source references; if provider/retriever fails, show a safe fallback.
+11. Log minimal operational metadata without storing unnecessary dialogue by default.
+
+**Guardrails:** no unsafe chemistry experiment/mixing advice; no invented citations; no NCERT textbook RAG without permission; no answer-key or other-learner data disclosure; no claim hallucinations are impossible; visible uncertainty; bounded rate/cost/timeouts.
+
+~~~mermaid
+sequenceDiagram
+  participant S as Student UI
+  participant API as Assistant API
+  participant R as Approved retriever
+  participant L as Language model
+  participant V as Response validator
+  S->>API: Ask bounded question
+  API->>API: Authenticate and derive curriculum scope
+  API->>API: Apply limits and safety checks
+  API->>R: Retrieve approved chunks for scope
+  alt Adequate evidence found
+    R-->>API: Ranked chunks with source anchors
+    API->>L: Question plus bounded evidence and schema
+    L-->>API: Structured draft and citations
+    API->>V: Validate content and evidence IDs
+    alt Response passes
+      V-->>API: Safe answer and references
+      API-->>S: Explanation with citations
+    else Response fails
+      V-->>API: Validation rejection
+      API-->>S: Curated fallback or unsupported notice
+    end
+  else No adequate evidence
+    R-->>API: No supported evidence
+    API-->>S: Curated fallback and scope guidance
+  end
+~~~
+
+**Evaluation:** fixed educator-checked factuality set; prompt injection in retrieved text; unsafe chemistry requests; citation validity/completeness; age suitability; refusal/fallback; latency/cost; provider and retriever outage behavior.
+
+**Exit gate:** answers cite allowed sources, unsupported questions fall back, fixed reviewed evaluations pass and operational limits are documented.
+
+### 11.13 Phase 27 — AI-generated practice-question candidates
+
+**Status:** planned; draft generation only.
+
+**Purpose:** generate structured question candidates from approved retrieval evidence. Model output is untrusted and never published directly.
+
+**Candidate provenance**
+Store provider/model version, prompt-template version, taxonomy/concept IDs and version, source chunk IDs, structured content/options/proposed answer/explanation, validation findings, similarity result, generated time and lifecycle status.
+
+**Generation workflow**
+1. Authorized Teacher selects an approved concept and a bounded number of draft candidates.
+2. Server loads allowed concept metadata and approved source chunks; client-provided arbitrary text does not become official evidence.
+3. Build a constrained prompt from source evidence and MCQ schema.
+4. Call provider with timeout and token/spend limits.
+5. Parse structured output and reject invalid JSON/unexpected fields.
+6. Validate prompt/options, unique IDs, correct-option membership, explanation, concept mapping and evidence support.
+7. Compare exact/near-duplicate questions against the bank.
+8. Run deterministic safety and scope checks; send uncertain material to human review.
+9. Persist a draft candidate with complete provenance and report.
+10. Provider or validation failure creates no Student-visible item.
+
+A proposed answer key is only a model suggestion. It is not factually correct merely because the model generated it. Phase 28 must show it and the evidence to an authorized Teacher.
+
+~~~mermaid
+flowchart TD
+  A["Teacher requests candidate for approved concept"]
+  B["Resolve permitted chunks and taxonomy version"]
+  C["Build bounded structured generation request"]
+  D["Call provider with timeout and budget limit"]
+  E{"Provider returned valid structure?"}
+  F["Reject provider result without candidate"]
+  G["Validate schema concept and answer membership"]
+  H["Check evidence safety and scope"]
+  I["Run duplicate and similarity checks"]
+  J{"Automatic checks acceptable?"}
+  K["Persist draft with model prompt and source provenance"]
+  L["Reject or flag for manual investigation"]
+  M["Keep candidate unavailable to Students"]
+  N["Send draft to Teacher review queue"]
+  A --> B --> C --> D --> E
+  E -->|no| F
+  E -->|yes| G --> H --> I --> J
+  J -->|yes| K --> M --> N
+  J -->|no| L --> M
+~~~
+
+**Tests and exit gate:** provider timeout/rate limit/malformed JSON; invalid options/key; unsupported evidence/wrong concept/wrong grade/unsafe advice; duplicates; source IDs persist; draft not returned to Student; no automatic publish path; deterministic validation independent of live provider.
+
+### 11.14 Phase 28 — Teacher review and immutable publication
+
+**Status:** planned; mandatory human publication gate.
+
+**Purpose:** make Educators the final authority for AI-generated questions. Approval is explicit, auditable and tied to an exact version.
+
+**Review screen**
+Show prompt, options, proposed correct answer, explanation, concept/grade mapping, source passages and anchors, model/provider/prompt version, automatic validation warnings, duplicate/safety results and lifecycle state. A reviewer must be able to inspect evidence without accessing a source outside their permission.
+
+**Review actions**
+- Approve: validate reviewer scope, create immutable published QuestionVersion and record review/provenance.
+- Edit: create a new candidate revision; never mutate an already reviewed/published version.
+- Reject: record reviewer/time/reason and exclude from Student serving.
+- Request changes: create a revision state with review notes.
+- Retire/withdraw: stop future serving while retaining historical attempt/version records.
+
+Only a reviewer authorized for that school/class/subject may approve. Admin school ownership does not automatically grant academic approval for every topic. Reviewer policy must be explicit.
+
+**Atomic publication**
+1. Confirm candidate is reviewable.
+2. Resolve reviewer from persisted actor context.
+3. Verify reviewer is authorized for candidate school/subject/grade.
+4. Verify evidence and taxonomy version are still approved/available.
+5. Re-run deterministic answer/schema validation.
+6. Create immutable published version and audit record.
+7. Conditionally transition candidate review state.
+8. Ensure Student fetch/recommendation query uses only published versions.
+9. Preserve the exact version used by existing attempts.
+
+~~~mermaid
+stateDiagram-v2
+  [*] --> Draft
+  Draft --> PendingReview
+  PendingReview --> ChangesRequested
+  ChangesRequested --> PendingReview
+  PendingReview --> Rejected
+  PendingReview --> Approved
+  Approved --> Published
+  Published --> Retired
+  Rejected --> Draft: Authorized reopen
+  Retired --> [*]
+~~~
+
+~~~mermaid
+flowchart TD
+  A["Teacher opens review queue"]
+  B["Load candidate and evidence provenance"]
+  C["Verify reviewer and school subject scope"]
+  D["Inspect question answer key and warnings"]
+  E{"Reviewer decision"}
+  F["Create immutable published QuestionVersion"]
+  G["Create revised draft with review notes"]
+  H["Record rejection and reviewer"]
+  I["Keep unapproved content hidden"]
+  J["Expose published version to eligible Students"]
+  K["Preserve version for historical attempts"]
+  A --> B --> C --> D --> E
+  E -->|approve| F --> J --> K
+  E -->|request changes| G --> I
+  E -->|reject| H --> I
+~~~
+
+**Tests and exit gate:** unauthorized reviewer cannot approve; draft/rejected candidates never served; evidence and model provenance persist; edits create new versions; attempts keep historical version; concurrent approval cannot create duplicates; all decisions are auditable.
+
+### 11.15 Phase 29 — Teacher insights, evaluation and pilot readiness
+
+**Status:** planned; a release gate, not just a dashboard phase.
+
+**Purpose:** provide Teachers with useful class-level views while proving the product is safe, measurable and operationally supportable before any real-Student pilot.
+
+**Teacher insights**
+Potential views include aggregate attempt/participation by subject/concept, first-attempt/recent accuracy with sample counts, mastery distribution only when coverage is adequate, revision uptake, tentative misconception patterns and question/review coverage. Teacher reads must be scoped to assigned class/subject. Small-group privacy safeguards must suppress or coarsen aggregates that could reveal a specific learner. Admin sees privacy-reviewed school aggregates, not unrestricted private attempt histories by default.
+
+Do not infer attendance, motivation, mental ability or a permanent academic label from quiz accuracy.
+
+**Independent evaluation streams**
+- BKT: calibration, Brier/log loss and next-response prediction against simple baselines.
+- Recommendation: eligibility correctness, coverage, repeat suppression and comparison with fixed-order/random/low-mastery policies.
+- Misconception rules: precision/recall/F1, class-wise error and minimum sample sizes.
+- Retrieval: judged queries, Recall@k or appropriate ranking metric, citation coverage.
+- Generated questions: validity, correctness, source support, duplicates, safety and Teacher acceptance.
+- Reliability: API error/latency, duplicate submissions, worker lag, provider failures and recovery.
+- Security/privacy: role/school isolation, answer-key leak, deletion/review audit and retention.
+
+Do not collapse these into one vanity score. High retrieval relevance does not prove an answer is correct; Teacher acceptance does not prove learning improved.
+
+**Pilot go/no-go**
+Engineering, academic owner and privacy/security owner review the evidence. Include sample sizes/provenance, known limitations, consent/authorization, retention, incident response and rollback. Failure of a high-risk gate means stay in internal/synthetic testing.
+
+~~~mermaid
+flowchart TD
+  A["Collect evaluation and reliability reports"]
+  B["Review learner privacy and small group suppression"]
+  C["Retest role school and class isolation"]
+  D["Retest answer key and question version security"]
+  E["Review source rights and Teacher publication audit"]
+  F["Review model and recommendation metrics"]
+  G["Review operations backups and recovery"]
+  H{"Academic privacy security and quality gates pass?"}
+  I["Approve limited pilot with scope and rollback plan"]
+  J["No-go: repair gaps and repeat review"]
+  K["Monitor pilot and enforce stop conditions"]
+  A --> B --> C --> D --> E --> F --> G --> H
+  H -->|yes| I --> K
+  H -->|no| J
+~~~
+
+**Pilot safeguards:** written purpose/scope; required consent/authorization; retention/deletion route; minimum group-size rules; ability to disable AI without breaking quizzes/school app; incident/rollback trigger; transparent estimate language; no educational-impact claims without a valid study.
+
+**Exit gate:** reproducible reports with sample sizes/uncertainty, privacy/security sign-off, source provenance and a documented go/no-go decision before real-Student access.
+
+### 11.16 Phase 30 — deployment, documentation and portfolio evidence
+
+**Status:** planned; final reproducibility and handover phase.
+
+**Purpose:** ensure another developer, operator or interviewer can understand, run, test and evaluate the product. A one-time demo on a developer laptop is not a deployment plan.
+
+**Deployment decisions**
+- Choose hosting for React assets, Express API, MongoDB and any Python component based on security, budget and measured workload.
+- Keep secrets in provider secret storage. Never place database credentials, model keys or session secrets in React REACT_APP variables.
+- Configure frontend origin, credentialed CORS, Secure/SameSite cookies, TLS, Mongo network policy and backups together.
+- Add readiness checks so API health does not report ready while required dependencies are unavailable.
+- Decide whether Python BKT/retrieval runs as an internal API, worker or offline job. Do not expose model services to the public browser.
+- Version schema, frontend/backend, ML parameters and source corpus for rollback/reproduction.
+- Monitor API latency/errors, job backlog, provider failures and backup status without logging Student content or secrets.
+
+**Release workflow**
+1. Freeze commit and build metadata.
+2. Run backend/frontend/Python tests in isolated environments.
+3. Validate seed/catalogue manifests.
+4. Rehearse migrations/import on disposable or staging copy.
+5. Run build and static/security checks.
+6. Deploy backend and verify readiness.
+7. Deploy frontend with correct public API base URL.
+8. Smoke-test Admin, Teacher, Student, Games Zone and Learning Studio.
+9. Verify role/school isolation, session expiry and cookie transport on actual origins.
+10. Verify approved content and retrieval/model versions.
+11. Verify backup and perform a restore rehearsal.
+12. Record release identity, test evidence, configuration reference and rollback steps.
+
+**Handover pack**
+Windows setup; environment/secret matrix; schema and relationship diagrams; API/role matrix; source rights register; import/migration guide; actual test output; BKT assumptions/evaluation; recommendation/misconception policy; retrieval/assistant/generation evaluation; privacy/retention/deletion; monitoring/recovery; demo script and known limitations. Attribution must separate original school-management work, legacy ChemAmaze data and new features.
+
+~~~mermaid
+flowchart TD
+  A["Freeze commit and environment versions"]
+  B["Run backend frontend and content validation"]
+  C["Rehearse migrations on isolated staging"]
+  D["Build and inspect release artifacts"]
+  E["Deploy backend and verify readiness"]
+  F["Deploy frontend with public API configuration"]
+  G["Run role and end to end smoke tests"]
+  H["Verify privacy rights and model versions"]
+  I["Verify backup and restore"]
+  J{"All release checks complete?"}
+  K["Promote release and publish operator docs"]
+  L["Rollback and repair failures"]
+  M["Capture demo evidence and interview notes"]
+  A --> B --> C --> D --> E --> F --> G --> H --> I --> J
+  J -->|yes| K --> M
+  J -->|no| L
+~~~
+
+**Exit gate:** clean environment can be provisioned from docs; tests/build/seed results are reproducible; schema/source/model versions are identifiable; role journeys, rollback and restore are proven; portfolio statements match actual implementation and evidence.
+
+### 11.17 Cross-phase contracts that must remain consistent
+
+| Contract | Required behavior | Why it matters |
+|---|---|---|
+| Identity | Derive Student/Teacher/Admin from signed session and persisted actor, never request JSON | Prevents identity spoofing and tenant leakage |
+| Scope | Validate school, class, subject, grade and concept relationships on every operation | Prevents wrong-cohort content and IDOR |
+| Lifecycle | Draft, pending review, approved, published, retired/rejected are server-enforced states | Prevents accidental exposure |
+| Versioning | Attempts reference exact quiz/question/taxonomy versions | Makes historical results reproducible |
+| Answer keys | Never return before successful server grading | Prevents leakage |
+| Provenance | Questions/explanations/chunks retain creator/source/version/permission | Enables audit and takedown |
+| Event integrity | Idempotency, deterministic order and replayable updates | Prevents corrupted analytics/mastery |
+| Privacy | Minimize learner fields, scope queries, suppress small groups, define retention | Protects students, including minors |
+| AI trust | Model output is untrusted; deterministic validation and educator approval gate publication | Prevents unchecked generated content |
+| Evaluation | Compare algorithms to baselines and report samples/uncertainty | Prevents unsupported claims |
+| Failure isolation | Quiz attempts remain durable if model/retrieval/provider fails | Protects the core learning flow |
+| Feature flags | AI features can be disabled without disabling school management or first-party quiz basics | Supports safe pilot and rollback |
+
+### 11.18 Likely future file boundaries
+
+The paths below are planning candidates, not tracked files. Final paths should be chosen after inspecting current conventions in the relevant phase.
+
+| Domain | Candidate boundaries | Responsibility |
+|---|---|---|
+| Question bank | Question/version model, question validator, question-bank service/controller/tests | Content, authoring, review and versioning |
+| Quiz UI | Teacher Learning Studio, Student list/take/result pages, question/progress components | Native UI using existing APIs |
+| Attempt evidence | Event contract/service, replay/data-quality command/tests | Idempotent response records |
+| Baseline analytics | Data dictionary, cohort/split/report scripts, synthetic simulator | Measurement before ML |
+| BKT | Pure Python model, parameter config, tests and evaluation script | Formula-only estimate |
+| Mastery | Mastery model, worker/outbox, integration adapter and controller tests | Replayable state updates |
+| Recommendation | Policy/service, recommendation event model/controller/tests | Candidate eligibility and rationale |
+| Misconception | Reviewed taxonomy, rules engine, evaluation scripts | Tentative distractor-pattern hypotheses |
+| Retrieval | Source registry, ingestion pipeline, chunk schema, embedding/retriever adapter | Permission-cleared source grounding |
+| Assistant | Controller/service, prompt templates, output schema, citation validator | Grounded explanations and fallback |
+| Generation | Provider adapter, candidate model, validators and duplicate checker | Draft-only question proposals |
+| Review | Review queue UI, review model/controller, immutable publication service | Human approval and audit |
+| Insights/pilot | Aggregate query service, privacy suppression, evaluation reports | Safe class-level reporting |
+| Deployment | CI, readiness checks, release docs and restore scripts | Reproducible operation |
+
+### 11.19 Per-phase completion checklist
+
+For every phase:
+1. Confirm prerequisites and educator/content permissions.
+2. Re-read exact source files and adjust proposals to actual patterns.
+3. Review API request/response and role matrix before UI changes.
+4. Define schema/version/migration plan before persistence changes.
+5. Add success, validation, authorization, conflict, retry and failure tests.
+6. Inspect Student-safe projections and answer-key/source provenance explicitly.
+7. Execute relevant backend/frontend/Python checks and record real outputs.
+8. Browser-test keyboard/mobile and deployed/provider behavior where relevant.
+9. Review diff for unrelated edits, data leaks, secrets and generated files.
+10. Update PROJECT_HANDOFF.md and this file with actual changes and evidence.
+11. Explain limitations and the next phase's entry gate.
+12. Stop for review; do not begin the next phase until its prerequisites pass.
+
+
 
 ## 12. Key end-to-end flowcharts
 
