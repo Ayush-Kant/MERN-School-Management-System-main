@@ -37,7 +37,7 @@ The compound unique partial index on `school + legacySource.sourceKey` protects 
 
 ## One-command local demo setup (recommended)
 
-You do **not** need to create your own school, classes, subjects, Teachers, or copy MongoDB ObjectIds for the Phase 15 demo. The recommended quick path creates a fictional school structure and imports the existing 18 canonical records in one command.
+You do **not** need to create your own school, classes, subjects, Teachers, or copy MongoDB ObjectIds for the Phase 15 demo. The command adds a fictional demo school structure and the 18 canonical Wordwall records to the **same local MongoDB database already configured for this application**.
 
 From the `backend` folder in Windows PowerShell:
 
@@ -45,23 +45,13 @@ From the `backend` folder in Windows PowerShell:
 npm run seed
 ~~~
 
-The command uses this dedicated local database by default:
+The seed reads `MONGO_URL` from `backend/.env`, exactly like `npm start`. The checked-in `.env.example` uses:
 
-`mongodb://127.0.0.1:27017/school_management_dev`
+`mongodb://127.0.0.1:27017/school_management`
 
-It deliberately does not use the application's normal `MONGO_URL`, so it will not seed the database configured for your regular backend server. If you use a different local MongoDB port, set `CHEMAMAZE_DEMO_MONGO_URL` to a local URL with the exact database name `school_management_dev`. Remote hosts are refused.
+Keep your existing `MONGO_URL`; there is no separate demo database and no need to change it after seeding. The command refuses remote MongoDB hosts, system/test databases, production-like database names, and explicit `NODE_ENV` values other than `development`. When `NODE_ENV` is unset, this explicit local seed command treats it as development.
 
-To use the seeded demo accounts in the web app, run the backend server against that same database. In the backend terminal, set this before starting the server:
-
-~~~powershell
-$env:MONGO_URL = "mongodb://127.0.0.1:27017/school_management_dev"
-npm start
-~~~
-
-This changes only the current PowerShell session. It does not rewrite your `.env` file. The seeder uses its own `CHEMAMAZE_DEMO_MONGO_URL`/safe default; the application server uses `MONGO_URL`, so both must point to the same local database while testing the demo.
-
-
-The seed creates/reuses the following fictional demo records:
+The seed creates/reuses the following fictional demo records inside that existing database:
 
 | Record type | Amount |
 |---|---:|
@@ -73,21 +63,26 @@ The seed creates/reuses the following fictional demo records:
 | Canonical Wordwall GameActivity records | 18 |
 | **Total seed-owned records** | **37** |
 
-All 18 games are imported as **drafts**. Sign in as the appropriate Teacher to review and publish them before testing the Student Game Zone. The command is idempotent: it reuses matching demo records, preserves existing demo-account passwords and existing game lifecycle states, and refuses to overwrite conflicting school/assignment/game content. It does not delete existing records.
+All 18 games are imported as **drafts**. Sign in as the appropriate Teacher to review and publish them before testing the Student Game Zone. The command is idempotent: it reuses matching demo records, preserves existing demo-account passwords and existing game lifecycle states, and refuses to overwrite conflicting school/assignment/game content. It does not delete existing records or reset other users' passwords.
 
-**Local demo login accounts** (use only with the local demo database):
+**Local demo login accounts** (local development only):
 
 | Role | Login | Password |
 |---|---|---|
-| Admin | `admin@chemamaze.demo` | `DemoAdmin@12345` |
-| Teachers | `science.class6@chemamaze.demo`, `mathematics.class6@chemamaze.demo`, `science.class7@chemamaze.demo`, `mathematics.class7@chemamaze.demo`, `science.class8@chemamaze.demo`, `mathematics.class8@chemamaze.demo` | `DemoTeacher@12345` |
-| Class 6 Student | Name: `Demo Student - Class 6`, Roll: `601` | `DemoStudent@12345` |
-| Class 7 Student | Name: `Demo Student - Class 7`, Roll: `701` | `DemoStudent@12345` |
-| Class 8 Student | Name: `Demo Student - Class 8`, Roll: `801` | `DemoStudent@12345` |
+| Admin | `admin@demo.com` | `password` |
+| Class 6 Science Teacher | `sci6@demo.com` | `password` |
+| Class 6 Maths Teacher | `math6@demo.com` | `password` |
+| Class 7 Science Teacher | `sci7@demo.com` | `password` |
+| Class 7 Maths Teacher | `math7@demo.com` | `password` |
+| Class 8 Science Teacher | `sci8@demo.com` | `password` |
+| Class 8 Maths Teacher | `math8@demo.com` | `password` |
+| Class 6 Student | Name: `Student 6`, Roll: `601` | `password` |
+| Class 7 Student | Name: `Student 7`, Roll: `701` | `password` |
+| Class 8 Student | Name: `Student 8`, Roll: `801` | `password` |
 
-The seed summary also prints the created/reused counts and these login details. Existing matching accounts are not password-reset on later runs; the table shows the initial local demo credentials only. Do not deploy the demo database or reuse these credentials outside local development.
+Students log in with their name and roll number, not an email address. Admins and Teachers log in with email. Passwords are bcrypt-hashed before being stored. Existing matching demo accounts are reused without changing their passwords, so the table describes the credentials on a fresh first seed. Do not deploy these demo credentials or use them outside local development.
 
-The command requires `NODE_ENV=development`; when `NODE_ENV` is unset, this explicitly named local demo-seed command treats it as development. It enforces the exact database name and loopback host after connecting. If `NODE_ENV` is `test` or `production`, or the URL points elsewhere, the command stops.
+Because the seed and backend both read the same `MONGO_URL`, the seeded accounts are available as soon as you start the backend normally with `npm start`; no extra connection-setting command is needed.
 
 ## Manual target mapping for a different development school
 
