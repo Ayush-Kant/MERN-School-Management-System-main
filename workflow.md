@@ -2305,15 +2305,15 @@ Retrieval-Augmented Generation first retrieves relevant passages from a permissi
 ### 16.10 How to answer questions about testing
 
 State the actual evidence:
-- owner-provided backend run on 21 November 2026: 230 passed, 1 failed;
-- owner-provided frontend run: 43 passed, 2 failed;
-- backend failure: duplicate source-key test mutates the deterministic key, causing the earlier deterministic-key validation error;
-- frontend failures: combined search/filter interaction test and immediate DOM assertion during Material UI dialog exit;
-- supplied excerpt did not show seed validation or production build result;
-- no development import result was supplied;
+- owner-provided backend run on 21 November 2026: 231 passed, 0 failed;
+- owner-provided `npm run seed:chemamaze:validate` result: `catalog-valid`, 18 canonical records, three records in each of the six Class 6–8 / Science-Mathematics groups;
+- a prior owner-provided frontend run reported 43 passed, 2 failed. Test-only corrections for the two StudentGameZone failures have since been committed, but a fresh full frontend run and production build have not yet been supplied;
+- the previous backend failure was a duplicate source-key test fixture that changed only the deterministic key; the fixture was corrected to clone a complete valid record;
+- the two frontend test corrections address the inherited search-term match in the Solar System fixture and the Material UI dialog exit-transition timing;
+- the one-command local demo bootstrap `npm run seed` has now been added, but it has not been run against the user's MongoDB; no database import result is claimed;
 - Phase 13 was previously user-confirmed good;
 - Phase 14 browser/build checks remain to be confirmed;
-- Phase 15 validation/dry-run/apply remain to be confirmed;
+- Phase 15 catalogue validation and backend suite are user-confirmed pass; the actual local demo seed/import and Student browser review remain pending;
 - Phase 16 educator approval remains pending.
 
 Never claim “all tests pass”, “AI tutor is complete”, “BKT improves learning” or “the seed migration is finished” without the evidence.
@@ -2374,12 +2374,18 @@ cd backend
 npm test
 npm run seed:chemamaze:validate
 
+# Optional: create/reuse the fictional local Phase 15 demo school and import 18 drafts.
+# This uses school_management_dev on localhost, separate from the normal MONGO_URL.
+npm run seed
+
 cd ..\frontend
 npm test -- --watchAll=false
 npm run build
 ~~~
 
 Capture actual output and exit code for each command. A command appearing in a terminal history does not prove it completed successfully.
+
+The recommended Phase 15 demo shortcut is `npm run seed` from `backend/`. It creates/reuses a fictional ChemAmaze Demo School, three classes, six subjects, six Teacher accounts and three Student accounts, then imports the 18 canonical Wordwall activities as drafts. It uses `CHEMAMAZE_DEMO_MONGO_URL` if explicitly supplied, otherwise defaults to `mongodb://127.0.0.1:27017/school_management_dev`; it does not use the normal application `MONGO_URL`. It refuses non-development and non-loopback targets. See `backend/LEGACY_GAME_IMPORT.md` for demo login details and the optional manual mapping workflow for an alternate development school.
 
 ### 17.4 Phase-by-phase engineering discipline
 
