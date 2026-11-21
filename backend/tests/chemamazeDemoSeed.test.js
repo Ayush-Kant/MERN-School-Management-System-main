@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const {
     DEMO_PASSWORDS,
     ensureChemAmazeDemoData,
+    resolveDemoSeedTarget,
 } = require("../services/learning/chemamazeDemoSeed");
 
 function createModel(nextId) {
@@ -91,6 +92,17 @@ test("creates the complete demo school scope and six importer assignments", asyn
     });
 
     assert.equal(seeded.school.schoolName, "ChemAmaze Demo School");
+    assert.equal(models.AdminModel.documents[0].email, "admin@demo.com");
+    assert.equal(models.AdminModel.documents[0].password, "hashed-admin:password");
+    assert.deepEqual(
+        models.TeacherModel.documents.map((teacher) => teacher.email).sort(),
+        ["math6@demo.com", "math7@demo.com", "math8@demo.com", "sci6@demo.com", "sci7@demo.com", "sci8@demo.com"]
+    );
+    assert.deepEqual(
+        models.StudentModel.documents.map((student) => student.name).sort(),
+        ["Student 6", "Student 7", "Student 8"]
+    );
+    assert.deepEqual(Object.values(DEMO_PASSWORDS), ["password", "password", "password"]);
     assert.equal(models.AdminModel.documents.length, 1);
     assert.equal(models.SclassModel.documents.length, 3);
     assert.equal(models.SubjectModel.documents.length, 6);
@@ -179,8 +191,8 @@ test("is idempotent and does not reset existing demo account passwords", async (
 test("refuses to merge an existing Admin email and school name from different records", async () => {
     const models = createModels();
     models.AdminModel.documents.push(
-        { _id: "aaaaaaaaaaaaaaaaaaaaaaaa", email: "admin@chemamaze.demo", schoolName: "Other School", role: "Admin" },
-        { _id: "bbbbbbbbbbbbbbbbbbbbbbbb", email: "other@chemamaze.demo", schoolName: "ChemAmaze Demo School", role: "Admin" }
+        { _id: "aaaaaaaaaaaaaaaaaaaaaaaa", email: "admin@demo.com", schoolName: "Other School", role: "Admin" },
+        { _id: "bbbbbbbbbbbbbbbbbbbbbbbb", email: "other@demo.com", schoolName: "ChemAmaze Demo School", role: "Admin" }
     );
 
     await assert.rejects(
@@ -208,4 +220,37 @@ test("refuses to reassign an existing demo Teacher or a Subject owned by another
     );
     assert.equal(teacher.teachSubject, "ffffffffffffffffffffffff");
     assert.equal(seeded.school._id, models.AdminModel.documents[0]._id);
+});
+
+
+test("uses the application's local MONGO_URL and its selected database", () => {
+    assert.deepEqual(
+        resolveDemoSeedTarget(
+            "mongodb://localhost:27017/school_management?authSource=admin",
+            "development"
+        ),
+        {
+            databaseName: "school_management",
+            hostname: "localhost",
+        }
+    );
+});
+
+test("blocks non-local, test, system and non-development seed targets", () => {
+    assert.throws(
+        () => resolveDemoSeedTarget("mongodb+srv://cluster.example.com/school_management", "development"),
+        /restricted to a local MongoDB host/
+    );
+    assert.throws(
+        () => resolveDemoSeedTarget("mongodb://127.0.0.1:27017/school_management_test", "development"),
+        /system, test or production database/
+    );
+    assert.throws(
+        () => resolveDemoSeedTarget("mongodb://127.0.0.1:27017/admin", "development"),
+        /system, test or production database/
+    );
+    assert.throws(
+        () => resolveDemoSeedTarget("mongodb://127.0.0.1:27017/school_management", "production"),
+        /NODE_ENV=development/
+    );
 });
