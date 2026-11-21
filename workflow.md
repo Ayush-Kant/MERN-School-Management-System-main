@@ -1480,7 +1480,10 @@ The backend suite uses Node's built-in test runner and a test-only preloader. Mo
 | frontend/src/assets/classroom.png | Classroom visual asset. |
 | frontend/src/assets/designlogin.jpg | Background image imported by LoginPage. |
 | frontend/src/assets/h.svg | SVG illustration/asset. |
-| frontend/src/assets/img1.png through img4.png | Existing UI image assets. |
+| frontend/src/assets/img1.png | Existing UI image asset. |
+| frontend/src/assets/img2.png | Existing UI image asset. |
+| frontend/src/assets/img3.png | Existing UI image asset. |
+| frontend/src/assets/img4.png | Existing UI image asset. |
 | frontend/src/assets/students.png | Student-related visual asset. |
 | frontend/src/assets/subjects.svg | Subject visual asset. |
 | frontend/src/assets/time.svg | Time/attendance visual asset. |
