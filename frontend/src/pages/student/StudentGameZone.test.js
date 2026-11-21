@@ -47,6 +47,20 @@ let root;
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+async function waitForElementRemoval(element, timeoutMs = 1000) {
+    const startedAt = Date.now();
+
+    while (element?.isConnected) {
+        if (Date.now() - startedAt >= timeoutMs) {
+            throw new Error("Timed out waiting for the game dialog exit transition.");
+        }
+
+        await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 25));
+        });
+    }
+}
+
 async function renderPage() {
     await act(async () => {
         root.render(<StudentGameZone />);
@@ -255,6 +269,8 @@ test("refresh removes an unpublished game and closes its open play dialog", asyn
     await act(async () => {
         findButton("Play game").click();
     });
+    const closeGameButton = findButton("Close game");
+    expect(closeGameButton).toBeDefined();
     expect(document.body.querySelector("iframe")).not.toBeNull();
 
     await act(async () => {
@@ -266,6 +282,7 @@ test("refresh removes an unpublished game and closes its open play dialog", asyn
     expect(apiClient.get).toHaveBeenCalledTimes(2);
     expect(document.body.textContent).not.toContain("Fractions Challenge");
     expect(document.body.querySelector("iframe")).toBeNull();
+    await waitForElementRemoval(closeGameButton);
     expect(document.body.textContent).not.toContain("Close game");
     expect(document.body.textContent).toContain("No games published yet");
 });
