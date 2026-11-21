@@ -14,10 +14,77 @@ const DEMO_SUBJECTS = Object.freeze([
 ]);
 
 const DEMO_PASSWORDS = Object.freeze({
-    admin: "DemoAdmin@12345",
-    teacher: "DemoTeacher@12345",
-    student: "DemoStudent@12345",
+    admin: "password",
+    teacher: "password",
+    student: "password",
 });
+
+const LOCAL_MONGO_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+const BLOCKED_DATABASE_NAMES = new Set([
+    "admin",
+    "config",
+    "local",
+    "test",
+    "school_management_test",
+]);
+
+function isLocalMongoHost(hostname) {
+    return LOCAL_MONGO_HOSTS.has(
+        typeof hostname === "string" ? hostname.toLowerCase() : ""
+    );
+}
+
+/**
+ * Use the same local development database configured for the application.
+ * Never allow this convenience seed to target a remote, system, test or
+ * production database.
+ */
+function resolveDemoSeedTarget(mongoUrl, nodeEnv = "development") {
+    if (nodeEnv !== "development") {
+        throw new Error("The ChemAmaze demo seed is allowed only when NODE_ENV=development");
+    }
+    if (typeof mongoUrl !== "string" || mongoUrl.length === 0) {
+        throw new Error("MONGO_URL is required; set it to the same local MongoDB URL used by the application");
+    }
+
+    let parsed;
+    try {
+        parsed = new URL(mongoUrl);
+    } catch {
+        throw new Error("MONGO_URL must be a valid MongoDB connection URL");
+    }
+
+    if (!["mongodb:", "mongodb+srv:"].includes(parsed.protocol)) {
+        throw new Error("MONGO_URL must use mongodb:// or mongodb+srv://");
+    }
+    if (!isLocalMongoHost(parsed.hostname)) {
+        throw new Error("The ChemAmaze demo seed is restricted to a local MongoDB host");
+    }
+
+    let databaseName;
+    try {
+        databaseName = decodeURIComponent(
+            parsed.pathname.replace(/^\\/+/, "").split("/")[0] || ""
+        );
+    } catch {
+        databaseName = "";
+    }
+
+    const normalizedName = databaseName.toLowerCase();
+    if (
+        !databaseName ||
+        BLOCKED_DATABASE_NAMES.has(normalizedName) ||
+        /(^|[-_])(prod|production)([-_]|$)/i.test(databaseName) ||
+        normalizedName.endsWith("_test")
+    ) {
+        throw new Error("MONGO_URL must name an ordinary local development database, not a system, test or production database");
+    }
+
+    return {
+        databaseName,
+        hostname: parsed.hostname,
+    };
+}
 
 function requireModel(model, name, methods) {
     if (!model || methods.some((method) => typeof model[method] !== "function")) {
@@ -133,8 +200,8 @@ async function ensureTeacher(
     hashPassword,
     counts
 ) {
-    const emailPrefix = subjectName === "Mathematics" ? "mathematics" : "science";
-    const email = `${emailPrefix}.class${grade}@chemamaze.demo`;
+    const emailPrefix = subjectName === "Mathematics" ? "math" : "sci";
+    const email = `${emailPrefix}${grade}@demo.com`;
     const existing = await TeacherModel.findOne({ email });
 
     // Do not attach a newly-created demo Teacher to a subject already owned
@@ -157,7 +224,7 @@ async function ensureTeacher(
     } else {
         const password = await hashPassword(DEMO_PASSWORDS.teacher);
         teacher = await TeacherModel.create({
-            name: `${subjectName} Teacher - Class ${grade}`,
+            name: `${subjectName === "Mathematics" ? "Math" : "Science"} Teacher ${grade}`,
             email,
             password,
             role: "Teacher",
@@ -190,7 +257,7 @@ async function ensureTeacher(
 
 async function ensureStudent(StudentModel, school, schoolClass, grade, hashPassword, counts) {
     const rollNum = grade * 100 + 1;
-    const name = `Demo Student - Class ${grade}`;
+    const name = `Student ${grade}`;
     const existing = await StudentModel.findOne({
         school: school._id,
         sclassName: schoolClass._id,
@@ -318,5 +385,7 @@ module.exports = {
     DEMO_CLASSES,
     DEMO_SUBJECTS,
     DEMO_PASSWORDS,
+    isLocalMongoHost,
+    resolveDemoSeedTarget,
     ensureChemAmazeDemoData,
 };
