@@ -858,3 +858,14 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - Frontend fixture commit: `2183a41750ea8d501253953d91d99ba551069617`.
 - Verification status: inspected filter predicates and fixture values; with the corrected description, the Science record no longer matches `fractions`, while the Mathematics record is excluded by the selected Science filter. Jest has not yet been run in this connector session; local execution remains required.
 - Next step: update the refresh/dialog test to wait for Material UI's exit transition rather than asserting that transition content disappears synchronously.
+
+
+### 2026-11-21 — Student Game Zone dialog transition assertion correction
+- Reviewed the refresh path in `StudentGameZone.js`: when the refreshed published list no longer contains the selected activity, the state updater clears `selectedActivity`; the iframe content is removed on the state update and the Material UI Dialog then performs its configured exit transition.
+- Root cause: the test asserted that the `Close game` button had disappeared immediately after the refresh response. Material UI retains the dialog subtree during its exit transition, so this synchronous text assertion ran too early.
+- Corrected only `frontend/src/pages/student/StudentGameZone.test.js`: capture the specific `Close game` button while the dialog is open, then wait (with a bounded timeout and React `act`) for that DOM node to be removed before asserting the dialog text is gone. The iframe-removal assertion remains immediate, preserving the check that unpublished content is no longer rendered.
+- Frontend dialog-test commit: `937df87f886ca3d5fd4cd1c43d0cc85d9f18dfa6`.
+- Runtime source `frontend/src/pages/student/StudentGameZone.js` and MUI dialog behavior were not changed.
+- Verification status: source-level review confirms the test now distinguishes immediate iframe/content removal from the asynchronous dialog exit/unmount. Jest has not yet been run in this connector session; rerun the complete frontend suite and production build locally.
+- Current fix scope: one backend test fixture and two StudentGameZone test-only corrections; no application runtime, backend validation, seed records, API routes or dependencies changed.
+- Next actions: run the full backend suite, static ChemAmaze seed validation, full frontend Jest suite and frontend production build from the local Windows checkout; capture each exit code. Then continue the already-recorded Phase 14 browser acceptance, Phase 15 development-only dry-run/import checks, and Phase 16 Science educator approval. Phase 17 remains gated.
