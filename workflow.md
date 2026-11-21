@@ -2194,20 +2194,22 @@ npm run build
 
 A passing unit suite does not by itself prove that a live Wordwall page loads, that fullscreen works, or that deployed cookie/CORS settings are correct.
 
-### 14.3 Validation output supplied by the repository owner on 21 November 2026
+### 14.3 Validation output supplied by the repository owner on 22 November 2026
 
 | Check | Reported result | What can be concluded |
 |---|---:|---|
-| Backend suite before the new demo-seed tests were added | 231 passed, 0 failed | User-confirmed pass for the then-current 231-test suite; rerun after the four new demo-seed tests. |
+| Backend suite before the simplified MONGO_URL seed change | 235 passed, 0 failed | User-confirmed pass for the version before the two new seed-target guard tests; rerun after pulling the simplified seed change. |
 | ChemAmaze static catalogue validation | `catalog-valid`, 18 records | User-confirmed valid pinned manifest with three records in each of the six Class 6–8 / Science-Mathematics groups. This is validate-only and does not connect to MongoDB. |
 | Frontend suite | 43 passed, 2 failed in the earlier supplied run | Two test-only corrections have since been committed; a fresh full frontend run is still required. |
 | Frontend production build | Output not supplied | Unknown; do not mark successful. |
-| Local demo database seed/import | Not run/supplied | No 18-game MongoDB import is confirmed. |
+| Local demo database seed/import | Attempted; stopped with `ECONNREFUSED 127.0.0.1:27017` | MongoDB was not listening at the configured local address. The script stopped before a connection and no seed records are confirmed. |
 | Student browser acceptance | Not supplied | Phase 14 remains open. |
 
-**Backend and catalogue evidence**
+**Backend, catalogue and seed evidence**
 
-The user's latest terminal output confirms that the duplicate source-key fixture was corrected: the suite reported 231 passing tests and no failures. The static validator separately reported `catalog-valid` for the 18 canonical records. The subsequent addition of four `chemamazeDemoSeed.test.js` cases happened after that run, so a fresh `npm test` is required before treating the current backend tree as green.
+The user's 22 November terminal output reports 235 passing backend tests and no failures. This run predates the two additional tests for the simplified local MONGO_URL target guard, so rerun `npm test` after pulling the latest change. The earlier static validator separately reported `catalog-valid` for the 18 canonical records.
+
+The same terminal output shows `npm run seed` stopped with `ECONNREFUSED 127.0.0.1:27017`. That means the local MongoDB service was not accepting a connection; it is not a seed-data validation failure. No demo school, accounts or GameActivity records are confirmed as written.
 
 **Frontend test corrections**
 
@@ -2219,19 +2221,19 @@ These are test-only changes; `StudentGameZone.js` was not changed. The complete 
 
 **Phase 15 database-seed distinction**
 
-`npm run seed:chemamaze:validate` only validates the checked-in JSON manifest. It does not make MongoDB records. A new recommended `npm run seed` command now creates/reuses the fictional local demo school structure and applies the 18 canonical activities as drafts in `school_management_dev`. That new command and its four new unit tests were not part of the user's supplied terminal run. Do not claim they have passed or that the database has been seeded until the user runs them locally.
+`npm run seed:chemamaze:validate` validates the checked-in 18-row JSON manifest only; it does not connect to MongoDB. The one-command `npm run seed` path creates/reuses the fictional demo school structure and imports the 18 canonical activities as drafts into the same local database configured by the application's `MONGO_URL` in `backend/.env`. It does not create a separate demo database or require a second connection setting. The seeder is restricted to loopback MongoDB and rejects system/test/production database targets.
 
-The GitHub source edits did not connect to MongoDB or write any database records.
+The user's latest seed attempt stopped with `ECONNREFUSED 127.0.0.1:27017`, before a MongoDB connection was established; no records were written. Start the local MongoDB service first, then rerun the seed. The simplified seed configuration also adds two tests, so run the backend suite after pulling the change.
 
 ### 14.4 Recommended validation sequence
 
 1. Pull the latest `feature/learning-game-zones` branch and check `git status` so local work is not overwritten.
-2. From `backend/`, run `npm test` to include the new demo-seed tests, then `npm run seed:chemamaze:validate`.
-3. Ensure local MongoDB is running on loopback, then run `npm run seed`. The script defaults to `school_management_dev`, ignores the application's normal `MONGO_URL`, and refuses remote/non-development targets.
+2. From `backend/`, run `npm test` to include the new MONGO_URL guard tests, then `npm run seed:chemamaze:validate`.
+3. Ensure the local MongoDB service is running on loopback and `backend/.env` contains the same `MONGO_URL` used by the backend. Run `npm run seed`; it targets that database and refuses remote, system, test or production targets.
 4. Review the seed summary. On a clean first run expect 18 inserted games and no failures; run it again and expect 18 unchanged games and no duplicate inserts. Check that demo structure counts are created on first run and reused on the second.
 5. Run the complete frontend test suite and production build; capture output and exit codes.
 6. Browser-test Admin and Teacher access, publish one appropriate draft through the Teacher account, then verify the corresponding demo Student sees only that published game. Check subject filter/clear, refresh, dialog close, real Wordwall load, fullscreen and external fallback.
-7. Use the older manual target mapping/dry-run/apply flow only when intentionally importing to a different already-existing development school. It is not required for the fictional local demo school.
+7. Use the older manual target mapping/dry-run/apply flow only when intentionally importing to a different already-existing development school. It is an optional alternate workflow, not required for the demo seed.
 8. Obtain Science educator approval for Phase 16 taxonomy.
 9. Only after the Phase 14 browser, Phase 15 seed/validation, and Phase 16 educator-approval gates pass should Phase 17 begin.
 
@@ -2379,21 +2381,18 @@ cd backend
 npm test
 npm run seed:chemamaze:validate
 
-# Optional: create/reuse the fictional local Phase 15 demo school and import 18 drafts.
-# This uses school_management_dev on localhost, separate from the normal MONGO_URL.
+# Ensure the local MongoDB service is running and backend/.env has MONGO_URL.
+# This adds demo records to the same local database used by npm start.
 npm run seed
 
-cd ..\frontend
+cd ..\\frontend
 npm test -- --watchAll=false
 npm run build
 ~~~
 
 Capture actual output and exit code for each command. A command appearing in a terminal history does not prove it completed successfully.
 
-The recommended Phase 15 demo shortcut is `npm run seed` from `backend/`. It creates/reuses a fictional ChemAmaze Demo School, three classes, six subjects, six Teacher accounts and three Student accounts, then imports the 18 canonical Wordwall activities as drafts. It uses `CHEMAMAZE_DEMO_MONGO_URL` if explicitly supplied, otherwise defaults to `mongodb://127.0.0.1:27017/school_management_dev`; it does not use the normal application `MONGO_URL`. It refuses non-development and non-loopback targets. See `backend/LEGACY_GAME_IMPORT.md` for demo login details and the optional manual mapping workflow for an alternate development school.
-
-To log in to these seeded accounts in the web app, start the backend with `MONGO_URL=mongodb://127.0.0.1:27017/school_management_dev` (for Windows PowerShell, set `$env:MONGO_URL` to that URL before `npm start`). Otherwise the app may still point at the separate database configured in the normal `.env` file and will not find the demo accounts.
-
+The recommended Phase 15 demo shortcut is `npm run seed` from `backend/`. It creates/reuses a fictional ChemAmaze Demo School, three classes, six subjects, six Teacher accounts and three Student accounts, then imports the 18 canonical Wordwall activities as drafts. It reads the existing application's `MONGO_URL` from `backend/.env`, so the data is immediately available to the app started with `npm start`; no separate demo database or connection override is needed. The seeder is restricted to local loopback MongoDB and rejects system, test and production-like database targets. Login details are documented in `backend/LEGACY_GAME_IMPORT.md`. The older manual target-mapping/dry-run/apply workflow remains optional for importing to a different already-created development school.
 
 ### 17.4 Phase-by-phase engineering discipline
 
