@@ -206,6 +206,7 @@ test("clears search and subject filters from the no-results state", async () => 
                 _id: "222222222222222222222222",
                 title: "Solar System Quiz",
                 topic: "Space",
+                description: "Explore planets beyond Earth",
                 subject: { _id: "eeeeeeeeeeeeeeeeeeeeeeee", subName: "Science" },
             },
         ],
