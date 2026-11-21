@@ -828,3 +828,6 @@ Created the continuity record and new-chat prompt. Verified the application-code
 - The supplied terminal excerpt did not include the result of \`npm run seed:chemamaze:validate\` or \`npm run build\`; their status remains unknown. No development dry-run/apply output was supplied, so the ChemAmaze database import is not confirmed and no imported count is claimed.
 - Current validation gates remain: correct and rerun the backend catalog test; correct and rerun the two frontend StudentGameZone tests; capture the frontend production build result; capture static seed validation; perform Student browser acceptance; configure and inspect the isolated development target mapping/dry-run before any explicit apply; and obtain Science educator approval for the Phase 16 concept taxonomy.
 - Phase 13 remains user-confirmed good. Phase 14, Phase 15 and Phase 16 approval gates remain pending as described above. Phase 17 has not started and must remain gated until the required Phase 14–16 checks are complete.
+
+
+- Final file-index audit after adding workflow.md: the current branch tree contains 189 tracked paths including workflow.md, and every tracked path is explicitly named in its file inventory. A small asset-index correction was committed in workflow follow-up commit `94b3c287ce1e7fbb5cd008f54912a949fa0c2353`; no application code was changed.
