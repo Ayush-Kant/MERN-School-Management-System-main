@@ -7,7 +7,8 @@
     "start": "nodemon index.js",
     "build": "npm i",
     "test": "node --require ./tests/test-env.js --test tests/*.test.js",
-    "seed": "node scripts/seed-chemamaze-demo.js",\n    "seed:chemamaze:validate": "node scripts/import-chemamaze-games.js --validate-only",
+    "seed": "node scripts/seed-chemamaze-demo.js",
+    "seed:chemamaze:validate": "node scripts/import-chemamaze-games.js --validate-only",
     "seed:chemamaze:dry-run": "node scripts/import-chemamaze-games.js --dry-run",
     "seed:chemamaze:apply": "node scripts/import-chemamaze-games.js --apply"
   },
