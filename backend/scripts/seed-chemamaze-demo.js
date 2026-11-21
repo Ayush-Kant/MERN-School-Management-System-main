@@ -110,7 +110,7 @@ async function run() {
         result: imported.failures.length === 0 ? "seed-complete" : "seed-incomplete",
         demoLogins: {
             admin: {
-                email: "admin@chemamaze.demo",
+                email: "admin@demo.com",
                 password: DEMO_PASSWORDS.admin,
             },
             teachers: {
