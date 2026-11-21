@@ -9,7 +9,7 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const catalog = require("../seeds/chemamaze-cbse-games.json");
 const { hashAdminPassword } = require("../utils/adminPassword.js");
-const { ensureChemAmazeDemoData } = require("../services/learning/chemamazeDemoSeed.js");
+const { ensureChemAmazeDemoData, DEMO_PASSWORDS } = require("../services/learning/chemamazeDemoSeed.js");
 const {
     DEVELOPMENT_DATABASE_NAME,
     isLocalMongoHost,
@@ -147,9 +147,26 @@ async function run() {
         expectedTotalRecords: 37,
         result: imported.failures.length === 0 ? "seed-complete" : "seed-incomplete",
         demoLogins: {
-            admin: "admin@chemamaze.demo",
-            teacherPassword: "DemoTeacher@12345",
-            studentPassword: "DemoStudent@12345",
+            admin: {
+                email: "admin@chemamaze.demo",
+                password: DEMO_PASSWORDS.admin,
+            },
+            teachers: {
+                password: DEMO_PASSWORDS.teacher,
+                emails: Object.keys(demoData.assignments).map((key) => {
+                    const [gradeText, subjectName] = key.split("|");
+                    const prefix = subjectName === "Mathematics" ? "mathematics" : "science";
+                    return `${prefix}.class${gradeText}@chemamaze.demo`;
+                }),
+            },
+            students: {
+                password: DEMO_PASSWORDS.student,
+                accounts: Object.entries(demoData.students).map(([grade, student]) => ({
+                    grade: Number(grade),
+                    name: student.name,
+                    rollNum: student.rollNum,
+                })),
+            },
         },
     });
 
