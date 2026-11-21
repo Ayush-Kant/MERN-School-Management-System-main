@@ -637,7 +637,7 @@ The related StemGames/ChemAmaze-cbseGames derivative was compared; its 18 primar
 | backend/services/learning/legacyGameImporter.js | Target lookup, scope validation, dry-run plan, conflict/idempotency and insert service. |
 | backend/scripts/import-chemamaze-games.js | CLI modes and environment/database/confirmation guards. |
 
-The target mapping needs an existing Admin school, Class 6/7/8, Science and Mathematics Subjects, and a Teacher for each of these six assignments:
+For the alternate manual import path, the target mapping needs an existing Admin school, Class 6/7/8, Science and Mathematics Subjects, and a Teacher for each of these six assignments. The recommended one-command demo path (`npm run seed`) creates this fictional school structure and resolves the ObjectIds automatically:
 - 6|Science
 - 6|Mathematics
 - 7|Science
@@ -1942,6 +1942,7 @@ The inventory below reflects the 188 tracked files in the reviewed branch tree. 
 | backend/services/learning/gameActivityIntegrity.js | ObjectId normalization, persisted Teacher/school/class/subject relationship validation and idempotent GameActivity archival/reassignment operations. |
 | backend/services/learning/legacyGameCatalog.js | ChemAmaze manifest structure, source provenance, deterministic key, group count and Wordwall share/embed URL validation. |
 | backend/services/learning/legacyGameImporter.js | Six assignment mapping checks, database target resolution, read-only plan, conflict detection, idempotent draft insert and failure reconciliation. |
+| backend/services/learning/chemamazeDemoSeed.js | Idempotently creates/reuses the fictional demo Admin school, Classes 6–8, six subjects, six assigned Teachers and three Student demo accounts without resetting existing credentials. |
 | backend/utils/adminPassword.js | bcrypt Admin hash/verify and one-time legacy plaintext upgrade signal. |
 | backend/utils/apiResponse.js | Standardized API error response with stable code, user-safe message and requestId. |
 | backend/utils/asyncHandler.js | Express 4 wrapper for async route rejections and synchronous errors. |
@@ -1967,7 +1968,9 @@ The inventory below reflects the 188 tracked files in the reviewed branch tree. 
 
 | File | Responsibility |
 |---|---|
-| backend/scripts/import-chemamaze-games.js | CLI entry point; validates flags, environment/database, target mapping, dry-run plan and explicit apply mode. |
+| backend/scripts/import-chemamaze-games.js | Existing manual CLI for validation, custom development-school dry-run and confirmation-protected apply mode. |
+| backend/scripts/seed-chemamaze-demo.js | One-command local demo bootstrap; uses the dedicated loopback school_management_dev database, creates/reuses demo school scope and imports the 18 canonical games as drafts. |
+| backend/package.json | Exposes the `npm run seed` demo bootstrap command while retaining validate/dry-run/manual-apply scripts. |
 | backend/seeds/chemamaze-cbse-games.json | Pinned canonical 18-record Wordwall manifest. |
 | backend/seeds/chemamaze-supplemental-review.json | Six related-repository extras excluded from importer pending provider/content review. |
 | backend/seeds/chemamaze-targets.example.json | Placeholder school and six grade/subject ObjectId mapping template. |
@@ -2001,6 +2004,7 @@ The backend suite uses Node's built-in test runner and a test-only preloader. Mo
 | backend/tests/adminGameActivityController.test.js | Admin tenant catalogue filters, pagination, counts and moderation. |
 | backend/tests/legacyGameCatalog.test.js | Canonical source metadata, record coverage, deterministic keys and link validation. |
 | backend/tests/legacyGameImporter.test.js | Development-only target guard, assignments, dry-run, idempotency, conflicts and concurrent key handling. |
+| backend/tests/chemamazeDemoSeed.test.js | Demo school/class/subject/Teacher/Student setup, six assignment mappings, idempotent reruns, hashed credentials and conflict refusal. |
 | backend/tests/curriculumConceptCatalog.test.js | Concept scope/ID uniqueness, prerequisite DAG and source/rights/feature-gate consistency. |
 | backend/tests/learningQuizController.test.js | Quiz creation/list/publish/submit, authorization, answer-key filtering, grading and idempotency. |
 | backend/tests/noticeUpdateController.test.js | Notice update allowlist and input validation. |
@@ -2194,41 +2198,42 @@ A passing unit suite does not by itself prove that a live Wordwall page loads, t
 
 | Check | Reported result | What can be concluded |
 |---|---:|---|
-| Backend | 230 passed, 1 failed, 231 total | One test currently fails; suite is not fully green. |
-| Frontend | 43 passed, 2 failed, 45 total | Two StudentGameZone tests currently fail; suite is not fully green. |
-| Seed catalog validation | Output not present in the supplied excerpt | Unknown; do not mark successful from this evidence. |
-| Frontend production build | Output not present in supplied excerpt | Unknown; do not mark successful from this evidence. |
-| Development dry-run/apply | No output supplied | Database import not confirmed. |
+| Backend suite before the new demo-seed tests were added | 231 passed, 0 failed | User-confirmed pass for the then-current 231-test suite; rerun after the four new demo-seed tests. |
+| ChemAmaze static catalogue validation | `catalog-valid`, 18 records | User-confirmed valid pinned manifest with three records in each of the six Class 6–8 / Science-Mathematics groups. This is validate-only and does not connect to MongoDB. |
+| Frontend suite | 43 passed, 2 failed in the earlier supplied run | Two test-only corrections have since been committed; a fresh full frontend run is still required. |
+| Frontend production build | Output not supplied | Unknown; do not mark successful. |
+| Local demo database seed/import | Not run/supplied | No 18-game MongoDB import is confirmed. |
+| Student browser acceptance | Not supplied | Phase 14 remains open. |
 
-**Backend failing test — duplicate legacy source key**
+**Backend and catalogue evidence**
 
-The test in backend/tests/legacyGameCatalog.test.js named “rejects a duplicate source key and an incomplete catalog” mutates the second record's sourceKey to the first record's key. The validator first checks that each record's key deterministically matches its own subject, grade and chapter. Therefore the second row throws a deterministic-key TypeError before the duplicate-key Set check is reached. The assertion expects “Duplicate legacy sourceKey” but receives the earlier deterministic-key message.
+The user's latest terminal output confirms that the duplicate source-key fixture was corrected: the suite reported 231 passing tests and no failures. The static validator separately reported `catalog-valid` for the 18 canonical records. The subsequent addition of four `chemamazeDemoSeed.test.js` cases happened after that run, so a fresh `npm test` is required before treating the current backend tree as green.
 
-This output indicates a test-fixture/assertion-order mismatch; it does not prove the checked-in manifest contains duplicate keys. To test duplicate detection specifically, build a fixture where the second row still passes its deterministic identity fields while duplicating the first key, and keep its other unique fields valid. Alternatively, test deterministic-key rejection separately and expect that earlier error.
+**Frontend test corrections**
 
-**Frontend failing test — combined search and subject filter**
+The earlier 43-pass/2-fail output showed:
+- The combined filter fixture inherited the description “Practise equivalent fractions” from the Maths activity even though the Solar System result was a Science activity. The test now supplies a non-matching description so the expected no-results state is valid.
+- The refresh test checked that the MUI dialog button had disappeared immediately, before its exit transition completed. It now waits for the specific button node to be removed while keeping the iframe-removal assertion immediate.
 
-The failing test expects the no-results message after selecting Science and searching “fractions”, but Solar System Quiz remains displayed. The current component filters by selected subject ID and a lower-cased search over title, description, topic, subject name and class. The supplied test output suggests the subject event was applied while the search interaction did not produce the intended controlled input state. Inspect the test helper/event/act sequence and reproduce the filter in a browser before changing the component's business logic. A userEvent or fireEvent.change helper with independently awaited React act blocks may be more reliable than a manually dispatched input event.
+These are test-only changes; `StudentGameZone.js` was not changed. The complete frontend suite and production build still need a fresh local run.
 
-**Frontend failing test — dialog closing after refresh**
+**Phase 15 database-seed distinction**
 
-The supplied output showed the game card and iframe had disappeared after refresh, but the “Close game” button text remained in the DOM at the immediate assertion. The component clears selectedActivity when the refreshed published list no longer contains its ID. Material UI Dialog can retain its DOM during its exit transition. The test should wait for the dialog control to be removed or disable transitions in that test fixture; do not weaken the requirement that a removed activity is no longer playable.
+`npm run seed:chemamaze:validate` only validates the checked-in JSON manifest. It does not make MongoDB records. A new recommended `npm run seed` command now creates/reuses the fictional local demo school structure and applies the 18 canonical activities as drafts in `school_management_dev`. That new command and its four new unit tests were not part of the user's supplied terminal run. Do not claim they have passed or that the database has been seeded until the user runs them locally.
 
-No seed validation or build output was included in the supplied excerpt. Do not claim those commands passed until their actual result is recorded. The test counts above are user-provided execution output, not tests independently run while authoring this guide.
+The GitHub source edits did not connect to MongoDB or write any database records.
 
 ### 14.4 Recommended validation sequence
 
-1. Fix the duplicate source-key test fixture/assertion to reach the intended validator branch.
-2. Fix the StudentGameZone search interaction test without weakening the actual filtering behavior.
-3. Await the Material UI dialog exit transition in the refresh test.
-4. Rerun backend and frontend test suites.
-5. Capture the actual production build output and exit code.
-6. Capture seed:chemamaze:validate JSON output.
-7. Prepare a dedicated development database and local mapping only after confirming all school/class/subject/Teacher records exist.
-8. Run and review the dry-run. Do not apply if the database or mappings are uncertain.
-9. Browser-test Student scope, published-only list, search/filter/clear, refresh, dialog, live embed, fullscreen and fallback.
-10. Obtain Science educator approval for Phase 16 taxonomy.
-11. Only then pass the Phase 14–16 gates and begin Phase 17.
+1. Pull the latest `feature/learning-game-zones` branch and check `git status` so local work is not overwritten.
+2. From `backend/`, run `npm test` to include the new demo-seed tests, then `npm run seed:chemamaze:validate`.
+3. Ensure local MongoDB is running on loopback, then run `npm run seed`. The script defaults to `school_management_dev`, ignores the application's normal `MONGO_URL`, and refuses remote/non-development targets.
+4. Review the seed summary. On a clean first run expect 18 inserted games and no failures; run it again and expect 18 unchanged games and no duplicate inserts. Check that demo structure counts are created on first run and reused on the second.
+5. Run the complete frontend test suite and production build; capture output and exit codes.
+6. Browser-test Admin and Teacher access, publish one appropriate draft through the Teacher account, then verify the corresponding demo Student sees only that published game. Check subject filter/clear, refresh, dialog close, real Wordwall load, fullscreen and external fallback.
+7. Use the older manual target mapping/dry-run/apply flow only when intentionally importing to a different already-existing development school. It is not required for the fictional local demo school.
+8. Obtain Science educator approval for Phase 16 taxonomy.
+9. Only after the Phase 14 browser, Phase 15 seed/validation, and Phase 16 educator-approval gates pass should Phase 17 begin.
 
 ---
 
