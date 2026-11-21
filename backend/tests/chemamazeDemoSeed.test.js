@@ -5,9 +5,8 @@ const {
     ensureChemAmazeDemoData,
 } = require("../services/learning/chemamazeDemoSeed");
 
-function createModel() {
+function createModel(nextId) {
     const documents = [];
-    let nextId = 1;
 
     function matches(document, filter) {
         return Object.entries(filter).every(([field, expected]) => {
@@ -39,7 +38,7 @@ function createModel() {
         },
         async create(document) {
             const created = {
-                _id: String(nextId++).padStart(24, "0"),
+                _id: nextId(),
                 ...structuredClone(document),
             };
             documents.push(created);
@@ -55,12 +54,15 @@ function createModel() {
 }
 
 function createModels() {
+    let nextId = 1;
+    const createId = () => String(nextId++).padStart(24, "0");
+
     return {
-        AdminModel: createModel(),
-        SclassModel: createModel(),
-        SubjectModel: createModel(),
-        TeacherModel: createModel(),
-        StudentModel: createModel(),
+        AdminModel: createModel(createId),
+        SclassModel: createModel(createId),
+        SubjectModel: createModel(createId),
+        TeacherModel: createModel(createId),
+        StudentModel: createModel(createId),
     };
 }
 
