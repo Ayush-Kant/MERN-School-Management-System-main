@@ -831,3 +831,12 @@ Created the continuity record and new-chat prompt. Verified the application-code
 
 
 - Final file-index audit after adding workflow.md: the current branch tree contains 189 tracked paths including workflow.md, and every tracked path is explicitly named in its file inventory. A small asset-index correction was committed in workflow follow-up commit `94b3c287ce1e7fbb5cd008f54912a949fa0c2353`; no application code was changed.
+
+
+### 2026-11-21 — WORKFLOW.md Mermaid repair and Phase 16–30 expansion
+- Corrected the Mermaid syntax reported by GitHub in the system architecture diagram. The invalid edge \`Legacy --> "development-only importer" --> DB\` is now represented by an explicit \`Importer\` node and ordinary node-to-node arrows. The other architecture links were normalized to explicit nodes/standard edge syntax.
+- Added a short Mermaid authoring convention to prevent quoted text being used as a pseudo-node.
+- Expanded the Phase 16–30 roadmap into a detailed implementation blueprint. Phase 16 now includes the exact educator approval workflow and gate. Each later phase (17–30) now describes its purpose, data/content contracts, implementation steps, expected existing/new module boundaries, role/security rules, failure/retry handling, tests and exit evidence.
+- Added 17 new roadmap/dependency diagrams, including a phase dependency map and phase-specific workflows for taxonomy review, question authoring/versioning, native quiz delivery, event quality, baselines, BKT, mastery processing, recommendations, misconception rules, rights-cleared ingestion, grounded assistant, generated candidates, Teacher publication review, pilot readiness and deployment. The document now contains 32 Mermaid blocks in total.
+- Audited all 32 fenced Mermaid blocks for supported diagram headers, balanced Markdown fences and malformed quoted pseudo-node/edge syntax. The original reported malformed pattern is absent. No full GitHub browser renderer/interactive Mermaid parser was available during this edit, so this is a static syntax/source audit rather than a claim of a separate live-render test.
+- Latest workflow commit: \`6948f0490a13b034ed575ebb43761dca8d0c48dc\`. The document is approximately 147,500 characters and 2,400 lines. Application code was not changed, and no application tests or database operations were run for this documentation-only repair.
