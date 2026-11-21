@@ -9,70 +9,32 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const catalog = require("../seeds/chemamaze-cbse-games.json");
 const { hashAdminPassword } = require("../utils/adminPassword.js");
-const { ensureChemAmazeDemoData, DEMO_PASSWORDS } = require("../services/learning/chemamazeDemoSeed.js");
 const {
-    DEVELOPMENT_DATABASE_NAME,
+    ensureChemAmazeDemoData,
+    DEMO_PASSWORDS,
     isLocalMongoHost,
-    validateDevelopmentImportTarget,
+    resolveDemoSeedTarget,
+} = require("../services/learning/chemamazeDemoSeed.js");
+const {
     prepareLegacyGameImport,
     applyLegacyGameImport,
 } = require("../services/learning/legacyGameImporter.js");
-
-const DEFAULT_DEMO_MONGO_URL =
-    "mongodb://127.0.0.1:27017/school_management_dev";
-
-function getDatabaseTarget(mongoUrl) {
-    let parsed;
-    try {
-        parsed = new URL(mongoUrl);
-    } catch {
-        throw new Error("CHEMAMAZE_DEMO_MONGO_URL must be a valid MongoDB connection URL");
-    }
-
-    if (!["mongodb:", "mongodb+srv:"].includes(parsed.protocol)) {
-        throw new Error("ChemAmaze demo seed accepts only mongodb:// or mongodb+srv:// URLs");
-    }
-
-    const databaseName = decodeURIComponent(
-        parsed.pathname.replace(/^\/+/, "").split("/")[0] || ""
-    );
-
-    return {
-        databaseName,
-        hostname: parsed.hostname,
-    };
-}
 
 function printSummary(summary) {
     process.stdout.write(JSON.stringify(summary, null, 2) + "\n");
 }
 
 async function run() {
-    // This is deliberately separate from MONGO_URL so the demo command can
-    // never silently seed the database used by the normal backend server.
-    const mongoUrl =
-        process.env.CHEMAMAZE_DEMO_MONGO_URL || DEFAULT_DEMO_MONGO_URL;
-    const target = getDatabaseTarget(mongoUrl);
+    // Use the same local MongoDB database configured for the application.
+    const mongoUrl = process.env.MONGO_URL;
     const nodeEnv = process.env.NODE_ENV || "development";
-
-    // Running this explicitly named command is the write authorization. Keep
-    // all environment/database/host guards; only the older manual apply path
-    // continues to require the separate CHEMAMAZE_SEED_CONFIRM token.
-    validateDevelopmentImportTarget({
-        nodeEnv,
-        databaseName: target.databaseName,
-        hostname: target.hostname,
-        allowRemote: false,
-        apply: false,
-    });
+    const target = resolveDemoSeedTarget(mongoUrl, nodeEnv);
 
     mongoose.set("autoIndex", false);
     await mongoose.connect(mongoUrl);
 
-    if (mongoose.connection.name !== DEVELOPMENT_DATABASE_NAME) {
-        throw new Error(
-            "Connected MongoDB database does not match the required development database"
-        );
+    if (mongoose.connection.name !== target.databaseName) {
+        throw new Error("Connected MongoDB database does not match MONGO_URL");
     }
     if (!isLocalMongoHost(mongoose.connection.host)) {
         throw new Error("ChemAmaze demo seed is restricted to a local MongoDB host");
@@ -155,8 +117,8 @@ async function run() {
                 password: DEMO_PASSWORDS.teacher,
                 emails: Object.keys(demoData.assignments).map((key) => {
                     const [gradeText, subjectName] = key.split("|");
-                    const prefix = subjectName === "Mathematics" ? "mathematics" : "science";
-                    return `${prefix}.class${gradeText}@chemamaze.demo`;
+                    const prefix = subjectName === "Mathematics" ? "math" : "sci";
+                    return `${prefix}${gradeText}@demo.com`;
                 }),
             },
             students: {
