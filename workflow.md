@@ -2392,6 +2392,9 @@ Capture actual output and exit code for each command. A command appearing in a t
 
 The recommended Phase 15 demo shortcut is `npm run seed` from `backend/`. It creates/reuses a fictional ChemAmaze Demo School, three classes, six subjects, six Teacher accounts and three Student accounts, then imports the 18 canonical Wordwall activities as drafts. It uses `CHEMAMAZE_DEMO_MONGO_URL` if explicitly supplied, otherwise defaults to `mongodb://127.0.0.1:27017/school_management_dev`; it does not use the normal application `MONGO_URL`. It refuses non-development and non-loopback targets. See `backend/LEGACY_GAME_IMPORT.md` for demo login details and the optional manual mapping workflow for an alternate development school.
 
+To log in to these seeded accounts in the web app, start the backend with `MONGO_URL=mongodb://127.0.0.1:27017/school_management_dev` (for Windows PowerShell, set `$env:MONGO_URL` to that URL before `npm start`). Otherwise the app may still point at the separate database configured in the normal `.env` file and will not find the demo accounts.
+
+
 ### 17.4 Phase-by-phase engineering discipline
 
 For each future phase:
